@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -16,6 +16,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <style>
+  * { touch-action: manipulation; }   /* iOS 더블탭 줌 방지 */
+  .pchart, .rchart, .mchart, canvas, .tv-lightweight-charts { touch-action: pinch-zoom !important; }   /* 차트는 핀치줌 허용 */
+  html { -webkit-text-size-adjust: 100%; }
   :root{
     --bg:#0b0906; --surface:#151006; --surface-2:#100c05;
     --border:#3a2e14; --hair:#251d0d;
