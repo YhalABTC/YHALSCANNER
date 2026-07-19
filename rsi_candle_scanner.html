@@ -2,14 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="RSI Scanner">
-<meta name="theme-color" content="#0d1420">
-<link rel="manifest" href="manifest-pc.json">
-<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RSI 캔들 스캐너</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1491,7 +1484,7 @@ async function scanSymbol(s, cfg){
     }
     return {
       symbol: s.symbol, vol: s.vol, price: px, volat, pxMini,
-      rO: rO[iC]||0, rH: rH[iC]||0, rL: rL[iC]||0, rC: rC[iC]!=null?rC[iC]:0,
+      rO: rO[i0]||0, rH: rH[i0]||0, rL: rL[i0]||0, rC: rC[i0]!=null?rC[i0]:0,
       rPrev: [iC-2,iC-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC,cfg.smaF,iC), sma20: smaAt(rC,cfg.smaS,iC),
       gap: 0, retestN: 1,
@@ -1518,7 +1511,7 @@ async function scanSymbol(s, cfg){
     let chg4h = (cfg.tf==='4h' && hitN===1) ? chg : null;
     return {
       symbol: s.symbol, vol: s.vol, price: closes[iC], volat, pxMini,
-      rO: rO[iC]||0, rH: rH[iC]||0, rL: rL[iC]||0, rC: rC[iC]!=null?rC[iC]:0,
+      rO: rO[i0]||0, rH: rH[i0]||0, rL: rL[i0]||0, rC: rC[i0]!=null?rC[i0]:0,
       rPrev: [iC-2,iC-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC,cfg.smaF,iC), sma20: smaAt(rC,cfg.smaS,iC),
       gap: 0, retestN: hitN,
@@ -1609,7 +1602,7 @@ async function scanSymbol(s, cfg){
     const j = rsiIdx;
     return gate({
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
-      rO: rO[j], rH: rH[j], rL: rL[j], rC: rC[j], rPrev: [j-2,j-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
+      rO: rO[i0], rH: rH[i0], rL: rL[i0], rC: rC[i0]!=null?rC[i0]:0, rPrev: [i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC, cfg.smaF, j), sma20: smaAt(rC, cfg.smaS, j),
       gap: rC[j] - rbbLo,        // RSI 종가가 하단밴드 위로 복귀한 폭
       depth: rbbLo - rL[j],      // RSI 저가의 하단밴드 침투 깊이
@@ -1639,7 +1632,7 @@ async function scanSymbol(s, cfg){
     const j = i0;
     return gate({
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
-      rO: rO[j], rH: rH[j], rL: rL[j], rC: rC[j], rPrev: [j-2,j-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
+      rO: rO[i0], rH: rH[i0], rL: rL[i0], rC: rC[i0]!=null?rC[i0]:0, rPrev: [i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC, cfg.smaF, j), sma20: smaAt(rC, cfg.smaS, j),
       gap: cur!=null ? cur : 0,      // 현재 RSI
       retestN: nearest,              // 가장 가까운 관통봉
@@ -1665,7 +1658,7 @@ async function scanSymbol(s, cfg){
     const j = i0;
     return gate({
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
-      rO: rO[j], rH: rH[j], rL: rL[j], rC: rC[j], rPrev: [j-2,j-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
+      rO: rO[i0], rH: rH[i0], rL: rL[i0], rC: rC[i0]!=null?rC[i0]:0, rPrev: [i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC, cfg.smaF, j), sma20: smaAt(rC, cfg.smaS, j),
       gap: cur!=null ? cur : 0,    // 현재 RSI
       retestN: hit,                // 지지 테스트 봉
@@ -1689,7 +1682,7 @@ async function scanSymbol(s, cfg){
     const j = hitIdx;
     return gate({
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
-      rO: rO[j], rH: rH[j], rL: rL[j], rC: rC[j], rPrev: [j-2,j-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
+      rO: rO[i0], rH: rH[i0], rL: rL[i0], rC: rC[i0]!=null?rC[i0]:0, rPrev: [i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC, cfg.smaF, j), sma20: smaAt(rC, cfg.smaS, j),
       gap: rsiMax,             // 최근 RSI 최고값
       depth: rC[j] - 90,       // 90 초과 정도
@@ -1713,7 +1706,7 @@ async function scanSymbol(s, cfg){
     const j = hitIdx;
     return gate({
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
-      rO: rO[j], rH: rH[j], rL: rL[j], rC: rC[j], rPrev: [j-2,j-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
+      rO: rO[i0], rH: rH[i0], rL: rL[i0], rC: rC[i0]!=null?rC[i0]:0, rPrev: [i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC, cfg.smaF, j), sma20: smaAt(rC, cfg.smaS, j),
       gap: rsiMax,             // 최근 RSI 최고값
       depth: rC[j] - 70,       // 70 초과 정도
@@ -1748,7 +1741,7 @@ async function scanSymbol(s, cfg){
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
       pO: opens[j], pH: highs[j], pL: lows[j], pC: closes[j],
       p20: pa.p20,                                 // 가격 미니캔들 기준선
-      rO: rO[rj], rH: rH[rj], rL: rL[rj], rC: rC[rj]!=null ? rC[rj] : 0, rPrev: [rj-2,rj-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
+      rO: rO[i0], rH: rH[i0], rL: rL[i0], rC: rC[i0]!=null?rC[i0]:0, rPrev: [i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC, cfg.smaF, rj), sma20: smaAt(rC, cfg.smaS, rj),   // RSI 리테봉의 RSI SMA9/20
       gap: (closes[i0]/pa.p20 - 1)*100,            // 현재가 SMA20 이격 %
       depth: (pa.p20 - lows[j])/pa.p20*100,        // SMA20 침투 %
@@ -1817,7 +1810,7 @@ async function scanSymbol(s, cfg){
     const mark = (s9pre!=null && s20pre!=null && s9pre > s20pre) ? '+' : '-';
     return gate({
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
-      rO: rO[aIdx], rH: rH[aIdx], rL: rL[aIdx], rC: rC[aIdx], rPrev: [aIdx-2,aIdx-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
+      rO: rO[i0], rH: rH[i0], rL: rL[i0], rC: rC[i0]!=null?rC[i0]:0, rPrev: [i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: s9a, sma20: s20a,
       gap: (s9pre!=null && s20pre!=null) ? Math.abs(s9pre - s20pre) : Math.abs(s9a - s20a),
       depth: rC[aIdx] - s20a,           // RSI SMA20 돌파 강도
@@ -1854,7 +1847,7 @@ async function scanSymbol(s, cfg){
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
       pO: opens[j], pH: highs[j], pL: lows[j], pC: closes[j],
       p20: pa.p20,
-      rO: rO[j], rH: rH[j], rL: rL[j], rC: rC[j]!=null ? rC[j] : 0, rPrev: [j-2,j-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
+      rO: rO[i0], rH: rH[i0], rL: rL[i0], rC: rC[i0]!=null?rC[i0]:0, rPrev: [i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC, cfg.smaF, j), sma20: smaAt(rC, cfg.smaS, j),
       gap: (closes[i0]/pa.p20 - 1)*100,            // 현재가 SMA20 이격 %
       depth: (pa.p20 - lows[j])/pa.p20*100,        // SMA20 침투 %
@@ -1879,7 +1872,7 @@ async function scanSymbol(s, cfg){
   const j = hit.idx;
   return gate({
     symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
-    rO: rO[j], rH: rH[j], rL: rL[j], rC: rC[j], rPrev: [j-2,j-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
+    rO: rO[i0], rH: rH[i0], rL: rL[i0], rC: rC[i0]!=null?rC[i0]:0, rPrev: [i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
     sma9: hit.s9, sma20: hit.s20,
     gap: hit.s9 - hit.s20,            // 정배열 강도
     depth: hit.refVal - hit.dipLow,   // 리테한 선까지의 침투 깊이 (단봉=당봉 저가, 2봉=눌림봉 저가)
@@ -2273,7 +2266,7 @@ async function buildDisplayRow(symbol, cfg){
   let bars;
   try{ bars = await EX[cfg.exchange].klines(symbol, cfg.tf, 300); }catch(e){ return null; }
   if(!bars || bars.length < cfg.rsiLen + 25) return null;
-  bars.pop();   // 진행봉 제거
+  // 진행봉 유지 — 미니캔들이 현재 진행 중인 봉 표시 (다른 스캔과 통일)
   const opens=bars.map(b=>b.o), highs=bars.map(b=>b.h), lows=bars.map(b=>b.l), closes=bars.map(b=>b.c);
   const { rO,rH,rL,rC } = rsiCandles(opens,highs,lows,closes,cfg.rsiLen);
   const i0 = closes.length-1;
