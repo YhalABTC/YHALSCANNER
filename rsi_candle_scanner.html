@@ -540,6 +540,9 @@
         <label>이평 근접 (켠 TF 전부가 이평 ±% 이내 · AND)</label>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <div class="seg" id="maproxtfseg" title="스캔할 타임프레임 (여러 개 켜면 전부 근처여야 매칭 = AND)">
+            <button data-mtf="1m">1m</button>
+            <button data-mtf="3m">3m</button>
+            <button data-mtf="5m">5m</button>
             <button data-mtf="15m">15m</button>
             <button data-mtf="1h">1H</button>
             <button data-mtf="4h" class="on">4H</button>
@@ -765,7 +768,7 @@ let includeLive = true;     // 진행봉(0봉) 항상 포함 (고정)
 let sma5Only = false;       // 5선위 필터: 신호봉 종가가 가격 SMA5 위인 것만
 let volxTf = '1d';          // 변동성 스캔 TF
 let maproxLines = {200:true};   // 이평근접: SMA200 고정
-let maproxTfs = {'15m':'off','1h':'off','4h':'near','1d':'near','1w':'off'};   // off/near/above (3상태)
+let maproxTfs = {'1m':'off','3m':'off','5m':'off','15m':'off','1h':'off','4h':'near','1d':'near','1w':'off'};   // off/near/above
 let maproxMaFilter = {'4h':'all','1d':'all','1w':'all'};   // TF별 가격 5선/20선 위 필터
 let maproxRsiFilter = {'4h':'all','1d':'all','1w':'all'};  // TF별 RSI SMA9/20 위 필터
 let volxBars = 1;           // 변동성 탐색 봉수 (최근 N개 마감봉)
@@ -1286,13 +1289,13 @@ const EX = {
         .filter(s=>s.vol>=minVol).sort((a,b)=>b.vol-a.vol);
     },
     async klines(symbol, tf, limit){
-      const iv = {'5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1d','1w':'1w','1M':'1M'}[tf];
+      const iv = {'1m':'1m','3m':'3m','5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1d','1w':'1w','1M':'1M'}[tf];
       const raw = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${iv}&limit=${limit}`).then(r=>r.json());
       if(!Array.isArray(raw)) return null;
       return raw.map(k=>({t:k[0], o:+k[1], h:+k[2], l:+k[3], c:+k[4]}));
     },
     async klinesUntil(symbol, tf, endMs, limit){
-      const iv = {'5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1d','1w':'1w','1M':'1M'}[tf];
+      const iv = {'1m':'1m','3m':'3m','5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1d','1w':'1w','1M':'1M'}[tf];
       const raw = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${iv}&endTime=${endMs}&limit=${limit}`).then(r=>r.json());
       if(!Array.isArray(raw)) return null;
       return raw.map(k=>({t:k[0], o:+k[1], h:+k[2], l:+k[3], c:+k[4]}));
@@ -1331,7 +1334,7 @@ const EX = {
         .filter(s=>s.vol>=minVol).sort((a,b)=>b.vol-a.vol);
     },
     async klines(symbol, tf, limit){
-      const iv = {'5m':'5','15m':'15','1h':'60','4h':'240','1d':'D','1w':'W','1M':'M'}[tf];
+      const iv = {'1m':'1','3m':'3','5m':'5','15m':'15','1h':'60','4h':'240','1d':'D','1w':'W','1M':'M'}[tf];
       const j = await fetch(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${symbol}&interval=${iv}&limit=${limit}`).then(r=>r.json());
       const list = j.result?.list;
       if(!Array.isArray(list)) return null;
@@ -1339,7 +1342,7 @@ const EX = {
       return list.slice().reverse().map(k=>({t:+k[0], o:+k[1], h:+k[2], l:+k[3], c:+k[4]}));
     },
     async klinesUntil(symbol, tf, endMs, limit){
-      const iv = {'5m':'5','15m':'15','1h':'60','4h':'240','1d':'D','1w':'W','1M':'M'}[tf];
+      const iv = {'1m':'1','3m':'3','5m':'5','15m':'15','1h':'60','4h':'240','1d':'D','1w':'W','1M':'M'}[tf];
       const j = await fetch(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${symbol}&interval=${iv}&end=${endMs}&limit=${limit}`).then(r=>r.json());
       const list = j.result?.list;
       if(!Array.isArray(list)) return null;

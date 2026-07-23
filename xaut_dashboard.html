@@ -302,6 +302,12 @@
     color:var(--muted);cursor:pointer;user-select:none}
   .chk input{accent-color:var(--amber);cursor:pointer;margin:0}
   .chk.l5{color:#5fd6c4} .chk.l10{color:#bf95f0} .chk.lb{color:#8a99b5} .chk.lrb{color:#3fb0a0}
+  .chart-indicators{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+  .chart-indicators span{padding:2px 5px;border:1px solid var(--border,#3a2e14);border-radius:5px;background:var(--surface,#151006);font-family:var(--mono);font-size:10px;cursor:pointer;user-select:none;color:var(--text,#efe4cb)}
+  .chart-indicators span.ind-off{opacity:.32;text-decoration:line-through}
+  .chart-indicators .l5{color:#d5d9e0} .chart-indicators .l10{color:#9aa4b5} .chart-indicators .l20{color:#c76f2f}
+  .chart-indicators .l50{color:#c9a53d} .chart-indicators .l120{color:#3aad64} .chart-indicators .l200{color:#d5d9e0}
+  .chart-indicators .lb{color:#8a99b5} .chart-indicators .lrb{color:#3fb0a0}
   .pane-label .l5{color:#5fd6c4} .pane-label .l10{color:#bf95f0} .pane-label .lb{color:#8a99b5}
   .pane-label .lmd{color:#5b9bd5}
   .modal-nav{background:var(--surface-2);border:1px solid var(--border);color:var(--text);
@@ -426,10 +432,11 @@
           <button data-v="single">단일</button>
           <button data-v="quad" class="on">4분할</button>
         </div>
-        <label class="chk l5"><input type="checkbox" id="cSma5" checked>SMA5</label>
-        <label class="chk l10"><input type="checkbox" id="cSma10" checked>SMA10</label>
-        <label class="chk lb"><input type="checkbox" id="cBb" checked>BB</label>
-        <label class="chk lrb"><input type="checkbox" id="cRbb">RSI BB</label>
+        <div class="chart-indicators" id="chartIndToggle" title="클릭해서 이평선 켜고 끄기">
+          <span class="l5" data-ind="5">5</span><span class="l10" data-ind="10">10</span><span class="l20" data-ind="20">20</span>
+          <span class="l50" data-ind="50">50</span><span class="l120" data-ind="120">120</span><span class="l200" data-ind="200">200</span>
+          <span class="lb" data-ind="bb">가격 BB</span><span class="lrb" data-ind="rbb">RSI BB</span><span class="lbb120" data-ind="bb120" style="border-color:#e9b64f;color:#e9b64f">BB 120·1</span>
+        </div>
       </div>
       <button class="modal-nav" id="chartPrev" title="이전 종목 (←)">‹</button>
       <span class="modal-navpos" id="chartNavPos"></span>
@@ -2172,7 +2179,8 @@ function nextSide(sym, dir){
   const last = positionLog.find(p=>p.symbol===sym && p.dir===dir);   // newest-first
   return (last && last.side==='entry') ? 'exit' : 'entry';
 }
-const ind = { sma5:true, sma10:true, bb:true, rbb:false };
+const indShow = {5:true,10:true,20:true,50:true,120:true,200:true,bb:true,rbb:false,bb120:false};
+const ind = indShow;   // 하위호환 alias
 
 function priceSMA(closes, t, period){
   const out=[];
@@ -2227,7 +2235,7 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     smaS:   Math.max(2,+$('smas').value||20),
   };
   let bars;
-  const climit = isSingle ? Math.max(300, effBars + 80) : 200;   // 단일: 선택 캔들수 + 지표 워밍업
+  const climit = isSingle ? Math.max(300, effBars + 80) : 300;   // 단일·4분할 모두 SMA200 워밍업 확보
   try{ bars = await EX[exchange].klines(symbol, tf, climit); }
   catch(e){ priceEl.innerHTML = `<div class="chart-err">로드 실패</div>`; return; }
   if(!bars){ priceEl.innerHTML = `<div class="chart-err">데이터 없음</div>`; return; }
@@ -2318,20 +2326,25 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   const pcs = pc.addCandlestickSeries({...CANDLE, autoscaleInfoProvider: priceAutoscale}); pcs.setData(priceData);
   const pls = {priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,autoscaleInfoProvider:priceAutoscale};
   const upd = [];   // 라이브 재갱신용 라인 series [{s, kind}]
-  if(ind.bb || scanMode==='ctlong'){
+  if(indShow.bb || scanMode==='ctlong'){
     const b = bollinger(closes,t,20,2);
     const su=pc.addLineSeries({color:'#586a86',lineWidth:1,...pls}); su.setData(b.up); upd.push({s:su,k:'bbu'});
     const sm=pc.addLineSeries({color:'#8fa3c4',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dotted,...pls}); sm.setData(b.mid); upd.push({s:sm,k:'bbm'});
     const sl=pc.addLineSeries({color:'#586a86',lineWidth:1,...pls}); sl.setData(b.lo); upd.push({s:sl,k:'bbl'});
   }
-  if(ind.sma5){  const s=pc.addLineSeries({color:'#d5d9e0',lineWidth:1,...pls}); s.setData(priceSMA(closes,t,5)); upd.push({s,k:'psma5'}); }
-  if(ind.sma10){ const s=pc.addLineSeries({color:'#9aa4b5',lineWidth:1,...pls}); s.setData(priceSMA(closes,t,10)); upd.push({s,k:'psma10'}); }
-  { const s=pc.addLineSeries({color:'#c76f2f',lineWidth:1,...pls}); s.setData(priceSMA(closes,t,20)); upd.push({s,k:'psma20'}); }   // SMA20 주황 항상
-  if(isSingle){   // 단일 차트 전용: SMA50/120/200/300 (코인과 동일 · 데이터 부족 시 생략)
-    [[50,'#c9a53d',2],[120,'#3aad64',1],[200,'#d5d9e0',2],[300,'#454e5c',2]].forEach(([P,col,w])=>{
-      if(closes.length >= P + 20){ const s=pc.addLineSeries({color:col,lineWidth:w,...pls}); s.setData(priceSMA(closes,t,P)); }
-    });
+  if(indShow.bb120){   // 특수 볼밴 (120,1) — 기본 꺼짐
+    const b120 = bollinger(closes,t,120,1);
+    pc.addLineSeries({color:'rgba(233,182,79,.75)',lineWidth:1,...pls,autoscaleInfoProvider:()=>null}).setData(b120.up);
+    pc.addLineSeries({color:'rgba(233,182,79,.45)',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dotted,...pls,autoscaleInfoProvider:()=>null}).setData(b120.mid);
+    pc.addLineSeries({color:'rgba(233,182,79,.75)',lineWidth:1,...pls,autoscaleInfoProvider:()=>null}).setData(b120.lo);
   }
+  if(indShow[5]){  const s=pc.addLineSeries({color:'#d5d9e0',lineWidth:1,...pls}); s.setData(priceSMA(closes,t,5)); upd.push({s,k:'psma5'}); }
+  if(indShow[10]){ const s=pc.addLineSeries({color:'#9aa4b5',lineWidth:1,...pls}); s.setData(priceSMA(closes,t,10)); upd.push({s,k:'psma10'}); }
+  if(indShow[20]){ const s=pc.addLineSeries({color:'#c76f2f',lineWidth:1,...pls}); s.setData(priceSMA(closes,t,20)); upd.push({s,k:'psma20'}); }
+  // SMA50/120/200/300 (단일·4분할 공통 · 토글 · 데이터 부족 시 생략)
+  [[50,'#c9a53d',2],[120,'#3aad64',1],[200,'#d5d9e0',2]].forEach(([P,col,w])=>{
+    if(indShow[P] && closes.length >= P + 20){ const s=pc.addLineSeries({color:col,lineWidth:w,...pls,autoscaleInfoProvider:()=>null}); s.setData(priceSMA(closes,t,P)); }
+  });
   if(scanMode === 'bear'){
     const s=pc.addLineSeries({color:'#e0a050',lineWidth:1.5,...pls}); s.setData(priceSMA(closes,t,20)); upd.push({s,k:'psma20'});
   }
@@ -2937,12 +2950,15 @@ $('viewseg').addEventListener('click', e=>{
   syncChartBarSeg(); renderChartTfSeg();
   if(currentChartSymbol){ updateChartTitle(); renderChartView(); }
 });
-['cSma5','cSma10','cBb','cRbb'].forEach((id,i)=>{
-  $(id).addEventListener('change', e=>{
-    ind[['sma5','sma10','bb','rbb'][i]] = e.target.checked;
+(function(){ const el=$('chartIndToggle'); if(!el) return;
+  const sync=()=>{ el.querySelectorAll('[data-ind]').forEach(x=>{ const k=x.dataset.ind; const key=(k==='bb'||k==='rbb'||k==='bb120')?k:+k; x.classList.toggle('ind-off', !indShow[key]); }); };
+  sync();
+  el.addEventListener('click', e=>{ const x=e.target.closest('[data-ind]'); if(!x) return;
+    const k=x.dataset.ind; const key=(k==='bb'||k==='rbb'||k==='bb120')?k:+k;
+    indShow[key]=!indShow[key]; sync();
     if(currentChartSymbol) renderChartView();
   });
-});
+})();
 
 $('chartFav').addEventListener('click', ()=>{
   if(currentChartSymbol){ toggleFav(currentChartSymbol); syncChartFav(); }
