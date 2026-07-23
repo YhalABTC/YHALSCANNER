@@ -244,8 +244,11 @@
   .row-inrs{display:flex!important;flex-wrap:wrap;gap:8px 12px;margin:0!important;align-items:flex-end}
   .row-inrs .field{margin:0}
   .rs-info{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:7px 9px;line-height:1.5}
-  body.mobile .rs-split{flex-direction:column}
+  body.mobile .rs-split{flex-direction:column;gap:10px}
+  body.mobile .rs-left{width:100%!important;flex:1 1 auto}
   body.mobile .rs-right{width:100%}
+  body.mobile .rs-grp{flex-direction:row;align-items:center;flex-wrap:wrap;gap:6px}
+  body.mobile .rs-lab{min-width:64px}
   .chainbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:10px}
   .chain-lab{font-size:11px;color:var(--muted);font-weight:600}
   .chain-chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface-2);border:1px solid var(--amber);border-radius:8px;padding:3px 8px;font-size:11.5px;color:var(--text)}
@@ -2349,6 +2352,7 @@ function buildScanCfg(){
 // 공통 옵션 row를 RS 모드에선 오른쪽 컬럼으로 이동
 let _optRowHome = null;
 function moveOptionsRow(toRight){
+  if(typeof IS_MOBILE!=='undefined' && IS_MOBILE) toRight = false;   // 모바일: 세로 배치라 원위치 유지
   const row = document.getElementById('optionsrow'), slot = document.getElementById('rsRightExtra');
   if(!row || !slot) return;
   if(!_optRowHome) _optRowHome = { parent: row.parentNode, next: row.nextSibling };
@@ -2370,13 +2374,16 @@ async function initRsChart(force){
   const t = rsBars.map(b=>Math.floor(b.t/1000) + CHART_TZ);   // 앱 표준: KST 표시
   const O=rsBars.map(b=>b.o), H=rsBars.map(b=>b.h), L=rsBars.map(b=>b.l), C=rsBars.map(b=>b.c);
   const W = ()=> (pxEl.clientWidth||600);
+  const MOB = (typeof IS_MOBILE!=='undefined' && IS_MOBILE);
+  const H_PX = MOB?200:270, H_RSI = MOB?112:140;
+  pxEl.style.height = H_PX+'px'; rsiEl.style.height = H_RSI+'px';
   const common = {...chartCommon()};
   const rsiLen = Math.max(2,+$('rsilen').value||14), smaF=Math.max(1,+$('smaf').value||9), smaS=Math.max(2,+$('smas').value||20);
 
   // ── 가격 패널 (캔들 + SMA + MACD 오버레이) ──
   const SCALE_W = 62;   // 좌우 정렬용 고정 폭
   const commonFixed = {...common, rightPriceScale:{...(common.rightPriceScale||{}), minimumWidth: SCALE_W}};
-  rsBtcChart = LightweightCharts.createChart(pxEl, {...commonFixed, width:W(), height:270});
+  rsBtcChart = LightweightCharts.createChart(pxEl, {...commonFixed, width:W(), height:H_PX});
   rsBtcChart.priceScale('right').applyOptions({scaleMargins:{top:0.06, bottom:0.30}});   // 아래 30% = MACD 자리
   rsBtcSeries = rsBtcChart.addCandlestickSeries({upColor:'#46cd8a',downColor:'#e0584f',borderVisible:false,wickUpColor:'#46cd8a',wickDownColor:'#e0584f'});
   rsBtcSeries.setData(rsBars.map((b,i)=>({time:t[i],open:b.o,high:b.h,low:b.l,close:b.c})));
@@ -2409,7 +2416,7 @@ async function initRsChart(force){
   rsBtcChart.priceScale('rangeband').applyOptions({scaleMargins:{top:0, bottom:0}, visible:false});
 
   // ── RSI 패널 (RSI 캔들 OHLC) ──
-  rsRsiChart = LightweightCharts.createChart(rsiEl, {...commonFixed, width:W(), height:140});
+  rsRsiChart = LightweightCharts.createChart(rsiEl, {...commonFixed, width:W(), height:H_RSI});
   const R = rsiCandles(O,H,L,C,rsiLen);
   const rsiCandleData = [];
   for(let i=0;i<t.length;i++){
