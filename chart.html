@@ -44,7 +44,7 @@
   </div>
   <div class="legend">
     <b class="l5">SMA5</b><b class="l10">10</b><b class="l20">20</b><b class="l50">50</b><b class="l120">120</b><b class="l200">200</b>
-    <b style="color:var(--muted)">· BB(20,2)</b>
+    <b style="color:var(--muted)">· BB(20,2)</b><b style="color:#5b9bd5">· MACD</b>
   </div>
   <div id="price"></div>
   <div class="rsihead">RSI 캔들 · <b class="lr9">SMA9</b> · <b class="lr20">SMA20</b> · BB(20,2) · 30/50/70</div>
@@ -118,6 +118,17 @@ function rsiCandles(O,H,L,C,len){
   const rC=rsiSeries(C,len), rO=rsiSeries(O,len), rH=rsiSeries(H,len), rL=rsiSeries(L,len);
   return {rO,rH,rL,rC};
 }
+function macdCalc(closes, fast=12, slow=26, sig=9){
+  const ema=(arr,p)=>{ const k=2/(p+1); const out=new Array(arr.length).fill(null); let prev=null;
+    for(let i=0;i<arr.length;i++){ const v=arr[i]; if(v==null)continue; prev=(prev==null)?v:v*k+prev*(1-k); out[i]=prev; } return out; };
+  const ef=ema(closes,fast), es=ema(closes,slow);
+  const macd=new Array(closes.length).fill(null);
+  for(let i=0;i<closes.length;i++){ if(ef[i]!=null&&es[i]!=null&&i>=slow-1) macd[i]=ef[i]-es[i]; }
+  const sigArr=ema(macd.map(v=>v==null?0:v), sig);
+  const signal=new Array(closes.length).fill(null), hist=new Array(closes.length).fill(null);
+  for(let i=0;i<closes.length;i++){ if(macd[i]!=null&&sigArr[i]!=null&&i>=slow+sig-2){ signal[i]=sigArr[i]; hist[i]=macd[i]-sigArr[i]; } }
+  return {macd, signal, hist};
+}
 
 function fmtPrice(v){
   if(v>=1000) return v.toLocaleString('en-US',{maximumFractionDigits:2});
@@ -183,6 +194,7 @@ async function main(){
 
   // ── 가격 패널 ──
   const pc = LC.createChart(document.getElementById('price'), {...chartCommon(), width:document.getElementById('price').clientWidth, height:document.getElementById('price').clientHeight});
+  pc.priceScale('right').applyOptions({scaleMargins:{top:0.06, bottom:0.28}});   // 아래 28% = MACD 자리
   const pcs = pc.addCandlestickSeries({upColor:'#46cd8a',downColor:'#e0584f',borderVisible:false,wickUpColor:'#46cd8a',wickDownColor:'#e0584f'});
   pcs.setData(raw.map((b,i)=>({time:t[i],open:b.o,high:b.h,low:b.l,close:b.c})));
   // BB(20,2)
@@ -198,6 +210,20 @@ async function main(){
   [[50,'#c9a53d',1],[120,'#3aad64',1],[200,'#f1f4f8',2]].forEach(([p,c,w])=>{
     if(C.length>=p) pc.addLineSeries({color:c,lineWidth:w,...pls,autoscaleInfoProvider:()=>null}).setData(priceSMA(C,t,p));
   });
+  // MACD — 가격 차트 안 별도 스케일(아래쪽)에 배치 → 시간축 완전 일치
+  { const mac = macdCalc(C,12,26,9);
+    const hist=[],ml=[],sl=[];
+    for(let i=0;i<t.length;i++){
+      if(mac.hist[i]!=null) hist.push({time:t[i],value:mac.hist[i],color:mac.hist[i]>=0?'rgba(70,205,138,.55)':'rgba(224,88,79,.55)'});
+      if(mac.macd[i]!=null) ml.push({time:t[i],value:mac.macd[i]});
+      if(mac.signal[i]!=null) sl.push({time:t[i],value:mac.signal[i]});
+    }
+    const mo = {priceScaleId:'macd', priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false};
+    pc.addHistogramSeries({...mo}).setData(hist);
+    pc.addLineSeries({...mo, color:'#5b9bd5', lineWidth:1}).setData(ml);
+    pc.addLineSeries({...mo, color:'#f4a73c', lineWidth:1}).setData(sl);
+    pc.priceScale('macd').applyOptions({scaleMargins:{top:0.74, bottom:0.02}, visible:false});
+  }
 
   // ── RSI 패널 ──
   const rc = LC.createChart(document.getElementById('rsi'), {...chartCommon(), width:document.getElementById('rsi').clientWidth, height:document.getElementById('rsi').clientHeight});
