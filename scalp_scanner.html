@@ -244,6 +244,15 @@
   .row-inrs{display:flex!important;flex-wrap:wrap;gap:8px 12px;margin:0!important;align-items:flex-end}
   .row-inrs .field{margin:0}
   .rs-info{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:7px 9px;line-height:1.5}
+  /* 좁은 화면이면 (기기 판정과 무관하게) 차트 full width 세로 배치 */
+  @media (max-width: 900px){
+    .rs-split{flex-direction:column;gap:10px}
+    .rs-left{width:100%!important;flex:1 1 auto!important}
+    .rs-right{width:100%!important}
+    .rs-grp{flex-direction:row;align-items:center;flex-wrap:wrap;gap:6px}
+    .rs-lab{min-width:64px}
+    #rschartwrap{width:100%}
+  }
   body.mobile .rs-split{flex-direction:column;gap:10px}
   body.mobile .rs-left{width:100%!important;flex:1 1 auto}
   body.mobile .rs-right{width:100%}
@@ -2374,7 +2383,7 @@ async function initRsChart(force){
   const t = rsBars.map(b=>Math.floor(b.t/1000) + CHART_TZ);   // 앱 표준: KST 표시
   const O=rsBars.map(b=>b.o), H=rsBars.map(b=>b.h), L=rsBars.map(b=>b.l), C=rsBars.map(b=>b.c);
   const W = ()=> (pxEl.clientWidth||600);
-  const MOB = (typeof IS_MOBILE!=='undefined' && IS_MOBILE);
+  const MOB = ((window.innerWidth||1200) <= 900) || (typeof IS_MOBILE!=='undefined' && IS_MOBILE);
   const H_PX = MOB?200:270, H_RSI = MOB?112:140;
   pxEl.style.height = H_PX+'px'; rsiEl.style.height = H_RSI+'px';
   const common = {...chartCommon()};
@@ -2487,7 +2496,15 @@ async function initRsChart(force){
       document.getElementById('rsrangeinfo').textContent='시작점 선택됨 — 끝점을 클릭하세요';
     }
   });
-  new ResizeObserver(()=>{ const w=W(); [rsBtcChart,rsRsiChart].forEach(c=>{ try{ c.applyOptions({width:w}); }catch(e){} }); }).observe(pxEl);
+  new ResizeObserver(()=>{
+    const w = W();
+    const narrow = (window.innerWidth||1200) <= 900;
+    const hp = narrow?200:270, hr = narrow?112:140;
+    pxEl.style.height = hp+'px'; rsiEl.style.height = hr+'px';
+    try{ rsBtcChart.applyOptions({width:w, height:hp}); }catch(e){}
+    try{ rsRsiChart.applyOptions({width:w, height:hr}); }catch(e){}
+  }).observe(pxEl);
+  window.addEventListener('resize', ()=>{ const w=W(); try{ rsBtcChart.applyOptions({width:w}); rsRsiChart.applyOptions({width:w}); }catch(e){} });
 }
 function paintRsRange(){
   if(!rsBtcSeries || !rsBars.length) return;
