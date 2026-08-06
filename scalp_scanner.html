@@ -980,7 +980,7 @@
 
 <script>
 let currentTF = '15m';   // 스캔용 TF (스캔 옵션 세그와 바인딩)
-let chartTF = '3m';     // 차트 보기용 TF — 스캔 TF와 분리 (단일 기본 3분)
+let chartTF = '15m';    // 차트 보기용 TF — 스캔 TF와 분리 (단일 기본 15분)
 let chartBars = 100;    // 단일 차트 가시 봉 수 (스케일창도 연동)
 let quadMode = 'scalp';   // '4분할 TF 세트: scalp(5m·15m·1h·4h) | swing(1h·4h·1d·1w)'
 function quadTfs(){ return quadMode==='swing' ? ['1h','4h','1d','1w'] : ['5m','15m','1h','4h']; }
@@ -4462,7 +4462,7 @@ async function renderChartMtfState(sym, forceRefresh=false){
 }
 
 function openChart(symbol, list){
-  chartTF = '3m';   // 단일 차트는 항상 3분으로 시작 (스캘핑)
+  chartTF = '15m';  // 단일 차트는 항상 15분으로 시작
   if(Array.isArray(list) && list.length){ navList = list; navIdx = list.indexOf(symbol); }
   else { const i = navList.indexOf(symbol); navIdx = i; }   // 기존 목록에 있으면 위치 동기화
   currentChartSymbol = symbol;
