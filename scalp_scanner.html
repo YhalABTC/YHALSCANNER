@@ -195,6 +195,7 @@
   .scan-category-label{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;
     color:var(--dim);text-transform:uppercase;white-space:nowrap}
   .scan-category .seg{width:100%;display:flex;flex-wrap:wrap}
+  .scan-rows{display:flex;flex-direction:column;gap:6px;min-width:0}   /* 한 카테고리에 여러 줄 */
   .scan-category .seg button{flex:1 1 auto;min-width:110px}
   .seg.modeswitch{padding:4px}
   .seg.modeswitch button{padding:9px 22px;font-size:14px}
@@ -205,6 +206,7 @@
   .seg.modeswitch button[data-sm="short"].on{background:#e0584f;color:#0a0e16}
   .seg.modeswitch button[data-sm="resist"].on{background:#d4674a;color:#0a0e16}
   .seg.modeswitch button[data-sm="mania"].on{background:#f0883c;color:#0a0e16}
+  .seg.modeswitch button[data-sm="oversold"].on{background:#4aa8d8;color:#0a0e16}
   .modeswitch-new button{background:linear-gradient(135deg,rgba(244,167,60,.16),rgba(224,88,79,.12));border-color:var(--amber)}
   #maproxtfseg button.above,#maproxrsi9 button.above{background:rgba(70,205,138,.22)!important;border-color:#46cd8a!important;color:#46cd8a!important}
   .seg.modeswitch button[data-sm="volx"].on{background:#f4c84b;color:#0a0e16}
@@ -405,6 +407,7 @@
   .pane-label .l50,.chart-indicators .l50{color:#d8b04a}
   .pane-label .l120,.chart-indicators .l120{color:#46b96c}
   .pane-label .l200,.chart-indicators .l200{color:#f1f4f8;font-weight:800}
+  .pane-label .l300,.chart-indicators .l300{color:#e05a8f;font-weight:800}
   .pane-label .lmd{color:#5b9bd5}
   .chart-indicators{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--muted)}
   .chart-indicators span{padding:2px 5px;border:1px solid var(--border);border-radius:5px;background:var(--surface-2);cursor:pointer;user-select:none}
@@ -525,11 +528,15 @@
     <div class="mode-row" id="scanmodeseg">
       <div class="scan-category">
         <div class="scan-category-label">특수 스캔</div>
-        <div class="seg modeswitch modeswitch-new">
-          <button data-sm="volx">⚡ 변동성</button>
-          <button data-sm="maprox" class="on">📏 이평근접</button>
-          <button data-sm="rsscan">🔺 RS 스캔</button>
-          <button data-sm="seq">🕯️ 3+1 반전</button>
+        <div class="scan-rows">
+          <div class="seg modeswitch modeswitch-new">
+            <button data-sm="maprox" class="on">📏 이평근접</button>
+            <button data-sm="rsscan">🔺 RS 스캔</button>
+          </div>
+          <div class="seg modeswitch modeswitch-new">
+            <button data-sm="mania">🔥 과매수</button>
+            <button data-sm="oversold">🧊 과매도</button>
+          </div>
         </div>
       </div>
       <div class="scan-category">
@@ -540,7 +547,6 @@
           <button data-sm="support">RSI50 지지</button>
           <button data-sm="bear">역배 스캔</button>
           <button data-sm="ctlong">역추세롱</button>
-          <button data-sm="mania">광기</button>
         </div>
       </div>
       <div class="scan-category">
@@ -548,6 +554,13 @@
         <div class="seg modeswitch">
           <button data-sm="short" class="shortbtn">숏</button>
           <button data-sm="resist" class="shortbtn">50/70 저항</button>
+        </div>
+      </div>
+      <div class="scan-category">
+        <div class="scan-category-label">기타</div>
+        <div class="seg modeswitch modeswitch-new">
+          <button data-sm="volx">⚡ 변동성</button>
+          <button data-sm="seq">🕯️ 3+1 반전</button>
         </div>
       </div>
     </div>
@@ -610,11 +623,11 @@
       </div>
     </div>
     <div class="field" id="maniafield" style="display:none;margin-bottom:10px">
-      <label>🔥 광기 — RSI 과매수(≥70) 스캔</label>
+      <label id="manialabel">🔥 과매수 — RSI 과매수(≥70) 스캔</label>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:7px">
         <span style="color:var(--muted);font-size:11px">조건:</span>
         <div class="seg sm" id="manianow">
-          <button data-mn="now" class="on">지금 과매수</button>
+          <button data-mn="now" class="on"><span class="mword">지금 과매수</span></button>
           <button data-mn="count">과거 N회 누적</button>
           <button data-mn="both">둘 다</button>
         </div>
@@ -622,16 +635,20 @@
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:7px">
         <span style="color:var(--muted);font-size:11px">되돌아볼 구간:</span>
         <div class="seg sm" id="maniaback">
-          <button data-mb="6">6봉</button>
-          <button data-mb="21">21봉</button>
-          <button data-mb="42" class="on">42봉</button>
+          <button data-mb="5">5봉</button>
+          <button data-mb="7">7봉</button>
+          <button data-mb="20">20봉</button>
+          <button data-mb="50" class="on">50봉</button>
+          <button data-mb="120">120봉</button>
+          <button data-mb="200">200봉</button>
+          <button data-mb="300">300봉</button>
         </div>
-        <span style="color:var(--muted);font-size:10px" id="maniabackhint">4H 기준 42봉 ≈ 1주</span>
+        <span style="color:var(--muted);font-size:10px" id="maniabackhint">4H 기준 50봉 ≈ 8일</span>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:7px">
-        <span style="color:var(--muted);font-size:11px">과매수 횟수 ≥</span>
+        <span style="color:var(--muted);font-size:11px" id="maniacntlab">과매수 횟수 ≥</span>
         <input type="number" id="maniacnt" value="6" min="1" step="1" style="width:60px">
-        <span style="color:var(--muted);font-size:10px">구간 내 RSI≥70 봉 개수</span>
+        <span style="color:var(--muted);font-size:10px" id="maniacnthint">구간 내 RSI≥70 봉 개수</span>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <span style="color:var(--muted);font-size:11px">마지막 봉:</span>
@@ -948,7 +965,7 @@
         </div>
         <div class="chart-indicators" id="chartIndToggle" title="클릭해서 이평선 켜고 끄기">
           <span class="l5" data-ind="5">5</span><span class="l10" data-ind="10">10</span><span class="l20" data-ind="20">20</span>
-          <span class="l50" data-ind="50">50</span><span class="l120" data-ind="120">120</span><span class="l200" data-ind="200">200</span>
+          <span class="l50" data-ind="50">50</span><span class="l120" data-ind="120">120</span><span class="l200" data-ind="200">200</span><span class="l300" data-ind="300">300</span>
           <span class="lb" data-ind="bb">가격 BB</span><span class="lrb" data-ind="rbb">RSI BB</span><span class="lbb120" data-ind="bb120" style="border-color:#e9b64f;color:#e9b64f">BB 120·1</span>
         </div>
       </div>
@@ -988,7 +1005,7 @@ let chartTF = '15m';    // 차트 보기용 TF — 스캔 TF와 분리 (단일 �
 let chartBars = 100;    // 단일 차트 가시 봉 수 (스케일창도 연동)
 let quadMode = 'scalp';   // '4분할 TF 세트: scalp(5m·15m·1h·4h) | swing(1h·4h·1d·1w)'
 function quadTfs(){ return quadMode==='swing' ? ['1h','4h','1d','1w'] : ['5m','15m','1h','4h']; }
-let indShow = {5:true,10:true,20:true,50:true,120:true,200:true,bb:true,rbb:true,bb120:false};   // 이평/BB 표시 토글 (bb120=특수볼밴 기본꺼짐)
+let indShow = {5:true,10:true,20:true,50:true,120:true,200:true,300:true,bb:true,rbb:true,bb120:false};   // 이평/BB 표시 토글 (bb120=특수볼밴 기본꺼짐)
 let exchange = 'bybit';
 let scanMode = 'maprox';
 let volxTf = '15m', volxBars = 1;
@@ -1008,7 +1025,7 @@ let rsBtcChart = null, rsBtcSeries = null, rsClickBuf = [];
 let rsChartTf = '1h', rsRsiChart = null, rsMacdChart = null;
 let rsBandSeries = null, rsBandRsi = null, rsPriceLines = [];
 let seqDir = 'both', seqTf = '15m', seqLive = 'live';   // 3+1 반전 스캔
-let maniaBack = 42, maniaCnt = 6, maniaLive = 'live', maniaMode = 'now';   // now=지금과매수 / count=과거N회 / both   // 광기: 룩백 구간·과매수 횟수·마지막봉
+let maniaBack = 50, maniaCnt = 6, maniaLive = 'live', maniaMode = 'now';   // now=지금과매수 / count=과거N회 / both   // 광기: 룩백 구간·과매수 횟수·마지막봉
 const RS_VIEW_BARS = 50;   // 화면에 보이는 봉 수
 const CHART_TZ = 9*3600;   // 차트 표시용 KST 오프셋 (앱 전체 공통)
 let btcRet = {};   // BTC 직전봉 수익률 캐시 {tf: ret%}
@@ -1030,6 +1047,28 @@ document.getElementById('exseg').addEventListener('click', e=>{
   [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); exchange = b.dataset.ex;
 });
+// 과매수/과매도 공용 패널 — 현재 모드에 맞춰 문구만 갈아끼움
+function applyManiaLabels(){
+  const os = (scanMode === 'oversold');
+  const NAME = os ? '과매도' : '과매수';
+  const set = (id, txt)=>{ const e=document.getElementById(id); if(e) e.textContent = txt; };
+  set('manialabel', `${os?'🧊':'🔥'} ${NAME} — RSI ${NAME}(${os?'≤30':'≥70'}) 스캔`);
+  set('maniacntlab', `${NAME} 횟수 ≥`);
+  set('maniacnthint', `구간 내 RSI${os?'≤30':'≥70'} 봉 개수`);
+  const w = document.querySelector('#manianow .mword'); if(w) w.textContent = `지금 ${NAME}`;
+  updateManiaBackHint();
+}
+function updateManiaBackHint(){
+  const h = document.getElementById('maniabackhint'); if(!h) return;
+  const tf = (currentTF||'4h');
+  const MIN = {'1m':1,'3m':3,'5m':5,'15m':15,'30m':30,'1h':60,'4h':240,'1d':1440,'1w':10080}[tf] || 240;
+  const mins = maniaBack * MIN;
+  const span = mins < 60 ? `${mins}분`
+    : mins < 1440 ? `${(mins/60).toFixed(mins%60?1:0)}시간`
+    : mins < 10080 ? `${(mins/1440).toFixed(mins%1440?1:0)}일`
+    : `${(mins/10080).toFixed(mins%10080?1:0)}주`;
+  h.textContent = `${tf.toUpperCase()} 기준 ${maniaBack}봉 ≈ ${span}`;
+}
 function updateCondChips(){
   const el = document.getElementById('condchips');
   if(scanMode === 'bull'){
@@ -1056,11 +1095,15 @@ function updateCondChips(){
       <div class="chip"><span class="n">①</span><b>RSI BB 하단 리테</b> · <b>인트라바</b>(한봉 관통복귀) <b>또는</b> <b style="color:#3fb0a0">봉간크로스</b>(직전봉 눌림→이번봉 복귀) — 둘 다 스캔</div>
       <div class="chip">태그: <span style="color:#3fb0a0">RSI BB하단</span> 항상 · <span style="color:#5b9bd5">가격 BB하단</span> 가격도 리테 · <span style="background:#3fb0a0;color:#0a0e16;padding:0 4px;border-radius:3px">동시 BB</span> 같은 봉 동시</div>
       <div class="chip">BB(20,2) · 과매도 반등(역추세 롱)</div>`;
-  }else if(scanMode === 'mania'){
+  }else if(scanMode === 'mania' || scanMode === 'oversold'){
+    const os = (scanMode === 'oversold');
+    const NAME = os ? '과매도' : '과매수';
+    const COND = os ? '≤ 30' : '≥ 70';
+    const COL = os ? '#4aa8d8' : '#f0883c';
     el.innerHTML = `
-      <div class="chip"><span class="n">①</span><b>RSI 과매수(≥70) 횟수</b> · 되돌아볼 구간(6/21/42봉) 내 RSI 종가 ≥ 70인 봉 개수</div>
-      <div class="chip">라벨 <span style="color:#f0883c">🔥 과매수 N회</span> = 구간 내 과매수 봉 수 · 많을수록 과열 지속</div>
-      <div class="chip">4H 기준 42봉 ≈ 1주 · 21봉 ≈ 반주 · 6봉 ≈ 하루</div>`;
+      <div class="chip"><span class="n">①</span><b>RSI ${NAME}(${COND}) 횟수</b> · 되돌아볼 구간(5/7/20/50/120/200/300봉) 내 RSI 종가 ${COND}인 봉 개수</div>
+      <div class="chip">라벨 <span style="color:${COL}">${os?'🧊':'🔥'} ${NAME} N회</span> = 구간 내 ${NAME} 봉 수 · 많을수록 ${os?'침체':'과열'} 지속</div>
+      <div class="chip">${os?'바닥권 반등 후보 관점':'과열 극단 → 숏/차익 관점'} · 정렬은 현재 RSI ${os?'낮은':'높은'} 순</div>`;
   }else if(scanMode === 'resist'){
     el.innerHTML = `
       <div class="chip"><span class="n">①</span><b>RSI 50/70 관통</b> · 최근 N봉 중 <b>RSI시가 ≤ 선 AND RSI고가 ≥ 선</b>인 봉</div>
@@ -1082,13 +1125,13 @@ document.getElementById('scanmodeseg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return;
   e.currentTarget.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); scanMode = b.dataset.sm;
-  const isVolx=(scanMode==='volx'), isMaprox=(scanMode==='maprox'), isRs=(scanMode==='rsscan'), isSeq=(scanMode==='seq'), isMania=(scanMode==='mania'), isSpecial=isVolx||isMaprox||isRs||isSeq;
+  const isVolx=(scanMode==='volx'), isMaprox=(scanMode==='maprox'), isRs=(scanMode==='rsscan'), isSeq=(scanMode==='seq'), isMania=(scanMode==='mania'||scanMode==='oversold'), isSpecial=isVolx||isMaprox||isRs||isSeq;
   document.getElementById('volxfield').style.display = isVolx ? '' : 'none';
   document.getElementById('maproxfield').style.display = isMaprox ? '' : 'none';
   document.getElementById('rsscanfield').style.display = isRs ? '' : 'none';
   document.getElementById('seqfield').style.display = isSeq ? '' : 'none';
   document.getElementById('maniafield').style.display = isMania ? '' : 'none';
-  if(isMania){ const cntRow=document.getElementById('maniacnt'); if(cntRow){ const dim=(maniaMode==='now'); cntRow.disabled=dim; cntRow.parentElement.style.opacity=dim?'.4':'1'; } }
+  if(isMania){ const cntRow=document.getElementById('maniacnt'); if(cntRow){ const dim=(maniaMode==='now'); cntRow.disabled=dim; cntRow.parentElement.style.opacity=dim?'.4':'1'; } applyManiaLabels(); }
   { const rb=document.getElementById('retestbarfield'); if(rb) rb.style.display = isSpecial ? 'none' : ''; }
   moveOptionsRow(isRs);
   if(isRs) initRsChart();
@@ -1103,7 +1146,7 @@ document.getElementById('scanmodeseg').addEventListener('click', e=>{
   }else if(scanMode==='pullback'){
     retestN = 10;
     [...document.getElementById('barseg').children].forEach(x=>x.classList.toggle('on', +x.dataset.n===10));
-  }else if((scanMode==='bear' || scanMode==='ctlong' || scanMode==='mania') && retestN < 3){
+  }else if((scanMode==='bear' || scanMode==='ctlong' || scanMode==='mania' || scanMode==='oversold') && retestN < 3){
     retestN = 5;
     [...document.getElementById('barseg').children].forEach(x=>x.classList.toggle('on', +x.dataset.n===5));
   }
@@ -1220,10 +1263,7 @@ document.getElementById('rsdiagbtn').addEventListener('click', async ()=>{
     [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
     b.classList.add('on');
     const v=b.dataset[attr];
-    if(varn==='maniaBack'){ maniaBack=+v;
-      const h=document.getElementById('maniabackhint');
-      if(h){ const tf=(currentTF||'4h').toUpperCase(); h.textContent = tf+' 기준 '+v+'봉'+(v==42?' ≈ 1주(4H)':v==21?' ≈ 반주(4H)':v==6?' ≈ 하루(4H)':''); }
-    }
+    if(varn==='maniaBack'){ maniaBack=+v; updateManiaBackHint(); }
     else if(varn==='maniaLive') maniaLive=v;
     else if(varn==='maniaMode'){ maniaMode=v;
       const cntRow=document.getElementById('maniacnt'); if(cntRow){ const dim=(v==='now'); cntRow.disabled=dim; cntRow.parentElement.style.opacity=dim?'.4':'1'; }
@@ -1287,6 +1327,7 @@ document.getElementById('tfseg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return;
   [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); currentTF = b.dataset.tf;
+  updateManiaBackHint();   // "N봉 ≈ 몇 시간" 안내는 TF에 따라 달라짐
 });
 document.getElementById('barseg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return;
@@ -1565,7 +1606,10 @@ const EX = {
 
 // ---- per symbol ----
 async function scanSymbol(s, cfg){
-  const lim = 300;
+  // 필요한 봉 수를 모드에 맞춰 산정 — 과매수/과매도는 되돌아볼 구간이 최대 300봉이라 여유분을 더 받음
+  // (거래소 1회 요청 상한: Binance 선물 1500 · Bybit v5 1000 → 1000으로 캡)
+  const needBack = (cfg.scanMode==='mania' || cfg.scanMode==='oversold') ? (cfg.maniaBack||50) : 0;
+  const lim = Math.min(1000, Math.max(300, needBack + (cfg.rsiLen||14) + 60));
   let bars;
   try{ bars = await EX[cfg.exchange].klines(s.symbol, cfg.tf, lim); }
   catch(e){ return null; }
@@ -2020,37 +2064,41 @@ async function scanSymbol(s, cfg){
     });
   }
 
-  if(cfg.scanMode === 'mania'){
-    // 되돌아볼 구간(maniaBack봉) 안에서 RSI 종가 ≥ 70인 봉이 몇 개인지 세고, 임계 이상이면 통과
-    const back = cfg.maniaBack || 42;
+  if(cfg.scanMode === 'mania' || cfg.scanMode === 'oversold'){
+    // 과매수(≥70) / 과매도(≤30) 공용 로직 — 되돌아볼 구간 안에서 해당 봉 개수를 세고 임계 이상이면 통과
+    const isOS = (cfg.scanMode === 'oversold');
+    const TH = isOS ? 30 : 70;
+    const hitAt = (v) => isOS ? (v <= TH) : (v >= TH);      // 과매도는 이하, 과매수는 이상
+    const back = cfg.maniaBack || 50;
     const cntNeed = cfg.maniaCnt || 1;
     const endIdx = (cfg.maniaLive==='closed') ? i0-1 : i0;   // 완성봉까지 / 현재봉 포함
     if(endIdx < 0) return null;
-    let cnt = 0, rsiMax = 0, lastHit = -1, firstHit = -1;
+    let cnt = 0, rsiExt = isOS ? 100 : 0, lastHit = -1;
     for(let n=0; n<back; n++){
       const idx = endIdx - n;
       if(idx < 0) break;
       if(rC[idx]==null) continue;
-      if(rC[idx] > rsiMax) rsiMax = rC[idx];
-      if(rC[idx] >= 70){ cnt++; if(lastHit<0) lastHit=idx; firstHit=idx; }
+      if(isOS ? (rC[idx] < rsiExt) : (rC[idx] > rsiExt)) rsiExt = rC[idx];   // 구간 극단값
+      if(hitAt(rC[idx])){ cnt++; if(lastHit<0) lastHit=idx; }
     }
-    if(cnt < 1) return null;   // 구간 내 과매수 이력이 아예 없으면 제외
-    const nowHot = (rC[endIdx]!=null && rC[endIdx] >= 70);   // 현재봉 과매수 여부
+    if(cnt < 1) return null;   // 구간 내 이력이 아예 없으면 제외
+    const nowHot = (rC[endIdx]!=null && hitAt(rC[endIdx]));   // 현재봉이 임계 상태인가
     const mode = cfg.maniaMode || 'now';
-    if(mode==='now'   && !nowHot) return null;              // 지금 과매수만
+    if(mode==='now'   && !nowHot) return null;              // 지금 상태만
     if(mode==='count' && cnt < cntNeed) return null;         // 과거 N회 누적만
     if(mode==='both'  && !(nowHot && cnt >= cntNeed)) return null;   // 둘 다
     return gate({
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
       rO: rO[i0], rH: rH[i0], rL: rL[i0], rC: rC[i0]!=null?rC[i0]:0, rPrev: [i0-4,i0-3,i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC, cfg.smaF, i0), sma20: smaAt(rC, cfg.smaS, i0),
-      gap: rsiMax,                     // 구간 내 RSI 최고값
-      maniaCnt: cnt,                   // 과매수(≥70) 봉 개수
+      gap: rsiExt,                     // 구간 내 RSI 극단값 (과매수=최고 / 과매도=최저)
+      maniaCnt: cnt,                   // 임계 돌파 봉 개수
       maniaBack: back,
       maniaNowRsi: (rC[endIdx]!=null ? rC[endIdx] : null),   // 현재(마지막) 봉 RSI
-      maniaNowHot: (rC[endIdx]!=null && rC[endIdx] >= 70),   // 지금 과매수 상태인가
+      maniaNowHot: nowHot,             // 지금 과매수/과매도 상태인가
       maniaMode: cfg.maniaMode || 'now',
-      retestN: (lastHit>=0) ? (i0 - lastHit + 1) : 1,   // 가장 최근 과매수 봉 위치
+      maniaOS: isOS,                   // true=과매도 · false=과매수
+      retestN: (lastHit>=0) ? (i0 - lastHit + 1) : 1,   // 가장 최근 해당 봉 위치
       mania: true,
       smaInfo
     });
@@ -2349,7 +2397,7 @@ function tfTags(tags){
   if(!tags) return '';
   if(tags.overheat){
     const th = tags.th || 90;
-    const col = th>=90 ? '#e0584f' : '#f0883c';   // 90=빨강(숏), 70=주황(광기)
+    const col = tags.os ? '#4aa8d8' : (th>=90 ? '#e0584f' : '#f0883c');   // 30=파랑(과매도), 90=빨강(숏), 70=주황(과매수)
     let h='';
     const OL={'5m':'5M','15m':'15M','1h':'1H','4h':'4H'};
     ['5m','15m','1h','4h'].forEach(tf=>{ if(tags.over&&tags.over[tf]) h+=`<span class="tf-tag" style="color:${col};background:${col}22;border-color:${col}66">${OL[tf]} ${th}</span>`; });
@@ -2384,13 +2432,16 @@ function render(){
     return;
   }
   const rows = [...lastRows].sort((a,b)=>{
-    if(a.mania && b.mania && sortKey==='vol'){   // 광기 기본정렬 (다른 정렬 누르면 그거 우선)
-      if((a.maniaMode||'now')==='now'){   // 지금 과매수: 현재 RSI 높은 순
-        if((b.maniaNowRsi||0)!==(a.maniaNowRsi||0)) return (b.maniaNowRsi||0)-(a.maniaNowRsi||0);
+    if(a.mania && b.mania && sortKey==='vol'){   // 과매수/과매도 기본정렬 (다른 정렬 누르면 그거 우선)
+      const os = !!a.maniaOS;             // 과매도는 낮은 RSI가 위 · 과매수는 높은 RSI가 위
+      if((a.maniaMode||'now')==='now'){   // 지금 상태: 현재 RSI 극단 순
+        const av=(a.maniaNowRsi!=null?a.maniaNowRsi:(os?100:0)), bv=(b.maniaNowRsi!=null?b.maniaNowRsi:(os?100:0));
+        if(av!==bv) return os ? (av-bv) : (bv-av);
       } else {                            // 과거 N회: 횟수 순
         if((b.maniaCnt||0)!==(a.maniaCnt||0)) return (b.maniaCnt||0)-(a.maniaCnt||0);
       }
-      if((b.gap||0)!==(a.gap||0)) return (b.gap||0)-(a.gap||0);
+      const ag=(a.gap!=null?a.gap:(os?100:0)), bg=(b.gap!=null?b.gap:(os?100:0));
+      if(ag!==bg) return os ? (ag-bg) : (bg-ag);
       return b.vol-a.vol;
     }
     if(sortKey==='retestSum'){
@@ -2465,7 +2516,20 @@ function render(){
     const condTx=(()=>{const tx=n=>{const a=n-1; return a===0?'0봉(진행)':a+'봉전';};
       return r.resist ? tx(r.retestN)+' 관통' : (r.support ? tx(r.retestN)+' 지지' : (r.seq ? `R${tx(r.retestN2)}→P${tx(r.retestN)}` : (r.retestN2!=null ? tx(r.retestN)+'·'+tx(r.retestN2) : tx(r.retestN))));})();
     const fnd = r.funding!=null ? `<span style="color:${r.funding>0?'#e0584f':(r.funding<0?'#46cd8a':'var(--dim)')}">${r.funding>0?'+':''}${r.funding.toFixed(3)}%</span>` : '–';
-    const maniaLine = r.mania?`<span class="reftag" style="color:#f0883c;background:rgba(240,136,60,.18);font-weight:700">🔥 과매수 ${r.maniaCnt}회 / ${r.maniaBack}봉</span>${r.maniaNowHot?`<span class="reftag" style="color:#0a0e16;background:#f0883c;font-weight:700">● 지금 과매수 ${(r.maniaNowRsi||0).toFixed(0)}</span>`:`<span class="reftag" style="color:var(--muted);background:var(--surface-2)">지금 RSI ${(r.maniaNowRsi||0).toFixed(0)}</span>`}<span class="reftag" style="color:#e0584f;background:var(--surface-2)">최고 ${(r.gap||0).toFixed(0)}</span>`:'';
+    const maniaLine = (()=>{
+      if(!r.mania) return '';
+      const os = !!r.maniaOS;
+      const COL = os ? '#4aa8d8' : '#f0883c';          // 과매도=파랑 · 과매수=주황
+      const RGB = os ? '74,168,216' : '240,136,60';
+      const ICO = os ? '🧊' : '🔥';
+      const NAME = os ? '과매도' : '과매수';
+      const EXT = os ? '최저' : '최고';
+      return `<span class="reftag" style="color:${COL};background:rgba(${RGB},.18);font-weight:700">${ICO} ${NAME} ${r.maniaCnt}회 / ${r.maniaBack}봉</span>`
+        + (r.maniaNowHot
+            ? `<span class="reftag" style="color:#0a0e16;background:${COL};font-weight:700">● 지금 ${NAME} ${(r.maniaNowRsi||0).toFixed(0)}</span>`
+            : `<span class="reftag" style="color:var(--muted);background:var(--surface-2)">지금 RSI ${(r.maniaNowRsi||0).toFixed(0)}</span>`)
+        + `<span class="reftag" style="color:${os?'#5b9bd5':'#e0584f'};background:var(--surface-2)">${EXT} ${(r.gap||0).toFixed(0)}</span>`;
+    })();
     const tagRows = [tfLine, seqLine, maniaLine, rsScanLine, maproxLine, volxLine, pxLine, rsiLine, condLine, favpxLine, favcondLine].filter(x=>x.trim()).map(x=>`<div class="rc-tagline">${x}</div>`).join('');
     html += `<div class="rescard rowclick" data-symbol="${r.symbol}">
       <div class="rc-top">
@@ -2855,7 +2919,7 @@ async function runScan(){
 
 // ── 필터 체인 (drill-down) ──
 function scanModeLabel(cfg){
-  const M = {bull:'📈정배', pullback:'📉눌림목', support:'RSI50지지', bear:'📉역배', ctlong:'역추세롱', mania:'광기', short:'숏', resist:'저항', volx:'⚡변동성', maprox:'📏이평근접', rsscan:'🔺RS스캔', seq:'🕯️3+1반전'};
+  const M = {bull:'📈정배', pullback:'📉눌림목', support:'RSI50지지', bear:'📉역배', ctlong:'역추세롱', mania:'🔥과매수', oversold:'🧊과매도', short:'숏', resist:'저항', volx:'⚡변동성', maprox:'📏이평근접', rsscan:'🔺RS스캔', seq:'🕯️3+1반전'};
   let base = M[cfg.scanMode] || cfg.scanMode;
   if(cfg.scanMode==='volx') base += ` ${cfg.volxPct}%·${(cfg.tf||'').toUpperCase()}`;
   else if(cfg.scanMode==='rsscan') base += ` ${cfg.rsBarCount}봉·${(cfg.rsTf||'1h').toUpperCase()} ≥${cfg.rsScanPct}%p`;
@@ -2929,7 +2993,7 @@ async function drillScan(){
     nr.dip = pr.dip || nr.dip;
     nr.maprox = pr.maprox || nr.maprox;
     // 다른 모드 태그(정배/변동성 등)도 이전 값 유지
-    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits'].forEach(k=>{
+    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS'].forEach(k=>{
       if(nr[k]===undefined && pr[k]!==undefined) nr[k]=pr[k];
     });
   });
@@ -3089,8 +3153,9 @@ async function computeTags(symbol, cfg){
   const getK = (tf, lim) => cfg.endTime
     ? EX[cfg.exchange].klinesUntil(symbol, tf, cfg.endTime, lim)
     : EX[cfg.exchange].klines(symbol, tf, lim);
-  if(cfg.scanMode === 'short' || cfg.scanMode === 'mania'){
-    const TH = cfg.scanMode === 'mania' ? 70 : 90;
+  if(cfg.scanMode === 'short' || cfg.scanMode === 'mania' || cfg.scanMode === 'oversold'){
+    const osTag = (cfg.scanMode === 'oversold');
+    const TH = osTag ? 30 : (cfg.scanMode === 'mania' ? 70 : 90);
     const bbout = {}, over = {};
     for(const tf of ['5m','15m','1h','4h']){
       try{
@@ -3101,16 +3166,18 @@ async function computeTags(symbol, cfg){
           if(cur >= 19){
             let sum=0; for(let k=cur-19;k<=cur;k++) sum+=ac[k];
             const m=sum/20; let v=0; for(let k=cur-19;k<=cur;k++){ const d=ac[k]-m; v+=d*d; }
-            if(ah[cur] > m + 2*Math.sqrt(v/20)) bbout[tf] = true;
+            const sd=2*Math.sqrt(v/20);
+            // 과매도는 저가가 BB 하단 이탈, 그 외는 고가가 BB 상단 돌파
+            if(osTag ? (tb.map(b=>b.l)[cur] < m - sd) : (ah[cur] > m + sd)) bbout[tf] = true;
           }
           tb.pop();
           const trc = rsiCloseSeries(tb.map(b=>b.c), cfg.rsiLen);
           const li = trc.length - 1;
-          for(let k=0; k<10 && li-k>=0; k++){ if(trc[li-k]!=null && trc[li-k] >= TH){ over[tf] = true; break; } }
+          for(let k=0; k<10 && li-k>=0; k++){ const v2=trc[li-k]; if(v2!=null && (osTag ? v2 <= TH : v2 >= TH)){ over[tf] = true; break; } }
         }
       }catch(e){}
     }
-    return { overheat:true, th:TH, bbout, over };
+    return { overheat:true, th:TH, os:osTag, bbout, over };
   }
   const tags = {};
   const hotChk = (arr)=>{ const r=rsiCloseSeries(arr,cfg.rsiLen); const i=r.length-1; return r[i]!=null && r[i]>=70; };
@@ -3711,7 +3778,7 @@ function nextSide(sym, dir){
   const last = positionLog.find(p=>p.symbol===sym && p.dir===dir);   // newest-first
   return (last && last.side==='entry') ? 'exit' : 'entry';
 }
-const CHART_KLINE_LIMIT = 260;      // SMA200 + 최근 20봉 표시 여유
+const CHART_KLINE_LIMIT = 700;      // SMA300 + 최근 400봉 표시 여유 (거래소 1회 상한: Binance 1500 · Bybit 1000)
 const CHART_CACHE_TTL_MS = 20_000;
 const CHART_CACHE_MAX = 40;
 const chartKlineCache = new Map();
@@ -3800,7 +3867,7 @@ function buildChartDataset(bars, cfg){
     rsiData.push({time:t[i],open:rO[i],high:Math.max(rO[i],rH[i],rL[i],rC[i]),low:Math.min(rO[i],rH[i],rL[i],rC[i]),close:rC[i]});
   }
   const priceSmas={};
-  [5,10,20,50,120,200].forEach(p=>{ priceSmas[p]=priceSMA(closes,t,p); });
+  [5,10,20,50,120,200,300].forEach(p=>{ priceSmas[p]=priceSMA(closes,t,p); });
   return {
     t,opens,highs,lows,closes,priceData,rO,rH,rL,rC,rsiData,sma9Data,sma20Data,
     priceSmas, priceBB:bollinger(closes,t,20,2), priceBB120:bollinger(closes,t,120,1), rsiBB:nullableBollinger(rC,t,cfg.smaS,2),
@@ -3922,7 +3989,7 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   if(iShow[5])  pc.addLineSeries({color:'#5fd6c4',lineWidth:1,...pls}).setData(priceSmas[5]);
   if(iShow[10]) pc.addLineSeries({color:'#bf95f0',lineWidth:1,...pls}).setData(priceSmas[10]);
   if(iShow[20]) pc.addLineSeries({color:'#d77b38',lineWidth:(scanMode==='bear'||scanMode==='pullback'||(scanMode==='bull'&&bullRet.p20))?2:1.5,...pls}).setData(priceSmas[20]);
-  [[50,'#c9a53d',1],[120,'#3aad64',1],[200,'#f1f4f8',2]].forEach(([P,col,w])=>{
+  [[50,'#c9a53d',1],[120,'#3aad64',1],[200,'#f1f4f8',2],[300,'#e05a8f',2]].forEach(([P,col,w])=>{
     if(iShow[P] && closes.length >= P) pc.addLineSeries({color:col,lineWidth:w,...pls,autoscaleInfoProvider:()=>null}).setData(priceSmas[P]);
   });
 
@@ -4182,12 +4249,20 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
         if(rO[idx]==null||rL[idx]==null) continue;
         if(rO[idx]>=50 && rL[idx]<=50){ rcs.setMarkers([{time:t[idx],position:'belowBar',color:'#46cd8a',shape:'arrowUp',text:'50 지지'}]); break; }
       }
-    }else if(scanMode === 'short' || scanMode === 'mania'){
-      const TH = scanMode==='mania'?70:90;
+    }else if(scanMode === 'short' || scanMode === 'mania' || scanMode === 'oversold'){
+      const osM = (scanMode==='oversold');
+      const TH = osM ? 30 : (scanMode==='mania'?70:90);
       const start = Math.max(0, i0c - retestN + 1);
-      let hi=null, hv=-1;
-      for(let idx=start; idx<=i0c; idx++){ if(rC[idx]!=null && rC[idx]>=TH && rC[idx]>hv){ hv=rC[idx]; hi=idx; } }
-      if(hi!=null) rcs.setMarkers([{time:t[hi],position:'aboveBar',color:TH>=90?'#e0584f':'#f0883c',shape:'arrowDown',text:`RSI ${TH}+`}]);
+      let hi=null, hv=osM?101:-1;
+      for(let idx=start; idx<=i0c; idx++){
+        const v=rC[idx]; if(v==null) continue;
+        if(osM ? (v<=TH && v<hv) : (v>=TH && v>hv)){ hv=v; hi=idx; }
+      }
+      if(hi!=null) rcs.setMarkers([{time:t[hi],
+        position: osM?'belowBar':'aboveBar',
+        color: osM?'#4aa8d8':(TH>=90?'#e0584f':'#f0883c'),
+        shape: osM?'arrowUp':'arrowDown',
+        text:`RSI ${TH}${osM?'-':'+'}`}]);
     }else{
       // 통일 리테 정의: 인트라바(시가>선·저가<선·종가>선) 또는 봉간크로스(직전봉 시가>선·종가<선 → 이번봉 시가<선·종가>선)
       const cRet = (ln, idx)=>{
@@ -4339,7 +4414,7 @@ async function renderChartView({forceRefresh=false}={}){
     body.className = 'modal-body';
     const tfb = IS_MOBILE ? `<span class="tfnow">${chartTF.toUpperCase()}</span> ` : '';
     body.innerHTML = `
-      <div class="chart-pane"><div class="pane-label">${tfb}가격 · <span class="l5">5</span> <span class="l10">10</span> <span class="l20">20</span> <span class="l50">50</span> <span class="l120">120</span> <span class="l200">200</span> · <span class="lb">BB</span> · <span class="lmd">MACD</span></div><div class="pchart"></div></div>
+      <div class="chart-pane"><div class="pane-label">${tfb}가격 · <span class="l5">5</span> <span class="l10">10</span> <span class="l20">20</span> <span class="l50">50</span> <span class="l120">120</span> <span class="l200">200</span> <span class="l300">300</span> · <span class="lb">BB</span> · <span class="lmd">MACD</span></div><div class="pchart"></div></div>
       <div class="chart-pane"><div class="pane-label">${tfb}RSI 캔들 · <b>SMA9</b> / <i>SMA20</i> · <span class="lrb">BB(20,2)</span></div><div class="rchart"></div></div>`;
     let pH, rH;
     if(IS_MOBILE){
@@ -4372,7 +4447,7 @@ async function renderChartView({forceRefresh=false}={}){
     body.innerHTML = tfs.map(tf=>`
       <div class="quad-cell">
         <div class="quad-label">${tf.toUpperCase()}</div>
-        <div class="pane-label">가격 · <span class="l5">5</span> <span class="l10">10</span> <span class="l20">20</span> <span class="l50">50</span> <span class="l120">120</span> <span class="l200">200</span> · <span class="lb">BB</span> · <span class="lmd">MACD</span></div><div class="pchart"></div>
+        <div class="pane-label">가격 · <span class="l5">5</span> <span class="l10">10</span> <span class="l20">20</span> <span class="l50">50</span> <span class="l120">120</span> <span class="l200">200</span> <span class="l300">300</span> · <span class="lb">BB</span> · <span class="lmd">MACD</span></div><div class="pchart"></div>
         <div class="pane-label">RSI · <b>9</b>/<i>20</i> · <span class="lrb">BB</span></div><div class="rchart"></div>
       </div>`).join('');
     const cells = [...body.querySelectorAll('.quad-cell')];
