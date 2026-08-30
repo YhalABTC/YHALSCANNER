@@ -3988,10 +3988,20 @@ function chartCommon(){
 const CANDLE = {upColor:'#46cd8a',downColor:'#e0584f',wickUpColor:'#46cd8a',wickDownColor:'#e0584f',borderVisible:false};
 
 // limit visible candles; both panels share the same range so candles line up
-function setBars(chart, n, total, lastTime, gridTimes){
+function setBars(chart, n, total, lastTime, gridTimes, widthEl){
   const ts = chart.timeScale();
   const N = (n && total>n) ? n : total;
   const gap = 10;   // 우측 여백 (캔들 계산 무관, 표시만)
+  // lightweight-charts는 barSpacing을 minBarSpacing 아래로 못 내린다.
+  // 패널 폭이 좁으면 minBarSpacing에 걸려 요청한 봉 수가 안 들어가므로(예: 380px에 200봉),
+  // 요청 봉 수에 맞춰 minBarSpacing을 먼저 낮춰준다.
+  try{
+    const w = (widthEl && widthEl.clientWidth) || (chart.options && chart.options().width) || 0;
+    if(w > 0){
+      const need = Math.max(0.05, Math.min(6, w / (N + gap)));
+      chart.applyOptions({ timeScale: { minBarSpacing: need } });
+    }
+  }catch(e){}
   ts.setVisibleLogicalRange({ from: Math.max(0, total - N), to: total - 1 + gap });
 }
 
@@ -4453,15 +4463,11 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   });
 
   // both panels share the identical time grid (t) and last time -> candles align
-  if(typeof IS_MOBILE!=='undefined' && IS_MOBILE){
-    // 모바일: 최근 N봉만 + 우측 빈 공간(rightOffset) 유지
-    const N = visibleBars || 55, total = t.length, gap = 10;   // 우측 여백 10봉
-    const lr = { from: Math.max(0, total - N), to: total - 1 + gap };
-    pc.timeScale().setVisibleLogicalRange(lr);
-    rc.timeScale().setVisibleLogicalRange(lr);
-  } else {
-    setBars(pc, visibleBars, t.length, t[t.length-1], t);
-    setBars(rc, visibleBars, t.length, t[t.length-1], t);
+  // PC·모바일 동일 경로 — setBars가 패널 폭에 맞춰 minBarSpacing까지 조정
+  {
+    const N = visibleBars || (typeof IS_MOBILE!=='undefined' && IS_MOBILE ? 55 : 100);
+    setBars(pc, N, t.length, t[t.length-1], t, priceEl);
+    setBars(rc, N, t.length, t[t.length-1], t, rsiEl);
   }
   let lock=false;
   const a=pc.timeScale(), b2=rc.timeScale();
@@ -4533,7 +4539,14 @@ async function renderChartView({forceRefresh=false}={}){
     if(renderId!==chartRenderSeq) return;
   }
   if(renderId!==chartRenderSeq || !body.isConnected) return;
-  const ro = new ResizeObserver(()=>{ charts.forEach(({chart,el})=>{ try{chart.applyOptions({width:el.clientWidth||320});}catch(e){} }); });
+  const ro = new ResizeObserver(()=>{ charts.forEach(({chart,el})=>{ try{
+    chart.applyOptions({width:el.clientWidth||320});
+    // 폭이 바뀌면 minBarSpacing 상한도 다시 계산해야 요청한 봉 수가 유지됨
+    const r = chart.timeScale().getVisibleLogicalRange();
+    if(r){ const span = Math.max(1, r.to - r.from);
+      chart.applyOptions({timeScale:{minBarSpacing: Math.max(0.05, Math.min(6, (el.clientWidth||320)/span))}});
+      chart.timeScale().setVisibleLogicalRange(r); }
+  }catch(e){} }); });
   ro.observe(body); chartObservers.push(ro);
   if(markMode) body.classList.add('marking');
   renderChartJournal();
