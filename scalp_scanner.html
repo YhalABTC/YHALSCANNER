@@ -214,6 +214,11 @@
   .seg.modeswitch button[data-sm="rsscan"].on{background:#ff9d4d;color:#0a0e16}
   .seg.modeswitch button[data-sm="seq"].on{background:#9d7bd8;color:#0a0e16}
   .field.disabled{opacity:.4;pointer-events:none}
+  /* 공통 동시조건: 특수 스캔 4종에서만 숨김 (인라인 스타일 대신 선언적으로) */
+  body[data-scan="maprox"] #pxretfield,
+  body[data-scan="volx"]   #pxretfield,
+  body[data-scan="rsscan"] #pxretfield,
+  body[data-scan="seq"]    #pxretfield{display:none}
 
   .num{font-family:var(--mono);font-size:14px;color:var(--text);background:var(--surface-2);
     border:1px solid var(--border);border-radius:8px;padding:8px 11px;width:108px;outline:none}
@@ -844,6 +849,16 @@
           <button data-n="20">20</button>
         </div>
       </div>
+      <div class="field" id="pxretfield">
+        <label>가격 캔들 리테 <span style="color:var(--amber);font-weight:700;font-size:10px">(공통 동시조건)</span></label>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <div class="seg" id="pxretseg" title="스캔 조건에 AND로 덧붙는 필터 — 최근 '봉 개수' 구간 안에서 가격 캔들이 해당 가격 이평을 지지 리테했는지. 둘 다 켜면 둘 다 만족해야 통과.">
+            <button data-pr="p5">가격 5선 리테</button>
+            <button data-pr="p20">가격 20선 리테</button>
+          </div>
+          <span style="color:var(--muted);font-size:10.5px">끄면 필터 없음 · 켠 것은 모두 만족해야 통과</span>
+        </div>
+      </div>
       <div class="field" id="modefield">
         <label>탐색 범위</label>
         <div class="seg" id="modeseg">
@@ -1031,6 +1046,8 @@ const CHART_TZ = 9*3600;   // 차트 표시용 KST 오프셋 (앱 전체 공통)
 let btcRet = {};   // BTC 직전봉 수익률 캐시 {tf: ret%}
 let retestN = 6, retestMode = 'within';   // 내부 = 선택값+1 (진행봉 포함 창)
 let rsiNear = false;   // 눌림목 RSI 50 지지: false=정확 관통(<50), true=55 근접 허용
+// 공통 동시조건: 가격 캔들 5선/20선 리테 (일반 스캔 전 모드에 AND)
+let pxRet = {p5:false, p20:false};
 // 정배 리테 라인 토글: RSI SMA9 / RSI SMA20 / 가격 SMA5 / 가격 SMA20
 let bullRet = {r9:true, r20:true, p5:false, p20:false};
 let bullRetMode = 'or';     // 'or'=하나라도 · 'and'=켠 라인 전부 (같은 봉)
@@ -1068,6 +1085,14 @@ function updateManiaBackHint(){
     : mins < 10080 ? `${(mins/1440).toFixed(mins%1440?1:0)}일`
     : `${(mins/10080).toFixed(mins%10080?1:0)}주`;
   h.textContent = `${tf.toUpperCase()} 기준 ${maniaBack}봉 ≈ ${span}`;
+}
+// 모든 일반 스캔 칩 뒤에 붙는 공통 동시조건 안내
+function pxRetChip(){
+  const on = [];
+  if(pxRet.p5)  on.push('<span style="color:#5fd6c4">가격 5선</span>');
+  if(pxRet.p20) on.push('<span style="color:#d77b38">가격 20선</span>');
+  if(!on.length) return '';
+  return `<div class="chip"><b>+동시조건</b> · ${on.join(' <b>AND</b> ')} 지지 리테 (최근 봉 개수 구간 내)</div>`;
 }
 function updateCondChips(){
   const el = document.getElementById('condchips');
@@ -1120,6 +1145,8 @@ function updateCondChips(){
       <div class="chip">라벨 <span style="color:#e0584f">TF 90</span> = 해당 TF RSI 90 초과 · <span style="color:#bf95f0">TF BB</span> = 진행봉 고가 BB상단 돌파</div>
       <div class="chip">과매수 극단 → 숏 관점</div>`;
   }
+  // 일반 스캔이면 공통 동시조건 칩을 뒤에 덧붙임 (특수 스캔은 gate를 안 타므로 제외)
+  if(!['maprox','volx','rsscan','seq'].includes(scanMode)) el.innerHTML += pxRetChip();
 }
 document.getElementById('scanmodeseg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return;
@@ -1133,6 +1160,7 @@ document.getElementById('scanmodeseg').addEventListener('click', e=>{
   document.getElementById('maniafield').style.display = isMania ? '' : 'none';
   if(isMania){ const cntRow=document.getElementById('maniacnt'); if(cntRow){ const dim=(maniaMode==='now'); cntRow.disabled=dim; cntRow.parentElement.style.opacity=dim?'.4':'1'; } applyManiaLabels(); }
   { const rb=document.getElementById('retestbarfield'); if(rb) rb.style.display = isSpecial ? 'none' : ''; }
+  document.body.dataset.scan = scanMode;   // #pxretfield 표시는 CSS가 담당
   moveOptionsRow(isRs);
   if(isRs) initRsChart();
   // 역배/눌림목/숏은 탐색범위 토글 무의미 → 비활성
@@ -1169,7 +1197,9 @@ document.getElementById('volxbarseg').addEventListener('click', e=>{
   });
   // 기본 스캔이 이평근접 → 초기부터 해당 필드 표시, 정배 전용 필드 숨김
   if(scanMode==='rsscan'){ moveOptionsRow(true); }
-  { const rb=document.getElementById('retestbarfield'); if(rb && ['maprox','volx','rsscan','seq'].includes(scanMode)) rb.style.display='none'; }
+  { const sp=['maprox','volx','rsscan','seq'].includes(scanMode);
+    const rb=document.getElementById('retestbarfield'); if(rb && sp) rb.style.display='none';
+    document.body.dataset.scan = scanMode; }
   if(scanMode==='maprox'){
     const mf=document.getElementById('maproxfield'); if(mf) mf.style.display='';
     const bf=document.getElementById('bullretfield'); if(bf) bf.style.display='none';
@@ -1343,6 +1373,13 @@ document.getElementById('modeseg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return;
   [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); retestMode = b.dataset.m;
+});
+document.getElementById('pxretseg').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  const k = b.dataset.pr; if(!k) return;
+  pxRet[k] = !pxRet[k];
+  b.classList.toggle('on', pxRet[k]);
+  updateCondChips();
 });
 document.getElementById('bullretseg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return;
@@ -1643,8 +1680,37 @@ async function scanSymbol(s, cfg){
 
   const i0 = closes.length - 1;            // 진행봉 포함 시 현재(진행) 봉 = 미니캔들 기준
 
-  // (5선 필터 제거됨) — 결과 후처리 훅만 남겨 둠
-  const gate = (row)=> row;
+  // ── 공통 동시조건: 가격 캔들 5선/20선 리테스트 ──
+  // 일반 스캔(정배·눌림목·RSI50지지·역배·역추세롱·숏·저항·과매수·과매도) 결과에 AND로 덧씌움
+  const pxRetOn = ['p5','p20'].filter(k => (cfg.pxRet||{})[k]);
+  // 최근 retestN봉 안에서 가격 캔들이 해당 가격 이평을 지지 리테했는지 → 몇 봉 전인지 반환(0=없음)
+  const pxRetHit = (period)=>{
+    const win = Math.max(1, cfg.retestN || 1);
+    for(let n=1; n<=win; n++){
+      const idx = i0 - (n-1);
+      if(idx < 1) break;
+      const sv = smaAt(closes, period, idx);
+      if(sv==null) continue;
+      // 단봉: 시가>선 · 저가<선 · 종가>선
+      if(opens[idx]>sv && lows[idx]<sv && closes[idx]>sv) return {n, span:1};
+      // 2봉: 직전봉 선 아래 눌림 → 이번봉 복귀
+      const sp = smaAt(closes, period, idx-1);
+      if(sp!=null && opens[idx-1]>sp && closes[idx-1]<sp && opens[idx]<sv && closes[idx]>sv) return {n, span:2};
+    }
+    return null;
+  };
+  const gate = (row)=>{
+    if(!row || !pxRetOn.length) return row;
+    const hits = [];
+    for(const k of pxRetOn){
+      const period = (k==='p5') ? 5 : cfg.smaS;
+      const h = pxRetHit(period);
+      if(!h) return null;                    // 동시조건 → 켠 것 전부 만족해야 통과
+      hits.push({ref: (k==='p5'?'px5':'px20'), span:h.span, n:h.n});
+    }
+    row.pxRetHits = hits;
+    return row;
+  };
 
   // ── 가격 미니캔들용: 마지막 마감봉 + 직전봉 OHLC + SMA5 + BB(20,2) ──
   const pxMini = (()=>{
@@ -2346,6 +2412,15 @@ function fmtPrice(p){
   return p.toPrecision(4);
 }
 
+// 공통 동시조건(가격 5선/20선 리테) 태그 — "+" 로 덧붙은 조건임을 표시
+function pxRetTags(r){
+  if(!r.pxRetHits || !r.pxRetHits.length) return '';
+  return r.pxRetHits.map(h=>{
+    const isP5 = (h.ref==='px5');
+    return `<span class="reftag ${isP5?'refpx5':'refpx20'}" title="동시조건: ${h.n}봉 전 리테">`
+      + `+가격 ${isP5?'SMA5':'SMA20'}${h.span===2?' 2봉':''}</span>`;
+  }).join('');
+}
 // 정배 리테 라인 태그 (RSI SMA9/20 · 가격 SMA5/20)
 function bullRetTags(r){
   const STY = {
@@ -2506,7 +2581,7 @@ function render(){
     // 4) 가격 태그 줄
     const pxLine = `${r.pullback?`<span class="reftag refpx">가격 ${r.pxCount}회</span>`:''}${r.ctPx?`<span class="reftag refpx">가격 BB하단</span>`:''}`;
     // 5) RSI 태그 줄
-    const rsiLine = `${r.pullback?`<span class="reftag ref${r.rsiNear?'px':'ct'}">RSI50 ${r.rsiCount}회</span>`:''}${r.support?`<span class="reftag ref20">RSI50 지지${r.live?' ●':''}</span>`:''}${r.ctlong?`<span class="reftag refct">RSI BB하단</span>`:''}${r.ctBoth?`<span class="reftag refboth">가격+RSI 동시</span>`:''}${bullRetTags(r)}`;
+    const rsiLine = `${r.pullback?`<span class="reftag ref${r.rsiNear?'px':'ct'}">RSI50 ${r.rsiCount}회</span>`:''}${r.support?`<span class="reftag ref20">RSI50 지지${r.live?' ●':''}</span>`:''}${r.ctlong?`<span class="reftag refct">RSI BB하단</span>`:''}${r.ctBoth?`<span class="reftag refboth">가격+RSI 동시</span>`:''}${bullRetTags(r)}${pxRetTags(r)}`;
     // 6) 저항/기타 조건 줄
     const condLine = `${r.resist?`${r.r50?`<span class="reftag refshort">50 저항${r.live50?' ●':''}</span>`:''}${r.r70?`<span class="reftag refshort">70 저항${r.live70?' ●':''}</span>`:''}`:''}`;
     // 7) 📏 가격 스캔 결과 (TF별 SMA5/20 화살표 + MACD)
@@ -2583,6 +2658,7 @@ function buildScanCfg(){
     mode: retestMode,
     includeLive: includeLive,
     bullRet: {...bullRet}, bullRetMode: bullRetMode,
+    pxRet: {...pxRet},
     exchange: exchange,
     scanMode: scanMode,
     rsiNear: rsiNear,
@@ -2993,7 +3069,7 @@ async function drillScan(){
     nr.dip = pr.dip || nr.dip;
     nr.maprox = pr.maprox || nr.maprox;
     // 다른 모드 태그(정배/변동성 등)도 이전 값 유지
-    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS'].forEach(k=>{
+    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','pxRetHits'].forEach(k=>{
       if(nr[k]===undefined && pr[k]!==undefined) nr[k]=pr[k];
     });
   });
