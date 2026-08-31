@@ -739,33 +739,6 @@
         </div>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">
-        <span style="color:var(--muted);font-size:11px">RSI50 위:</span>
-        <div class="seg" id="maproxrsi50" title="RSI 종가가 50 위인지 (여러 TF 중복 선택 = AND)">
-          <button data-rt="4h">4H</button>
-          <button data-rt="1d">1D</button>
-        </div>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">
-        <span style="color:var(--muted);font-size:11px">RSI≈SMA9:</span>
-        <div class="seg" id="maproxrsi9" title="RSI 종가가 RSI-SMA9에 ±% 이내 (3상태: 근처→위만→끄기 · 여러 TF = AND)">
-          <button data-r9="1h">1H</button>
-          <button data-r9="4h">4H</button>
-          <button data-r9="1d">1D</button>
-          <button data-r9="1w">1W</button>
-        </div>
-        <input type="number" id="maproxrsi9pct" value="3" min="0.1" step="0.5" style="width:52px"> <span style="color:var(--muted);font-size:11px">% 이내</span>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">
-        <span style="color:var(--muted);font-size:11px">RS(BTC대비):</span>
-        <div class="seg" id="maproxrs" title="직전봉 기준 BTC 대비 강세 (여러 TF 중복 = AND)">
-          <button data-rs="4h">4H</button>
-          <button data-rs="1d">1D</button>
-          <button data-rs="1w">1W</button>
-          <button data-rs="1M">1M</button>
-        </div>
-        <input type="number" id="maproxrspct" value="0" min="-50" step="0.5" style="width:52px"> <span style="color:var(--muted);font-size:11px">%p 이상 강세</span>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">
         <span style="color:var(--muted);font-size:11px">RSI SMA9 ≥</span>
         <div class="seg sm" id="maproxs9lv" title="RSI-SMA9 임계값">
           <button data-lv="50" class="on">50</button>
@@ -800,6 +773,39 @@
         <div class="seg" id="maproxdip" title="1분봉 종가가 SMA200 아래로 이탈했다가 다시 위로 복귀한 이력 (최근 조정 신호)">
           <button data-d="off" class="on">off</button>
           <button data-d="1m">1m 200선 복귀</button>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--line);margin-top:10px;padding-top:9px">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:7px">
+          <span style="color:#8f7ae0;font-size:11px;font-weight:700">🎯 이평 리테 횟수:</span>
+          <div class="seg" id="maretmaseg" title="켠 이평선 각각이 구간 내 N회 이상 리테스트되어야 통과 (AND) · 전부 끄면 이 필터 비활성">
+            <button data-ma="120">120선</button>
+            <button data-ma="200">200선</button>
+            <button data-ma="300">300선</button>
+          </div>
+          <span style="color:var(--muted);font-size:11px;margin-left:4px">리테 ≥</span>
+          <input type="number" id="maretcnt" value="2" min="1" max="50" step="1" style="width:54px">
+          <span style="color:var(--muted);font-size:10px">회</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span style="color:var(--muted);font-size:11px">TF:</span>
+          <div class="seg sm" id="marettfseg">
+            <button data-mrtf="5m">5M</button>
+            <button data-mrtf="15m" class="on">15M</button>
+            <button data-mrtf="1h">1H</button>
+            <button data-mrtf="4h">4H</button>
+          </div>
+          <span style="color:var(--muted);font-size:11px;margin-left:4px">돌아볼 봉:</span>
+          <div class="seg sm" id="maretbackseg">
+            <button data-mrb="5">5</button>
+            <button data-mrb="7">7</button>
+            <button data-mrb="20">20</button>
+            <button data-mrb="50" class="on">50</button>
+            <button data-mrb="120">120</button>
+            <button data-mrb="200">200</button>
+            <button data-mrb="300">300</button>
+          </div>
+          <span style="color:var(--muted);font-size:10px" id="maretbackhint">15M 기준 50봉 ≈ 12.5시간</span>
         </div>
       </div>
     </div>
@@ -1027,7 +1033,11 @@ let volxTf = '15m', volxBars = 1;
 let maproxTfs = {'1m':'off','3m':'off','5m':'off','15m':'off','30m':'off','1h':'off','4h':'off','1d':'off'};   // off/near/above (기본: 전부 꺼짐)
 let maprox1wPx = 'all', maprox1wRsi = 'all';
 let maproxDip = 'off';   // 'off' | '1m' — 1분봉 200선 이탈→복귀 되돌림 필터
-let maproxRsi50 = {'4h':false,'1d':false};   // RSI50 위 필터 (TF별 중복 토글)
+let maproxRsi50 = {'4h':false,'1d':false};   // (UI 삭제됨 — 항상 off, 스캔 로직은 건너뜀)
+// 🎯 이평 리테 횟수 (이평근접 패널 내 추가 필터)
+let maretMa = {120:false, 200:false, 300:false};   // 대상 가격 이평 (여러 개 = AND · 전부 끄면 비활성)
+let maretTf = '15m';    // 전용 타임프레임
+let maretBack = 50;     // 돌아볼 봉
 let maproxRsi9 = {'1h':'off','4h':'off','1d':'off','1w':'off'};   // RSI≈SMA9 근접 (off/near/above)
 let maproxRs = {'4h':false,'1d':false,'1w':false,'1M':false};   // RS(BTC대비) 강세 필터
 let maproxS9 = {'15m':false,'1h':false,'4h':false,'1d':false,'1w':false}, maproxS9Lv = 50;    // RSI-SMA9 ≥ 임계
@@ -1074,6 +1084,15 @@ function applyManiaLabels(){
   set('maniacnthint', `구간 내 RSI${os?'≤30':'≥70'} 봉 개수`);
   const w = document.querySelector('#manianow .mword'); if(w) w.textContent = `지금 ${NAME}`;
   updateManiaBackHint();
+}
+function updateMaretHint(){
+  const h=document.getElementById('maretbackhint'); if(!h) return;
+  const MIN={'5m':5,'15m':15,'1h':60,'4h':240}[maretTf]||15;
+  const mins=maretBack*MIN;
+  const span = mins<60 ? `${mins}분`
+    : mins<1440 ? `${(mins/60).toFixed(mins%60?1:0)}시간`
+    : `${(mins/1440).toFixed(mins%1440?1:0)}일`;
+  h.textContent = `${maretTf.toUpperCase()} 기준 ${maretBack}봉 ≈ ${span}`;
 }
 function updateManiaBackHint(){
   const h = document.getElementById('maniabackhint'); if(!h) return;
@@ -1139,6 +1158,12 @@ function updateCondChips(){
       <div class="chip"><span class="n">①</span><b>RSI 50 지지</b> · 최근 N봉 중 <b>RSI시가 ≥ 50 AND RSI저가 ≤ 50</b>인 봉 (위에서 지지)</div>
       <div class="chip">태그 <span style="color:#46cd8a">RSI50 지지</span> · 반등 예상 → <b style="color:#46cd8a">롱</b></div>
       <div class="chip"><span style="color:#5fd6c4">현재진행형</span> = 현재 RSI가 50 이상 (지지받고 버팀, ● 표시)</div>`;
+  }else if(scanMode === 'maprox'){
+    const on = Object.keys(maproxTfs).filter(t=>maproxTfs[t]&&maproxTfs[t]!=='off').map(t=>t.toUpperCase());
+    el.innerHTML = `
+      <div class="chip"><span class="n">①</span><b>이평 근접</b> · ${on.length?on.join('·')+' 가격이 SMA200 ±% 이내':'<span style="color:var(--muted)">꺼짐 — 아래 추가필터만 적용</span>'}</div>
+      <div class="chip">추가필터(4H 필터 · RSI SMA9/20 레벨 · 되돌림 · 이평 리테 횟수)는 모두 <b>AND</b></div>
+      <div class="chip">전부 끄면 결과 없음</div>`;
   }else{
     el.innerHTML = `
       <div class="chip"><span class="n">①</span><b>RSI 90 과열</b> · 최근 N봉(기본10) 안에 RSI 종가 &gt; 90</div>
@@ -1147,6 +1172,15 @@ function updateCondChips(){
   }
   // 일반 스캔이면 공통 동시조건 칩을 뒤에 덧붙임 (특수 스캔은 gate를 안 타므로 제외)
   if(!['maprox','volx','rsscan','seq'].includes(scanMode)) el.innerHTML += pxRetChip();
+  // 이평근접이면 🎯 이평 리테 횟수 필터 안내를 덧붙임
+  if(scanMode==='maprox'){
+    const on = [120,200,300].filter(P=>maretMa[P]);
+    if(on.length){
+      const need = Math.max(1, parseInt((document.getElementById('maretcnt')||{}).value)||2);
+      el.innerHTML += `<div class="chip"><b style="color:#8f7ae0">🎯 이평 리테 횟수</b> · `
+        + on.map(P=>`${P}선`).join(' <b>AND</b> ') + ` 각각 ${maretTf.toUpperCase()} ${maretBack}봉 내 <b>${need}회 이상</b> 지지 리테</div>`;
+    }
+  }
 }
 document.getElementById('scanmodeseg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return;
@@ -1223,25 +1257,27 @@ document.getElementById('maprox1wrsi').addEventListener('click', e=>{
   [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); maprox1wRsi=b.dataset.r;
 });
+document.getElementById('maretmaseg').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const k=+b.dataset.ma; maretMa[k]=!maretMa[k];
+  b.classList.toggle('on', maretMa[k]);
+  updateCondChips();
+});
+document.getElementById('marettfseg').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); maretTf=b.dataset.mrtf; updateMaretHint(); updateCondChips();
+});
+document.getElementById('maretbackseg').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); maretBack=+b.dataset.mrb; updateMaretHint(); updateCondChips();
+});
+document.getElementById('maretcnt').addEventListener('input', ()=>updateCondChips());
 document.getElementById('maproxdip').addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b) return;
   [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); maproxDip=b.dataset.d;
-});
-document.getElementById('maproxrsi50').addEventListener('click', e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  b.classList.toggle('on'); maproxRsi50[b.dataset.rt]=b.classList.contains('on');
-});
-document.getElementById('maproxrsi9').addEventListener('click', e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  const tf=b.dataset.r9;
-  const next={off:'near',near:'above',above:'off'}[maproxRsi9[tf]||'off'];
-  maproxRsi9[tf]=next;
-  b.classList.toggle('on', next!=='off'); b.classList.toggle('above', next==='above');
-});
-document.getElementById('maproxrs').addEventListener('click', e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  b.classList.toggle('on'); maproxRs[b.dataset.rs]=b.classList.contains('on');
 });
 document.getElementById('rsdiagbtn').addEventListener('click', async ()=>{
   const out=document.getElementById('rsdiagout');
@@ -1809,7 +1845,9 @@ async function scanSymbol(s, cfg){
     const hasS20 = Object.values(cfg.maproxS20||{}).some(v=>v);
     const has1w = (cfg.maprox1wPx!=='all' || cfg.maprox1wRsi!=='all');
     const hasDip = (cfg.maproxDip==='1m');
-    if(!tfs.length && !hasR50 && !hasR9 && !hasRs && !has1w && !hasDip && !hasS9 && !hasS20) return null;   // 아무 조건도 없으면 제외
+    const maretOn = [120,200,300].filter(P => (cfg.maretMa||{})[P]);
+    const hasMaret = maretOn.length > 0;
+    if(!tfs.length && !hasR50 && !hasR9 && !hasRs && !has1w && !hasDip && !hasS9 && !hasS20 && !hasMaret) return null;   // 아무 조건도 없으면 제외
     const allHits = [];
     for(const mtf of tfs){
       let mb;
@@ -1933,12 +1971,45 @@ async function scanSymbol(s, cfg){
       }
       if(!dipHit) return null;   // 되돌림 이력 없으면 탈락
     }
+
+    // ── 🎯 이평 리테 횟수: 켠 이평선마다 구간 내 지지 리테를 세고 임계 미만이면 탈락 ──
+    const maretHits = [];
+    if(hasMaret){
+      const back = cfg.maretBack || 50;
+      const need = cfg.maretCnt || 2;
+      const maxP = Math.max(...maretOn);
+      // SMA 워밍업(maxP) + 되돌아볼 구간(back) + 여유 — 거래소 1회 상한 1000
+      const lim = Math.min(1000, maxP + back + 30);
+      let kb;
+      try{ kb = await EX[cfg.exchange].klines(s.symbol, cfg.maretTf || '15m', lim); }catch(e){ return null; }
+      if(!kb || kb.length < maxP + 5) return null;   // 이평 계산 자체가 불가 → 탈락
+      const ko = kb.map(b=>b.o), kl = kb.map(b=>b.l), kc = kb.map(b=>b.c);
+      const endIdx = cfg.includeLive ? kc.length-1 : kc.length-2;
+      if(endIdx < 1) return null;
+      for(const P of maretOn){
+        let cnt = 0, lastN = null;
+        for(let n=1; n<=back; n++){
+          const idx = endIdx - (n-1);
+          if(idx < 1) break;
+          const sv = smaAt(kc, P, idx); if(sv==null) continue;
+          // 단봉: 시가>선 · 저가<선 · 종가>선
+          let hit = (ko[idx]>sv && kl[idx]<sv && kc[idx]>sv);
+          if(!hit){   // 2봉: 직전봉 선 아래 눌림 → 이번봉 복귀
+            const sp = smaAt(kc, P, idx-1);
+            hit = (sp!=null && ko[idx-1]>sp && kc[idx-1]<sp && ko[idx]<sv && kc[idx]>sv);
+          }
+          if(hit){ cnt++; if(lastN==null) lastN = n; }
+        }
+        if(cnt < need) return null;   // 켠 이평선은 각각 기준을 채워야 함 (AND)
+        maretHits.push({P, cnt, lastN, back, tf: cfg.maretTf||'15m'});
+      }
+    }
     return {
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
       rO: rO[i0]||0, rH: rH[i0]||0, rL: rL[i0]||0, rC: rC[i0]!=null?rC[i0]:0,
       rPrev: [i0-4,i0-3,i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC,cfg.smaF,i0), sma20: smaAt(rC,cfg.smaS,i0),
-      gap: 0, retestN: 1, maprox: true, maproxHits: allHits, dip: dipHit, rsi50: rsi50Tfs, rsi9Hits: rsi9Hits, rsHits: rsHits, s9Hits: s9Hits, s20Hits: s20Hits, smaInfo
+      gap: 0, retestN: 1, maprox: true, maproxHits: allHits, dip: dipHit, rsi50: rsi50Tfs, rsi9Hits: rsi9Hits, rsHits: rsHits, s9Hits: s9Hits, s20Hits: s20Hits, maretHits, smaInfo
     };
   }
 
@@ -2572,7 +2643,7 @@ function render(){
     // 1) MTF/신호 줄 (0봉·1H·4H·1D·1W 등)
     const tfLine = `${r.isLive?`<span class="reftag reflive">0봉</span>`:''}${r.gainer&&r.chg!=null?`<span class="reftag refshort">🚀+${r.chg.toFixed(1)}%</span>`:''}${tfTags(r.tags)}`;
     // 2) 이평근접 줄 (📏)
-    const maproxLine = r.maprox?(r.maproxHits.map(h=>{const up=h.diff>=0;const col=up?'#4fbf8f':'#c77a6a';const bg=up?'rgba(79,191,143,.16)':'rgba(199,122,106,.16)';return `<span class="reftag" style="color:${col};background:${bg}">📏 ${(h.tf||'').toUpperCase()} ${up?'+':''}${h.diff.toFixed(1)}%${h.above?' ↑':''}</span>`;}).join('') + (r.rsi50&&r.rsi50.length?r.rsi50.map(tf=>`<span class="reftag" style="color:#6fc3ff;background:rgba(111,195,255,.16)">RSI50↑ ${tf.toUpperCase()}</span>`).join(''):'') + (r.rsi9Hits&&r.rsi9Hits.length?r.rsi9Hits.map(h=>{const up=h.diff>=0;const col=up?'#8fd6ff':'#c9a0e0';const bg=up?'rgba(143,214,255,.14)':'rgba(201,160,224,.14)';return `<span class="reftag" style="color:${col};background:${bg}">RSI≈9 ${h.tf.toUpperCase()} ${up?'+':''}${h.diff.toFixed(1)}%${h.above?' ↑':''}</span>`;}).join(''):'') + (r.rsHits&&r.rsHits.length?r.rsHits.map(h=>`<span class="reftag" style="color:${h.rs>=0?'#f0a840':'#c77a6a'};background:rgba(240,168,64,.14)">RS ${h.tf.toUpperCase()} ${h.rs>=0?'+':''}${h.rs.toFixed(1)}%p</span>`).join(''):'') + (r.s9Hits&&r.s9Hits.length?r.s9Hits.map(h=>`<span class="reftag" style="color:#7fd6a8;background:rgba(127,214,168,.14)">R9 ${h.tf.toUpperCase()} ${h.v.toFixed(0)}</span>`).join(''):'') + (r.s20Hits&&r.s20Hits.length?r.s20Hits.map(h=>`<span class="reftag" style="color:#d0b978;background:rgba(208,185,120,.14)">R20 ${h.tf.toUpperCase()} ${h.v.toFixed(0)}</span>`).join(''):'') + (r.dip?`<span class="reftag" style="color:#f4c84b;background:rgba(244,200,75,.16)">↩ 1m 200선복귀</span>`:'')):'';
+    const maproxLine = r.maprox?(r.maproxHits.map(h=>{const up=h.diff>=0;const col=up?'#4fbf8f':'#c77a6a';const bg=up?'rgba(79,191,143,.16)':'rgba(199,122,106,.16)';return `<span class="reftag" style="color:${col};background:${bg}">📏 ${(h.tf||'').toUpperCase()} ${up?'+':''}${h.diff.toFixed(1)}%${h.above?' ↑':''}</span>`;}).join('') + (r.rsi50&&r.rsi50.length?r.rsi50.map(tf=>`<span class="reftag" style="color:#6fc3ff;background:rgba(111,195,255,.16)">RSI50↑ ${tf.toUpperCase()}</span>`).join(''):'') + (r.rsi9Hits&&r.rsi9Hits.length?r.rsi9Hits.map(h=>{const up=h.diff>=0;const col=up?'#8fd6ff':'#c9a0e0';const bg=up?'rgba(143,214,255,.14)':'rgba(201,160,224,.14)';return `<span class="reftag" style="color:${col};background:${bg}">RSI≈9 ${h.tf.toUpperCase()} ${up?'+':''}${h.diff.toFixed(1)}%${h.above?' ↑':''}</span>`;}).join(''):'') + (r.rsHits&&r.rsHits.length?r.rsHits.map(h=>`<span class="reftag" style="color:${h.rs>=0?'#f0a840':'#c77a6a'};background:rgba(240,168,64,.14)">RS ${h.tf.toUpperCase()} ${h.rs>=0?'+':''}${h.rs.toFixed(1)}%p</span>`).join(''):'') + (r.s9Hits&&r.s9Hits.length?r.s9Hits.map(h=>`<span class="reftag" style="color:#7fd6a8;background:rgba(127,214,168,.14)">R9 ${h.tf.toUpperCase()} ${h.v.toFixed(0)}</span>`).join(''):'') + (r.s20Hits&&r.s20Hits.length?r.s20Hits.map(h=>`<span class="reftag" style="color:#d0b978;background:rgba(208,185,120,.14)">R20 ${h.tf.toUpperCase()} ${h.v.toFixed(0)}</span>`).join(''):'') + (r.maretHits&&r.maretHits.length?r.maretHits.map(h=>`<span class="reftag" style="color:#8f7ae0;background:rgba(143,122,224,.18);font-weight:700" title="${h.tf.toUpperCase()} ${h.back}봉 내${h.lastN?' · 최근 '+h.lastN+'봉 전':''}">🎯 ${h.P}선 ${h.cnt}회</span>`).join(''):'') + (r.dip?`<span class="reftag" style="color:#f4c84b;background:rgba(244,200,75,.16)">↩ 1m 200선복귀</span>`:'')):'';
     // 3) 변동성 줄 (⚡)
     const _rsHM = ms=>{ if(ms==null) return '?'; const d=new Date(ms); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
     const seqLine = r.seqScan?`<span class="reftag" style="color:#c9a0f0;background:rgba(157,123,216,.18);font-weight:700">${r.seqBars.map(x=>x.bull?'🟢':'🔴').join('')}</span><span class="reftag" style="color:${r.seqHit==='bull3'?'#e0584f':'#46cd8a'};background:var(--surface-2)">${r.seqHit==='bull3'?'상승후 반전음봉':'하락후 반전양봉'}</span>`:'';
@@ -2671,8 +2742,10 @@ function buildScanCfg(){
     maprox1wPx: maprox1wPx, maprox1wRsi: maprox1wRsi,
     maproxDip: maproxDip,
     maproxRsi50: {...maproxRsi50},
-    maproxRsi9: {...maproxRsi9}, maproxRsi9Pct: Math.abs(parseFloat(document.getElementById('maproxrsi9pct').value)||3),
-    maproxRs: {...maproxRs}, maproxRsPct: parseFloat(document.getElementById('maproxrspct').value)||0,
+    maproxRsi9: {...maproxRsi9}, maproxRsi9Pct: 3,          // (UI 삭제됨)
+    maproxRs: {...maproxRs}, maproxRsPct: 0,                 // (UI 삭제됨)
+    maretMa: {...maretMa}, maretTf: maretTf, maretBack: maretBack,
+    maretCnt: Math.max(1, parseInt(document.getElementById('maretcnt').value)||2),
     maproxS9: {...maproxS9}, maproxS9Lv: maproxS9Lv,
     maproxS20: {...maproxS20}, maproxS20Lv: maproxS20Lv,
     rsFrom: (rsFromIdx!=null && rsBars[rsFromIdx]) ? rsBars[rsFromIdx].t : null,
@@ -3069,7 +3142,7 @@ async function drillScan(){
     nr.dip = pr.dip || nr.dip;
     nr.maprox = pr.maprox || nr.maprox;
     // 다른 모드 태그(정배/변동성 등)도 이전 값 유지
-    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','pxRetHits'].forEach(k=>{
+    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','pxRetHits','maretHits'].forEach(k=>{
       if(nr[k]===undefined && pr[k]!==undefined) nr[k]=pr[k];
     });
   });
