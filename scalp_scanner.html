@@ -655,6 +655,13 @@
         <input type="number" id="maniacnt" value="6" min="1" step="1" style="width:60px">
         <span style="color:var(--muted);font-size:10px" id="maniacnthint">구간 내 RSI≥70 봉 개수</span>
       </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:7px">
+        <span style="color:var(--muted);font-size:11px">판정 기준:</span>
+        <div class="seg sm" id="maniasrc" title="종가 = RSI 캔들 종가로만 판정 · 꼬리 = RSI 캔들 고가(과매수)/저가(과매도)가 찍기만 해도 인정">
+          <button data-msrc="close" class="on">RSI 종가</button>
+          <button data-msrc="wick"><span class="msrcword">RSI 고가(꼬리)</span></button>
+        </div>
+      </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <span style="color:var(--muted);font-size:11px">마지막 봉:</span>
         <div class="seg sm" id="manialive">
@@ -1050,6 +1057,7 @@ let rsBtcChart = null, rsBtcSeries = null, rsClickBuf = [];
 let rsChartTf = '1h', rsRsiChart = null, rsMacdChart = null;
 let rsBandSeries = null, rsBandRsi = null, rsPriceLines = [];
 let seqDir = 'both', seqTf = '15m', seqLive = 'live';   // 3+1 반전 스캔
+let maniaSrc = 'close';   // 'close'=RSI 종가만 · 'wick'=RSI 고가(과매수)/저가(과매도) 터치도 인정
 let maniaBack = 50, maniaCnt = 6, maniaLive = 'live', maniaMode = 'now';   // now=지금과매수 / count=과거N회 / both   // 광기: 룩백 구간·과매수 횟수·마지막봉
 const RS_VIEW_BARS = 50;   // 화면에 보이는 봉 수
 const CHART_TZ = 9*3600;   // 차트 표시용 KST 오프셋 (앱 전체 공통)
@@ -1083,6 +1091,7 @@ function applyManiaLabels(){
   set('maniacntlab', `${NAME} 횟수 ≥`);
   set('maniacnthint', `구간 내 RSI${os?'≤30':'≥70'} 봉 개수`);
   const w = document.querySelector('#manianow .mword'); if(w) w.textContent = `지금 ${NAME}`;
+  const sw = document.querySelector('#maniasrc .msrcword'); if(sw) sw.textContent = os ? 'RSI 저가(꼬리)' : 'RSI 고가(꼬리)';
   updateManiaBackHint();
 }
 function updateMaretHint(){
@@ -1145,7 +1154,10 @@ function updateCondChips(){
     const COND = os ? '≤ 30' : '≥ 70';
     const COL = os ? '#4aa8d8' : '#f0883c';
     el.innerHTML = `
-      <div class="chip"><span class="n">①</span><b>RSI ${NAME}(${COND}) 횟수</b> · 되돌아볼 구간(5/7/20/50/120/200/300봉) 내 RSI 종가 ${COND}인 봉 개수</div>
+      <div class="chip"><span class="n">①</span><b>RSI ${NAME}(${COND}) 횟수</b> · 되돌아볼 구간(5/7/20/50/120/200/300봉) 내 RSI ${maniaSrc==='wick'?(os?'<b>저가</b>':'<b>고가</b>'):'종가'} ${COND}인 봉 개수</div>
+      <div class="chip"><b>판정 기준</b> · ${maniaSrc==='wick'
+        ? `RSI 캔들 ${os?'저가':'고가'}가 ${COND}를 <b>찍기만 해도</b> 인정 (종가는 되돌아와도 OK) → 결과 많아짐`
+        : `RSI 캔들 <b>종가</b>가 ${COND}일 때만 인정 (꼬리로만 찍은 건 제외)`}</div>
       <div class="chip">라벨 <span style="color:${COL}">${os?'🧊':'🔥'} ${NAME} N회</span> = 구간 내 ${NAME} 봉 수 · 많을수록 ${os?'침체':'과열'} 지속</div>
       <div class="chip">${os?'바닥권 반등 후보 관점':'과열 극단 → 숏/차익 관점'} · 정렬은 현재 RSI ${os?'낮은':'높은'} 순</div>`;
   }else if(scanMode === 'resist'){
@@ -1321,7 +1333,7 @@ document.getElementById('rsdiagbtn').addEventListener('click', async ()=>{
   }
   out.innerHTML=lines.join('<br>');
 });
-["maniaback:maniaBack:mb","manialive:maniaLive:ml","manianow:maniaMode:mn"].forEach(spec=>{
+["maniaback:maniaBack:mb","manialive:maniaLive:ml","manianow:maniaMode:mn","maniasrc:maniaSrc:msrc"].forEach(spec=>{
   const [id,varn,attr]=spec.split(':');
   const elx=document.getElementById(id); if(!elx) return;
   elx.addEventListener('click', e=>{
@@ -1331,6 +1343,7 @@ document.getElementById('rsdiagbtn').addEventListener('click', async ()=>{
     const v=b.dataset[attr];
     if(varn==='maniaBack'){ maniaBack=+v; updateManiaBackHint(); }
     else if(varn==='maniaLive') maniaLive=v;
+    else if(varn==='maniaSrc'){ maniaSrc=v; updateCondChips(); }
     else if(varn==='maniaMode'){ maniaMode=v;
       const cntRow=document.getElementById('maniacnt'); if(cntRow){ const dim=(v==='now'); cntRow.disabled=dim; cntRow.parentElement.style.opacity=dim?'.4':'1'; }
     }
@@ -2205,7 +2218,10 @@ async function scanSymbol(s, cfg){
     // 과매수(≥70) / 과매도(≤30) 공용 로직 — 되돌아볼 구간 안에서 해당 봉 개수를 세고 임계 이상이면 통과
     const isOS = (cfg.scanMode === 'oversold');
     const TH = isOS ? 30 : 70;
-    const hitAt = (v) => isOS ? (v <= TH) : (v >= TH);      // 과매도는 이하, 과매수는 이상
+    const useWick = (cfg.maniaSrc === 'wick');
+    // 판정에 쓸 값: 종가 모드는 RSI 종가 · 꼬리 모드는 과매수=RSI 고가 / 과매도=RSI 저가
+    const srcAt = (idx) => useWick ? (isOS ? rL[idx] : rH[idx]) : rC[idx];
+    const hitAt = (v) => (v!=null) && (isOS ? (v <= TH) : (v >= TH));   // 과매도는 이하, 과매수는 이상
     const back = cfg.maniaBack || 50;
     const cntNeed = cfg.maniaCnt || 1;
     const endIdx = (cfg.maniaLive==='closed') ? i0-1 : i0;   // 완성봉까지 / 현재봉 포함
@@ -2214,12 +2230,13 @@ async function scanSymbol(s, cfg){
     for(let n=0; n<back; n++){
       const idx = endIdx - n;
       if(idx < 0) break;
-      if(rC[idx]==null) continue;
-      if(isOS ? (rC[idx] < rsiExt) : (rC[idx] > rsiExt)) rsiExt = rC[idx];   // 구간 극단값
-      if(hitAt(rC[idx])){ cnt++; if(lastHit<0) lastHit=idx; }
+      const v = srcAt(idx);
+      if(v==null) continue;
+      if(isOS ? (v < rsiExt) : (v > rsiExt)) rsiExt = v;   // 구간 극단값 (판정 기준과 동일 소스)
+      if(hitAt(v)){ cnt++; if(lastHit<0) lastHit=idx; }
     }
     if(cnt < 1) return null;   // 구간 내 이력이 아예 없으면 제외
-    const nowHot = (rC[endIdx]!=null && hitAt(rC[endIdx]));   // 현재봉이 임계 상태인가
+    const nowHot = hitAt(srcAt(endIdx));   // 현재봉이 임계 상태인가
     const mode = cfg.maniaMode || 'now';
     if(mode==='now'   && !nowHot) return null;              // 지금 상태만
     if(mode==='count' && cnt < cntNeed) return null;         // 과거 N회 누적만
@@ -2231,7 +2248,8 @@ async function scanSymbol(s, cfg){
       gap: rsiExt,                     // 구간 내 RSI 극단값 (과매수=최고 / 과매도=최저)
       maniaCnt: cnt,                   // 임계 돌파 봉 개수
       maniaBack: back,
-      maniaNowRsi: (rC[endIdx]!=null ? rC[endIdx] : null),   // 현재(마지막) 봉 RSI
+      maniaNowRsi: (srcAt(endIdx)!=null ? srcAt(endIdx) : null),   // 현재(마지막) 봉 RSI (판정 기준값)
+      maniaWick: useWick,                                          // 꼬리 판정 여부
       maniaNowHot: nowHot,             // 지금 과매수/과매도 상태인가
       maniaMode: cfg.maniaMode || 'now',
       maniaOS: isOS,                   // true=과매도 · false=과매수
@@ -2670,7 +2688,8 @@ function render(){
       const ICO = os ? '🧊' : '🔥';
       const NAME = os ? '과매도' : '과매수';
       const EXT = os ? '최저' : '최고';
-      return `<span class="reftag" style="color:${COL};background:rgba(${RGB},.18);font-weight:700">${ICO} ${NAME} ${r.maniaCnt}회 / ${r.maniaBack}봉</span>`
+      const WK = r.maniaWick ? (os?'저가':'고가') : '';
+      return `<span class="reftag" style="color:${COL};background:rgba(${RGB},.18);font-weight:700">${ICO} ${NAME} ${r.maniaCnt}회 / ${r.maniaBack}봉${WK?' · '+WK:''}</span>`
         + (r.maniaNowHot
             ? `<span class="reftag" style="color:#0a0e16;background:${COL};font-weight:700">● 지금 ${NAME} ${(r.maniaNowRsi||0).toFixed(0)}</span>`
             : `<span class="reftag" style="color:var(--muted);background:var(--surface-2)">지금 RSI ${(r.maniaNowRsi||0).toFixed(0)}</span>`)
@@ -2758,6 +2777,7 @@ function buildScanCfg(){
   };
   cfg.seqDir = seqDir; cfg.seqLive = seqLive; cfg.seqTf = seqTf;
   cfg.maniaBack = maniaBack; cfg.maniaCnt = maniaCnt; cfg.maniaLive = maniaLive; cfg.maniaMode = maniaMode;
+  cfg.maniaSrc = maniaSrc;
   if(scanMode==='volx') cfg.tf = volxTf;
   if(scanMode==='seq') cfg.tf = seqTf;
   return cfg;
@@ -3142,7 +3162,7 @@ async function drillScan(){
     nr.dip = pr.dip || nr.dip;
     nr.maprox = pr.maprox || nr.maprox;
     // 다른 모드 태그(정배/변동성 등)도 이전 값 유지
-    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','pxRetHits','maretHits'].forEach(k=>{
+    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','maniaWick','pxRetHits','maretHits'].forEach(k=>{
       if(nr[k]===undefined && pr[k]!==undefined) nr[k]=pr[k];
     });
   });
@@ -4412,16 +4432,19 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
       const osM = (scanMode==='oversold');
       const TH = osM ? 30 : (scanMode==='mania'?70:90);
       const start = Math.max(0, i0c - retestN + 1);
+      // 스캔과 같은 소스로 봉을 고름 (꼬리 모드면 RSI 고가/저가)
+      const wickM = (scanMode!=='short') && (maniaSrc === 'wick');
+      const srcC = idx => wickM ? (osM ? rL[idx] : rH[idx]) : rC[idx];
       let hi=null, hv=osM?101:-1;
       for(let idx=start; idx<=i0c; idx++){
-        const v=rC[idx]; if(v==null) continue;
+        const v=srcC(idx); if(v==null) continue;
         if(osM ? (v<=TH && v<hv) : (v>=TH && v>hv)){ hv=v; hi=idx; }
       }
       if(hi!=null) rcs.setMarkers([{time:t[hi],
         position: osM?'belowBar':'aboveBar',
         color: osM?'#4aa8d8':(TH>=90?'#e0584f':'#f0883c'),
         shape: osM?'arrowUp':'arrowDown',
-        text:`RSI ${TH}${osM?'-':'+'}`}]);
+        text:`RSI ${TH}${osM?'-':'+'}${wickM?(osM?' 저가':' 고가'):''}`}]);
     }else{
       // 통일 리테 정의: 인트라바(시가>선·저가<선·종가>선) 또는 봉간크로스(직전봉 시가>선·종가<선 → 이번봉 시가<선·종가>선)
       const cRet = (ln, idx)=>{
