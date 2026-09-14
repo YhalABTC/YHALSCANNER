@@ -733,15 +733,30 @@
         <input type="number" id="maproxpct" value="2" min="0.1" step="0.5" style="width:56px"> <span style="color:var(--muted);font-size:11px">% 이내</span>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">
-        <span style="color:var(--muted);font-size:11px">4H 필터:</span>
-        <div class="seg" id="maprox1wpx" title="4H 가격 이평">
-          <button data-p="all" class="on">가격 전체</button>
-          <button data-p="a5">5선위</button>
+        <span style="color:#d77b38;font-size:11px;font-weight:700">가격 이평 위 &nbsp;TF:</span>
+        <div class="seg" id="maproxpxtf" title="가격 종가가 선택한 가격 이평 위인지 볼 TF (중복 = AND · 전부 끄면 비활성)">
+          <button data-ptf="15m">15M</button>
+          <button data-ptf="1h">1H</button>
+          <button data-ptf="4h">4H</button>
+          <button data-ptf="1d">1D</button>
+          <button data-ptf="1w">1W</button>
+        </div>
+        <div class="seg sm" id="maproxpxopt" title="기준 가격 이평선">
+          <button data-p="a5" class="on">5선위</button>
           <button data-p="a20">20선위</button>
         </div>
-        <div class="seg" id="maprox1wrsi" title="4H RSI 이평">
-          <button data-r="all" class="on">RSI 전체</button>
-          <button data-r="r9">R9위</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">
+        <span style="color:#5b9bd5;font-size:11px;font-weight:700">RSI 이평 위 &nbsp;TF:</span>
+        <div class="seg" id="maproxrsitf" title="RSI 종가가 선택한 RSI 이평 위인지 볼 TF (중복 = AND · 전부 끄면 비활성)">
+          <button data-rtf="15m">15M</button>
+          <button data-rtf="1h">1H</button>
+          <button data-rtf="4h">4H</button>
+          <button data-rtf="1d">1D</button>
+          <button data-rtf="1w">1W</button>
+        </div>
+        <div class="seg sm" id="maproxrsiopt" title="기준 RSI 이평선">
+          <button data-r="r9" class="on">R9위</button>
           <button data-r="r20">R20위</button>
         </div>
       </div>
@@ -783,46 +798,6 @@
           <button data-s20="4h">4H</button>
           <button data-s20="1d">1D</button>
           <button data-s20="1w">1W</button>
-        </div>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">
-        <span style="color:var(--muted);font-size:11px">되돌림:</span>
-        <div class="seg" id="maproxdip" title="1분봉 종가가 SMA200 아래로 이탈했다가 다시 위로 복귀한 이력 (최근 조정 신호)">
-          <button data-d="off" class="on">off</button>
-          <button data-d="1m">1m 200선 복귀</button>
-        </div>
-      </div>
-      <div style="border-top:1px solid var(--line);margin-top:10px;padding-top:9px">
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:7px">
-          <span style="color:#8f7ae0;font-size:11px;font-weight:700">🎯 이평 리테 횟수:</span>
-          <div class="seg" id="maretmaseg" title="켠 이평선 각각이 구간 내 N회 이상 리테스트되어야 통과 (AND) · 전부 끄면 이 필터 비활성">
-            <button data-ma="120">120선</button>
-            <button data-ma="200">200선</button>
-            <button data-ma="300">300선</button>
-          </div>
-          <span style="color:var(--muted);font-size:11px;margin-left:4px">리테 ≥</span>
-          <input type="number" id="maretcnt" value="2" min="1" max="50" step="1" style="width:54px">
-          <span style="color:var(--muted);font-size:10px">회</span>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <span style="color:var(--muted);font-size:11px">TF:</span>
-          <div class="seg sm" id="marettfseg">
-            <button data-mrtf="5m">5M</button>
-            <button data-mrtf="15m" class="on">15M</button>
-            <button data-mrtf="1h">1H</button>
-            <button data-mrtf="4h">4H</button>
-          </div>
-          <span style="color:var(--muted);font-size:11px;margin-left:4px">돌아볼 봉:</span>
-          <div class="seg sm" id="maretbackseg">
-            <button data-mrb="5">5</button>
-            <button data-mrb="7">7</button>
-            <button data-mrb="20">20</button>
-            <button data-mrb="50" class="on">50</button>
-            <button data-mrb="120">120</button>
-            <button data-mrb="200">200</button>
-            <button data-mrb="300">300</button>
-          </div>
-          <span style="color:var(--muted);font-size:10px" id="maretbackhint">15M 기준 50봉 ≈ 12.5시간</span>
         </div>
       </div>
     </div>
@@ -1050,13 +1025,10 @@ let exchange = 'bybit';
 let scanMode = 'maprox';
 let volxTf = '15m', volxBars = 1;
 let maproxTfs = {'1m':'off','3m':'off','5m':'off','15m':'off','30m':'off','1h':'off','4h':'off','1d':'off'};   // off/near/above (기본: 전부 꺼짐)
-let maprox1wPx = 'all', maprox1wRsi = 'all';
-let maproxDip = 'off';   // 'off' | '1m' — 1분봉 200선 이탈→복귀 되돌림 필터
+// 가격/RSI 이평 위 필터 — TF 토글과 기준선 옵션을 각각 독립으로
+let maproxPxTf  = {'15m':false,'1h':false,'4h':false,'1d':false,'1w':false}, maproxPxOpt  = 'a5';
+let maproxRsiTf = {'15m':false,'1h':false,'4h':false,'1d':false,'1w':false}, maproxRsiOpt = 'r9';
 let maproxRsi50 = {'4h':false,'1d':false};   // (UI 삭제됨 — 항상 off, 스캔 로직은 건너뜀)
-// 🎯 이평 리테 횟수 (이평근접 패널 내 추가 필터)
-let maretMa = {120:false, 200:false, 300:false};   // 대상 가격 이평 (여러 개 = AND · 전부 끄면 비활성)
-let maretTf = '15m';    // 전용 타임프레임
-let maretBack = 50;     // 돌아볼 봉
 let maproxRsi9 = {'1h':'off','4h':'off','1d':'off','1w':'off'};   // RSI≈SMA9 근접 (off/near/above)
 let maproxRs = {'4h':false,'1d':false,'1w':false,'1M':false};   // RS(BTC대비) 강세 필터
 let maproxS9 = {'15m':false,'1h':false,'4h':false,'1d':false,'1w':false}, maproxS9Lv = 50;    // RSI-SMA9 ≥ 임계
@@ -1106,15 +1078,6 @@ function applyManiaLabels(){
   const w = document.querySelector('#manianow .mword'); if(w) w.textContent = `지금 ${NAME}`;
   const sw = document.querySelector('#maniasrc .msrcword'); if(sw) sw.textContent = os ? 'RSI 저가(꼬리)' : 'RSI 고가(꼬리)';
   updateManiaBackHint();
-}
-function updateMaretHint(){
-  const h=document.getElementById('maretbackhint'); if(!h) return;
-  const MIN={'5m':5,'15m':15,'1h':60,'4h':240}[maretTf]||15;
-  const mins=maretBack*MIN;
-  const span = mins<60 ? `${mins}분`
-    : mins<1440 ? `${(mins/60).toFixed(mins%60?1:0)}시간`
-    : `${(mins/1440).toFixed(mins%1440?1:0)}일`;
-  h.textContent = `${maretTf.toUpperCase()} 기준 ${maretBack}봉 ≈ ${span}`;
 }
 function updateManiaBackHint(){
   const h = document.getElementById('maniabackhint'); if(!h) return;
@@ -1187,7 +1150,7 @@ function updateCondChips(){
     const on = Object.keys(maproxTfs).filter(t=>maproxTfs[t]&&maproxTfs[t]!=='off').map(t=>t.toUpperCase());
     el.innerHTML = `
       <div class="chip"><span class="n">①</span><b>이평 근접</b> · ${on.length?on.join('·')+' 가격이 SMA200 ±% 이내':'<span style="color:var(--muted)">꺼짐 — 아래 추가필터만 적용</span>'}</div>
-      <div class="chip">추가필터(4H 필터 · <span style="color:#46cd8a">RSI 정배(9&gt;20)</span> · RSI SMA9/20 레벨 · 되돌림 · 이평 리테 횟수)는 모두 <b>AND</b></div>
+      <div class="chip">추가필터(<span style="color:#d77b38">가격 이평 위</span> · <span style="color:#5b9bd5">RSI 이평 위</span> · <span style="color:#46cd8a">RSI 정배(9&gt;20)</span> · RSI SMA9/20 레벨)는 모두 <b>AND</b></div>
       <div class="chip">전부 끄면 결과 없음</div>`;
   }else{
     el.innerHTML = `
@@ -1197,14 +1160,13 @@ function updateCondChips(){
   }
   // 일반 스캔이면 공통 동시조건 칩을 뒤에 덧붙임 (특수 스캔은 gate를 안 타므로 제외)
   if(!['maprox','volx','rsscan','seq'].includes(scanMode)) el.innerHTML += pxRetChip();
-  // 이평근접이면 🎯 이평 리테 횟수 필터 안내를 덧붙임
+  // 이평근접이면 가격/RSI 이평 위 + 🎯 이평 리테 횟수 안내를 덧붙임
   if(scanMode==='maprox'){
-    const on = [120,200,300].filter(P=>maretMa[P]);
-    if(on.length){
-      const need = Math.max(1, parseInt((document.getElementById('maretcnt')||{}).value)||2);
-      el.innerHTML += `<div class="chip"><b style="color:#8f7ae0">🎯 이평 리테 횟수</b> · `
-        + on.map(P=>`${P}선`).join(' <b>AND</b> ') + ` 각각 ${maretTf.toUpperCase()} ${maretBack}봉 내 <b>${need}회 이상</b> 지지 리테</div>`;
-    }
+    const PXL={a5:'5선',a20:'20선',a50:'50선',a200:'200선'};
+    const pOn=Object.keys(maproxPxTf).filter(t=>maproxPxTf[t]).map(t=>t.toUpperCase());
+    const rOn=Object.keys(maproxRsiTf).filter(t=>maproxRsiTf[t]).map(t=>t.toUpperCase());
+    if(pOn.length) el.innerHTML += `<div class="chip"><b style="color:#d77b38">가격 이평 위</b> · ${pOn.join(' <b>AND</b> ')} 종가가 가격 ${PXL[maproxPxOpt]} 위</div>`;
+    if(rOn.length) el.innerHTML += `<div class="chip"><b style="color:#5b9bd5">RSI 이평 위</b> · ${rOn.join(' <b>AND</b> ')} RSI 종가가 RSI ${maproxRsiOpt==='r9'?'SMA9':'SMA20'} 위</div>`;
   }
 }
 document.getElementById('scanmodeseg').addEventListener('click', e=>{
@@ -1272,134 +1234,26 @@ document.getElementById('maproxtfseg').addEventListener('click', e=>{
   maproxTfs[tf]=next;
   b.classList.toggle('on', next!=='off'); b.classList.toggle('above', next==='above');
 });
-document.getElementById('maprox1wpx').addEventListener('click', e=>{
+document.getElementById('maproxpxtf').addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b) return;
-  [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); maprox1wPx=b.dataset.p;
-});
-document.getElementById('maprox1wrsi').addEventListener('click', e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); maprox1wRsi=b.dataset.r;
-});
-document.getElementById('maretmaseg').addEventListener('click', e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  const k=+b.dataset.ma; maretMa[k]=!maretMa[k];
-  b.classList.toggle('on', maretMa[k]);
+  b.classList.toggle('on'); maproxPxTf[b.dataset.ptf]=b.classList.contains('on');
   updateCondChips();
 });
-document.getElementById('marettfseg').addEventListener('click', e=>{
+document.getElementById('maproxpxopt').addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b) return;
   [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); maretTf=b.dataset.mrtf; updateMaretHint(); updateCondChips();
+  b.classList.add('on'); maproxPxOpt=b.dataset.p;
+  updateCondChips();
 });
-document.getElementById('maretbackseg').addEventListener('click', e=>{
+document.getElementById('maproxrsitf').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  b.classList.toggle('on'); maproxRsiTf[b.dataset.rtf]=b.classList.contains('on');
+  updateCondChips();
+});
+document.getElementById('maproxrsiopt').addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b) return;
   [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); maretBack=+b.dataset.mrb; updateMaretHint(); updateCondChips();
-});
-document.getElementById('maretcnt').addEventListener('input', ()=>updateCondChips());
-document.getElementById('maproxdip').addEventListener('click', e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); maproxDip=b.dataset.d;
-});
-document.getElementById('rsdiagbtn').addEventListener('click', async ()=>{
-  const out=document.getElementById('rsdiagout');
-  let sym=(document.getElementById('rsdiagsym').value||'').trim().toUpperCase();
-  if(!sym){ out.textContent='종목명을 입력하세요'; return; }
-  if(!sym.endsWith('USDT')) sym+='USDT';
-  if(rsFromIdx==null||rsToIdx==null||!rsBars.length){ out.textContent='먼저 구간을 지정하세요'; return; }
-  out.textContent='확인 중…';
-  const from=rsBars[rsFromIdx].t, to=rsBars[rsToIdx].t;
-  const btcRet=(rsBars[rsToIdx].c/rsBars[rsFromIdx].c-1)*100;
-  const TF_MS={'1m':60000,'3m':180000,'5m':300000,'15m':900000,'30m':1800000,'1h':3600000,'4h':14400000,'1d':86400000,'1w':604800000};
-  const tfms=TF_MS[rsChartTf]||3600000;
-  const need=Math.min(1000, Math.max(60, (rsBars.length-rsFromIdx)+30));
-  let cb=null, uni=null;
-  try{ cb = await EX[exchange].klines(sym, rsChartTf, need); }catch(e){}
-  try{ uni = await EX[exchange].universe(0); }catch(e){}
-  const u = uni ? uni.find(x=>x.symbol===sym) : null;
-  const minVol=(parseFloat($('minvol').value)||0)*1e6;
-  const lines=[];
-  lines.push(`<b>${sym}</b> · ${rsChartTf.toUpperCase()}`);
-  if(!u) lines.push('<span style="color:#e0584f">✗ 유니버스에 없음 (심볼 확인)</span>');
-  else {
-    const volOk = u.vol >= minVol;
-    lines.push(`거래대금 ${(u.vol/1e6).toFixed(1)}M · 최소 ${(minVol/1e6).toFixed(1)}M → ${volOk?'<span style="color:#46cd8a">통과</span>':'<span style="color:#e0584f">✗ 걸러짐</span>'}`);
-  }
-  if(!cb||cb.length<3) lines.push('<span style="color:#e0584f">✗ 캔들 로드 실패</span>');
-  else{
-    let fi=-1,ti2=-1;
-    for(let k=0;k<cb.length;k++){ if(fi<0&&cb[k].t>=from) fi=k; if(cb[k].t<=to) ti2=k; }
-    if(fi<0||ti2<0||ti2<=fi) lines.push('<span style="color:#e0584f">✗ 구간 봉을 못 찾음</span>');
-    else if(Math.abs(cb[fi].t-from)>tfms||Math.abs(cb[ti2].t-to)>tfms) lines.push('<span style="color:#e0584f">✗ 봉 시각 불일치(데이터 부족)</span>');
-    else{
-      const cr=(cb[ti2].c/cb[fi].c-1)*100, rs=cr-btcRet;
-      const pct=parseFloat(document.getElementById('rsscanpct').value)||0;
-      const fmt=t2=>{const d=new Date(t2);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;};
-      lines.push(`구간 ${fmt(cb[fi].t)} → ${fmt(cb[ti2].t)}`);
-      lines.push(`종가 ${cb[fi].c} → ${cb[ti2].c}`);
-      lines.push(`종목 <b style="color:${cr>=0?'#46cd8a':'#e0584f'}">${cr>=0?'+':''}${cr.toFixed(2)}%</b> · ${(rsRefSym||'BTC').replace(/USDT$/,'')} <b>${btcRet>=0?'+':''}${btcRet.toFixed(2)}%</b>`);
-      lines.push(`RS <b style="color:#ff9d4d">${rs>=0?'+':''}${rs.toFixed(2)}%p</b> · 기준 ≥${pct}%p → ${rs>=pct?'<span style="color:#46cd8a">통과</span>':'<span style="color:#e0584f">✗ 미달</span>'}`);
-    }
-  }
-  out.innerHTML=lines.join('<br>');
-});
-["maniaback:maniaBack:mb","manialive:maniaLive:ml","manianow:maniaMode:mn","maniasrc:maniaSrc:msrc"].forEach(spec=>{
-  const [id,varn,attr]=spec.split(':');
-  const elx=document.getElementById(id); if(!elx) return;
-  elx.addEventListener('click', e=>{
-    const b=e.target.closest('button'); if(!b) return;
-    [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
-    b.classList.add('on');
-    const v=b.dataset[attr];
-    if(varn==='maniaBack'){ maniaBack=+v; updateManiaBackHint(); }
-    else if(varn==='maniaLive') maniaLive=v;
-    else if(varn==='maniaSrc'){ maniaSrc=v; updateCondChips(); }
-    else if(varn==='maniaMode'){ maniaMode=v;
-      const cntRow=document.getElementById('maniacnt'); if(cntRow){ const dim=(v==='now'); cntRow.disabled=dim; cntRow.parentElement.style.opacity=dim?'.4':'1'; }
-    }
-  });
-});
-{ const mc=document.getElementById('maniacnt'); if(mc) mc.addEventListener('input', ()=>{ maniaCnt = Math.max(1, parseInt(mc.value)||6); }); }
-["seqdir:seqDir:sq","seqtf:seqTf:stf","seqlive:seqLive:sl"].forEach(spec=>{
-  const [id,varn,attr]=spec.split(':');
-  document.getElementById(id).addEventListener('click', e=>{
-    const b=e.target.closest('button'); if(!b) return;
-    [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
-    b.classList.add('on');
-    const v=b.dataset[attr];
-    if(varn==='seqDir') seqDir=v; else if(varn==='seqTf') seqTf=v; else if(varn==='seqLive') seqLive=v;
-  });
-});
-document.getElementById('rsrefload').addEventListener('click', async ()=>{
-  let v=(document.getElementById('rsrefsym').value||'').trim().toUpperCase();
-  if(!v){ v='BTC'; document.getElementById('rsrefsym').value='BTC'; }
-  if(!v.endsWith('USDT')) v+='USDT';
-  rsRefSym = v;
-  rsFromIdx = null; rsToIdx = null; rsClickBuf = [];
-  await initRsChart(true);   // 기준 코인 바뀌면 차트 재생성
-});
-document.getElementById('rsrefsym').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('rsrefload').click(); });
-document.getElementById('rstfseg').addEventListener('click', async e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); rsChartTf=b.dataset.rtf2;
-  rsClickBuf=[];
-  await initRsChart(true);   // TF 바뀌면 재생성
-});
-document.getElementById('rsquick').addEventListener('click', e=>{
-  const b=e.target.closest('button'); if(!b || !rsBars.length) return;
-  [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
-  b.classList.add('on');
-  const n = +b.dataset.q||24;
-  rsToIdx = rsBars.length-1; rsFromIdx = Math.max(0, rsToIdx-n);
-  rsClickBuf = []; paintRsRange();
-});
-document.getElementById('maproxbulltf').addEventListener('click', e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  b.classList.toggle('on'); maproxBull[b.dataset.mb9]=b.classList.contains('on');
+  b.classList.add('on'); maproxRsiOpt=b.dataset.r;
   updateCondChips();
 });
 document.getElementById('maproxs9lv').addEventListener('click', e=>{
@@ -1875,11 +1729,10 @@ async function scanSymbol(s, cfg){
     const hasS9 = Object.values(cfg.maproxS9||{}).some(v=>v);
     const hasS20 = Object.values(cfg.maproxS20||{}).some(v=>v);
     const hasBull = Object.values(cfg.maproxBull||{}).some(v=>v);
-    const has1w = (cfg.maprox1wPx!=='all' || cfg.maprox1wRsi!=='all');
-    const hasDip = (cfg.maproxDip==='1m');
-    const maretOn = [120,200,300].filter(P => (cfg.maretMa||{})[P]);
-    const hasMaret = maretOn.length > 0;
-    if(!tfs.length && !hasR50 && !hasR9 && !hasRs && !has1w && !hasDip && !hasS9 && !hasS20 && !hasBull && !hasMaret) return null;   // 아무 조건도 없으면 제외
+    const pxTfs  = Object.keys(cfg.maproxPxTf||{}).filter(t=>cfg.maproxPxTf[t]);
+    const rsiTfs = Object.keys(cfg.maproxRsiTf||{}).filter(t=>cfg.maproxRsiTf[t]);
+    const has1w = (pxTfs.length>0 || rsiTfs.length>0);
+    if(!tfs.length && !hasR50 && !hasR9 && !hasRs && !has1w && !hasS9 && !hasS20 && !hasBull) return null;   // 아무 조건도 없으면 제외
     const allHits = [];
     for(const mtf of tfs){
       let mb;
@@ -1896,23 +1749,45 @@ async function scanSymbol(s, cfg){
       if(cfg.maproxTfs[mtf]==='above' && diff < 0) return null;   // 위만 모드
       allHits.push({tf:mtf, N:200, diff, above: cfg.maproxTfs[mtf]==='above'});
     }
-    // 1W 추가 필터 (가격/RSI 이평 위) — 필요 시에만 페치
-    if(cfg.maprox1wPx!=='all' || cfg.maprox1wRsi!=='all'){
-      let wb;
-      try{ wb = await EX[cfg.exchange].klines(s.symbol, '4h', 40); }catch(e){ return null; }
-      if(!wb || wb.length < 25) return null;
-      const wo=wb.map(b=>b.o), wh=wb.map(b=>b.h), wl=wb.map(b=>b.l), wc=wb.map(b=>b.c);
+    // ── 가격 이평 위 / RSI 이평 위 — TF별 독립 토글, 켠 TF 전부 만족 (AND) ──
+    const PX_P  = {a5:5, a20:cfg.smaS, a50:50, a200:200}[cfg.maproxPxOpt] || 5;
+    const pxHitsTf = [], rsiHitsTf = [];
+    // 두 필터가 같은 TF를 쓰면 캔들을 한 번만 받도록 캐시.
+    // 요구 봉 수가 다를 수 있으니 TF별 최대치를 미리 계산해서 한 번에 받는다.
+    const RSI_P = (cfg.maproxRsiOpt==='r9') ? cfg.smaF : cfg.smaS;
+    const _need = {};
+    const bump = (tf, n)=>{ _need[tf] = Math.max(_need[tf]||0, Math.min(1000, n)); };
+    pxTfs.forEach(tf => bump(tf, PX_P + 30));
+    rsiTfs.forEach(tf => bump(tf, cfg.rsiLen + RSI_P + 40));
+    const _tfBars = {};
+    const tfBars = async (tf)=>{
+      if(_tfBars[tf] !== undefined) return _tfBars[tf];
+      let bb = null;
+      try{ bb = await EX[cfg.exchange].klines(s.symbol, tf, _need[tf] || 250); }catch(e){ bb = null; }
+      _tfBars[tf] = bb;
+      return bb;
+    };
+    for(const ptf of pxTfs){
+      const bb = await tfBars(ptf);
+      if(!bb || bb.length < PX_P + 2) return null;      // 봉이 모자라면 판정 불가 → 탈락
+      const wc = bb.map(b=>b.c);
       const wi = cfg.includeLive ? wc.length-2 : wc.length-1;
       if(wi < 0) return null;
-      if(cfg.maprox1wPx!=='all'){
-        const line = (cfg.maprox1wPx==='a5') ? smaAt(wc,5,wi) : smaAt(wc,20,wi);
-        if(line==null || !(wc[wi] >= line)) return null;
-      }
-      if(cfg.maprox1wRsi!=='all'){
-        const R = rsiCandles(wo,wh,wl,wc,cfg.rsiLen);
-        const rline = (cfg.maprox1wRsi==='r9') ? smaAt(R.rC,cfg.smaF,wi) : smaAt(R.rC,cfg.smaS,wi);
-        if(rline==null || R.rC[wi]==null || !(R.rC[wi] >= rline)) return null;
-      }
+      const line = smaAt(wc, PX_P, wi);
+      if(line==null || wc[wi]==null || !(wc[wi] >= line)) return null;
+      pxHitsTf.push({tf:ptf, P:PX_P, pct:(wc[wi]/line-1)*100});
+    }
+    for(const rtf of rsiTfs){
+      const RP = RSI_P;
+      const bb = await tfBars(rtf);
+      if(!bb || bb.length < cfg.rsiLen + RP + 2) return null;
+      const ro=bb.map(b=>b.o), rh=bb.map(b=>b.h), rl=bb.map(b=>b.l), rcl=bb.map(b=>b.c);
+      const R = rsiCandles(ro,rh,rl,rcl,cfg.rsiLen);
+      const wi = cfg.includeLive ? R.rC.length-2 : R.rC.length-1;
+      if(wi < 0) return null;
+      const rline = smaAt(R.rC, RP, wi);
+      if(rline==null || R.rC[wi]==null || !(R.rC[wi] >= rline)) return null;
+      rsiHitsTf.push({tf:rtf, P:RP, v:R.rC[wi], line:rline});
     }
     // RSI50 위 필터 (4H·1D 중복 = AND): 각 TF RSI 종가 ≥ 50
     const rsi50Tfs = Object.keys(cfg.maproxRsi50||{}).filter(tf=>cfg.maproxRsi50[tf]);
@@ -1994,63 +1869,12 @@ async function scanSymbol(s, cfg){
       bullHitsTf.push({tf:btf, v9, v20, gap:v9-v20});
     }
 
-    // 되돌림 필터: 1분봉 종가가 SMA200 아래로 이탈했다가 다시 위로 복귀한 이력
-    let dipHit = false;
-    if(cfg.maproxDip === '1m'){
-      let db;
-      try{ db = await EX[cfg.exchange].klines(s.symbol, '1m', 500); }catch(e){ return null; }
-      if(!db || db.length < 210) return null;   // SMA200 계산 불가면 탈락
-      const dc = db.map(b=>b.c);
-      const di = cfg.includeLive ? dc.length-2 : dc.length-1;
-      // SMA200을 각 봉마다 훑으며 (아래 이탈 → 이후 위 복귀) 시퀀스 탐지 — 최근 4시간(240봉)만
-      let wasBelow = false;
-      const dStart = Math.max(200, di - 240 + 1);   // 탐지 시작: 최근 240봉(4시간)
-      for(let k=dStart; k<=di; k++){
-        const ma = smaAt(dc, 200, k); if(ma==null) continue;
-        if(dc[k] < ma) wasBelow = true;             // 200선 아래로 이탈
-        else if(wasBelow && dc[k] >= ma){ dipHit = true; break; }   // 이탈 후 위로 복귀
-      }
-      if(!dipHit) return null;   // 되돌림 이력 없으면 탈락
-    }
-
-    // ── 🎯 이평 리테 횟수: 켠 이평선마다 구간 내 지지 리테를 세고 임계 미만이면 탈락 ──
-    const maretHits = [];
-    if(hasMaret){
-      const back = cfg.maretBack || 50;
-      const need = cfg.maretCnt || 2;
-      const maxP = Math.max(...maretOn);
-      // SMA 워밍업(maxP) + 되돌아볼 구간(back) + 여유 — 거래소 1회 상한 1000
-      const lim = Math.min(1000, maxP + back + 30);
-      let kb;
-      try{ kb = await EX[cfg.exchange].klines(s.symbol, cfg.maretTf || '15m', lim); }catch(e){ return null; }
-      if(!kb || kb.length < maxP + 5) return null;   // 이평 계산 자체가 불가 → 탈락
-      const ko = kb.map(b=>b.o), kl = kb.map(b=>b.l), kc = kb.map(b=>b.c);
-      const endIdx = cfg.includeLive ? kc.length-1 : kc.length-2;
-      if(endIdx < 1) return null;
-      for(const P of maretOn){
-        let cnt = 0, lastN = null;
-        for(let n=1; n<=back; n++){
-          const idx = endIdx - (n-1);
-          if(idx < 1) break;
-          const sv = smaAt(kc, P, idx); if(sv==null) continue;
-          // 단봉: 시가>선 · 저가<선 · 종가>선
-          let hit = (ko[idx]>sv && kl[idx]<sv && kc[idx]>sv);
-          if(!hit){   // 2봉: 직전봉 선 아래 눌림 → 이번봉 복귀
-            const sp = smaAt(kc, P, idx-1);
-            hit = (sp!=null && ko[idx-1]>sp && kc[idx-1]<sp && ko[idx]<sv && kc[idx]>sv);
-          }
-          if(hit){ cnt++; if(lastN==null) lastN = n; }
-        }
-        if(cnt < need) return null;   // 켠 이평선은 각각 기준을 채워야 함 (AND)
-        maretHits.push({P, cnt, lastN, back, tf: cfg.maretTf||'15m'});
-      }
-    }
     return {
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
       rO: rO[i0]||0, rH: rH[i0]||0, rL: rL[i0]||0, rC: rC[i0]!=null?rC[i0]:0,
       rPrev: [i0-4,i0-3,i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC,cfg.smaF,i0), sma20: smaAt(rC,cfg.smaS,i0),
-      gap: 0, retestN: 1, maprox: true, maproxHits: allHits, dip: dipHit, rsi50: rsi50Tfs, rsi9Hits: rsi9Hits, rsHits: rsHits, s9Hits: s9Hits, s20Hits: s20Hits, maproxBullHits: bullHitsTf, maretHits, smaInfo
+      gap: 0, retestN: 1, maprox: true, maproxHits: allHits, rsi50: rsi50Tfs, rsi9Hits: rsi9Hits, rsHits: rsHits, s9Hits: s9Hits, s20Hits: s20Hits, maproxBullHits: bullHitsTf, maproxPxHits: pxHitsTf, maproxRsiHits: rsiHitsTf, smaInfo
     };
   }
 
@@ -2689,7 +2513,9 @@ function render(){
     // 1) MTF/신호 줄 (0봉·1H·4H·1D·1W 등)
     const tfLine = `${r.isLive?`<span class="reftag reflive">0봉</span>`:''}${r.gainer&&r.chg!=null?`<span class="reftag refshort">🚀+${r.chg.toFixed(1)}%</span>`:''}${tfTags(r.tags)}`;
     // 2) 이평근접 줄 (📏)
-    const maproxLine = r.maprox?(r.maproxHits.map(h=>{const up=h.diff>=0;const col=up?'#4fbf8f':'#c77a6a';const bg=up?'rgba(79,191,143,.16)':'rgba(199,122,106,.16)';return `<span class="reftag" style="color:${col};background:${bg}">📏 ${(h.tf||'').toUpperCase()} ${up?'+':''}${h.diff.toFixed(1)}%${h.above?' ↑':''}</span>`;}).join('') + (r.rsi50&&r.rsi50.length?r.rsi50.map(tf=>`<span class="reftag" style="color:#6fc3ff;background:rgba(111,195,255,.16)">RSI50↑ ${tf.toUpperCase()}</span>`).join(''):'') + (r.rsi9Hits&&r.rsi9Hits.length?r.rsi9Hits.map(h=>{const up=h.diff>=0;const col=up?'#8fd6ff':'#c9a0e0';const bg=up?'rgba(143,214,255,.14)':'rgba(201,160,224,.14)';return `<span class="reftag" style="color:${col};background:${bg}">RSI≈9 ${h.tf.toUpperCase()} ${up?'+':''}${h.diff.toFixed(1)}%${h.above?' ↑':''}</span>`;}).join(''):'') + (r.rsHits&&r.rsHits.length?r.rsHits.map(h=>`<span class="reftag" style="color:${h.rs>=0?'#f0a840':'#c77a6a'};background:rgba(240,168,64,.14)">RS ${h.tf.toUpperCase()} ${h.rs>=0?'+':''}${h.rs.toFixed(1)}%p</span>`).join(''):'') + (r.s9Hits&&r.s9Hits.length?r.s9Hits.map(h=>`<span class="reftag" style="color:#7fd6a8;background:rgba(127,214,168,.14)">R9 ${h.tf.toUpperCase()} ${h.v.toFixed(0)}</span>`).join(''):'') + (r.s20Hits&&r.s20Hits.length?r.s20Hits.map(h=>`<span class="reftag" style="color:#d0b978;background:rgba(208,185,120,.14)">R20 ${h.tf.toUpperCase()} ${h.v.toFixed(0)}</span>`).join(''):'') + (r.maproxBullHits&&r.maproxBullHits.length?r.maproxBullHits.map(h=>`<span class="reftag" style="color:#46cd8a;background:rgba(70,205,138,.16);font-weight:700" title="RSI SMA9 ${h.v9.toFixed(1)} > SMA20 ${h.v20.toFixed(1)}">▲정배 ${h.tf.toUpperCase()} +${h.gap.toFixed(1)}</span>`).join(''):'') + (r.maretHits&&r.maretHits.length?r.maretHits.map(h=>`<span class="reftag" style="color:#8f7ae0;background:rgba(143,122,224,.18);font-weight:700" title="${h.tf.toUpperCase()} ${h.back}봉 내${h.lastN?' · 최근 '+h.lastN+'봉 전':''}">🎯 ${h.P}선 ${h.cnt}회</span>`).join(''):'') + (r.dip?`<span class="reftag" style="color:#f4c84b;background:rgba(244,200,75,.16)">↩ 1m 200선복귀</span>`:'')):'';
+    const maproxLine = r.maprox?(r.maproxHits.map(h=>{const up=h.diff>=0;const col=up?'#4fbf8f':'#c77a6a';const bg=up?'rgba(79,191,143,.16)':'rgba(199,122,106,.16)';return `<span class="reftag" style="color:${col};background:${bg}">📏 ${(h.tf||'').toUpperCase()} ${up?'+':''}${h.diff.toFixed(1)}%${h.above?' ↑':''}</span>`;}).join('') + (r.rsi50&&r.rsi50.length?r.rsi50.map(tf=>`<span class="reftag" style="color:#6fc3ff;background:rgba(111,195,255,.16)">RSI50↑ ${tf.toUpperCase()}</span>`).join(''):'') + (r.rsi9Hits&&r.rsi9Hits.length?r.rsi9Hits.map(h=>{const up=h.diff>=0;const col=up?'#8fd6ff':'#c9a0e0';const bg=up?'rgba(143,214,255,.14)':'rgba(201,160,224,.14)';return `<span class="reftag" style="color:${col};background:${bg}">RSI≈9 ${h.tf.toUpperCase()} ${up?'+':''}${h.diff.toFixed(1)}%${h.above?' ↑':''}</span>`;}).join(''):'') + (r.rsHits&&r.rsHits.length?r.rsHits.map(h=>`<span class="reftag" style="color:${h.rs>=0?'#f0a840':'#c77a6a'};background:rgba(240,168,64,.14)">RS ${h.tf.toUpperCase()} ${h.rs>=0?'+':''}${h.rs.toFixed(1)}%p</span>`).join(''):'') + (r.s9Hits&&r.s9Hits.length?r.s9Hits.map(h=>`<span class="reftag" style="color:#7fd6a8;background:rgba(127,214,168,.14)">R9 ${h.tf.toUpperCase()} ${h.v.toFixed(0)}</span>`).join(''):'') + (r.s20Hits&&r.s20Hits.length?r.s20Hits.map(h=>`<span class="reftag" style="color:#d0b978;background:rgba(208,185,120,.14)">R20 ${h.tf.toUpperCase()} ${h.v.toFixed(0)}</span>`).join(''):'') + (r.maproxPxHits&&r.maproxPxHits.length?r.maproxPxHits.map(h=>`<span class="reftag" style="color:#d77b38;background:rgba(215,123,56,.16);font-weight:700" title="${h.tf.toUpperCase()} 종가가 가격 SMA${h.P} 위 (+${h.pct.toFixed(2)}%)">가격 ${h.tf.toUpperCase()} ${h.P}선위</span>`).join(''):'')
+      + (r.maproxRsiHits&&r.maproxRsiHits.length?r.maproxRsiHits.map(h=>`<span class="reftag" style="color:#5b9bd5;background:rgba(91,155,213,.16);font-weight:700" title="${h.tf.toUpperCase()} RSI ${h.v.toFixed(1)} ≥ RSI-SMA${h.P} ${h.line.toFixed(1)}">RSI ${h.tf.toUpperCase()} R${h.P}위</span>`).join(''):'')
+      + (r.maproxBullHits&&r.maproxBullHits.length?r.maproxBullHits.map(h=>`<span class="reftag" style="color:#46cd8a;background:rgba(70,205,138,.16);font-weight:700" title="RSI SMA9 ${h.v9.toFixed(1)} > SMA20 ${h.v20.toFixed(1)}">▲정배 ${h.tf.toUpperCase()} +${h.gap.toFixed(1)}</span>`).join(''):'')):'';
     // 3) 변동성 줄 (⚡)
     const _rsHM = ms=>{ if(ms==null) return '?'; const d=new Date(ms); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
     const seqLine = r.seqScan?`<span class="reftag" style="color:#c9a0f0;background:rgba(157,123,216,.18);font-weight:700">${r.seqBars.map(x=>x.bull?'🟢':'🔴').join('')}</span><span class="reftag" style="color:${r.seqHit==='bull3'?'#e0584f':'#46cd8a'};background:var(--surface-2)">${r.seqHit==='bull3'?'상승후 반전음봉':'하락후 반전양봉'}</span>`:'';
@@ -2786,13 +2612,11 @@ function buildScanCfg(){
     volxBars: volxBars,
     maproxPct: Math.abs(parseFloat(document.getElementById('maproxpct').value)||2),
     maproxTfs: {...maproxTfs},
-    maprox1wPx: maprox1wPx, maprox1wRsi: maprox1wRsi,
-    maproxDip: maproxDip,
+    maproxPxTf: {...maproxPxTf}, maproxPxOpt: maproxPxOpt,
+    maproxRsiTf: {...maproxRsiTf}, maproxRsiOpt: maproxRsiOpt,
     maproxRsi50: {...maproxRsi50},
     maproxRsi9: {...maproxRsi9}, maproxRsi9Pct: 3,          // (UI 삭제됨)
     maproxRs: {...maproxRs}, maproxRsPct: 0,                 // (UI 삭제됨)
-    maretMa: {...maretMa}, maretTf: maretTf, maretBack: maretBack,
-    maretCnt: Math.max(1, parseInt(document.getElementById('maretcnt').value)||2),
     maproxS9: {...maproxS9}, maproxS9Lv: maproxS9Lv,
     maproxS20: {...maproxS20}, maproxS20Lv: maproxS20Lv,
     maproxBull: {...maproxBull},
@@ -3127,8 +2951,7 @@ function scanModeLabel(cfg){
     const r50=Object.keys(cfg.maproxRsi50||{}).filter(t=>cfg.maproxRsi50[t]);
     const r9=Object.keys(cfg.maproxRsi9||{}).filter(t=>cfg.maproxRsi9[t]&&cfg.maproxRsi9[t]!=='off');
     const rs=Object.keys(cfg.maproxRs||{}).filter(t=>cfg.maproxRs[t]);
-    const dip=(cfg.maproxDip==='1m');
-    const has1w=(cfg.maprox1wPx!=='all'||cfg.maprox1wRsi!=='all');
+    const has1w=(Object.values(cfg.maproxPxTf||{}).some(v=>v)||Object.values(cfg.maproxRsiTf||{}).some(v=>v));
     if(on.length){
       base += ` ${on.join('·')} ${cfg.maproxPct}%`;   // 근접 TF 켜짐 → 📏이평근접 유지
     } else {
@@ -3141,12 +2964,13 @@ function scanModeLabel(cfg){
       const s20=Object.keys(cfg.maproxS20||{}).filter(t=>cfg.maproxS20[t]);
       if(s9.length) parts.push(`R9≥${cfg.maproxS9Lv} ${s9.map(t=>t.toUpperCase()).join('·')}`);
       if(s20.length) parts.push(`R20≥${cfg.maproxS20Lv} ${s20.map(t=>t.toUpperCase()).join('·')}`);
-      if(dip) parts.push('1m되돌림');
-      if(has1w) parts.push('4H이평');
+      const pxT=Object.keys(cfg.maproxPxTf||{}).filter(t=>cfg.maproxPxTf[t]);
+      const rsT=Object.keys(cfg.maproxRsiTf||{}).filter(t=>cfg.maproxRsiTf[t]);
+      if(pxT.length) parts.push(`가격${{a5:'5',a20:'20'}[cfg.maproxPxOpt]||'5'}선 ${pxT.map(t=>t.toUpperCase()).join('·')}`);
+      if(rsT.length) parts.push(`RSI${cfg.maproxRsiOpt==='r9'?'9':'20'}선 ${rsT.map(t=>t.toUpperCase()).join('·')}`);
       base = '🔎 ' + (parts.join(' + ') || '조건');
       return base;
     }
-    if(dip) base += '+되돌림';
     if(r50.length) base+=' +R50';
     if(r9.length) base+=' +R≈9';
     if(rs.length) base+=` +RS(${rs.map(t=>t.toUpperCase()).join('·')}≥${cfg.maproxRsPct||0})`;
@@ -3187,11 +3011,9 @@ async function drillScan(){
     nr.rsi9Hits = Object.values(r9);
     // RSI50: TF 합집합
     nr.rsi50 = [...new Set([...(pr.rsi50||[]), ...(nr.rsi50||[])])];
-    // 되돌림: 하나라도 true면 유지
-    nr.dip = pr.dip || nr.dip;
     nr.maprox = pr.maprox || nr.maprox;
     // 다른 모드 태그(정배/변동성 등)도 이전 값 유지
-    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','maniaWick','pxRetHits','maretHits','maproxBullHits'].forEach(k=>{
+    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','maniaWick','pxRetHits','maproxBullHits','maproxPxHits','maproxRsiHits'].forEach(k=>{
       if(nr[k]===undefined && pr[k]!==undefined) nr[k]=pr[k];
     });
   });
