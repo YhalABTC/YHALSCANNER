@@ -668,7 +668,7 @@
       <button class="modal-share" id="chartMark" title="봉 클릭으로 사후표시 (진입→청산 자동 번갈기)">📍 매매표시</button>
       <div class="seg sm" id="dirseg" style="display:none"><button data-dir="long" class="on">롱</button><button data-dir="short">숏</button></div>
       <button class="modal-share" id="chartShare" title="차트 이미지로 공유 / 에어드랍">📷 공유</button>
-      <button class="modal-share" id="chartPdf" title="4TF 복기 시트 PDF (A4 세로 · 여백 없음)">📄 PDF</button>
+      <button class="modal-share" id="chartPdf" title="4TF 복기 시트 PDF (A4 세로 · 2×2 · 여백 없음)">📄 PDF</button>
       <button class="modal-nav" id="chartReload" title="최신 데이터로 갱신">↻</button>
       <button class="modal-close" id="chartClose">✕</button>
     </div>
@@ -2214,14 +2214,15 @@ async function deliverFile(blob, fname, mime){
   setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
 }
 
-// ---- 4TF 복기 시트: A4 세로 · 여백 없이 풀블리드 · 세로 4단 ----
-// 화면 차트와 무관하게 숨긴 대형 컨테이너에 다시 렌더해서 캡처한다.
+// ---- 4TF 복기 시트: A4 세로 · 여백 없이 풀블리드 · 2×2 ----
+// 화면 차트와 무관하게 숨긴 컨테이너에 다시 렌더해서 캡처한다.
 // (takeScreenshot()은 DOM 실제 픽셀을 따르므로 이 방법 외에는 해상도를 못 올린다)
 const SHEET_W     = 1240;    // A4 세로 @150dpi
-const SHEET_H     = 1752;    // 4로 나누어떨어지게 (438×4) — A4 비율 오차 0.1%, addImage가 흡수
-const SHEET_BARS  = 80;      // TF별 표시 봉 수
-const SHEET_FONT  = 15;      // 축 글자 (기본 10 → 확대: 아이패드 fit-width에서 읽히게)
-const SHEET_PR    = 0.62;    // 셀 내 가격패널 비율 (나머지는 RSI)
+const SHEET_H     = 1752;    // 2로 나누어떨어짐 (876×2) — A4 비율 오차 0.1%, addImage가 흡수
+const SHEET_COLS  = 2;       // 2×2 배치
+const SHEET_BARS  = 70;      // TF별 표시 봉 수 (셀 폭 620px → 폰과 비슷한 봉 밀도)
+const SHEET_FONT  = 13;      // 축 글자 (셀이 좁아진 만큼 15 → 13)
+const SHEET_PR    = 0.58;    // 셀 내 가격패널 비율 — 모바일 단일차트와 동일 분할
 const SHEET_BG    = '#0b0906';
 
 function sheetStamp(){ return new Date(Date.now()+9*3600*1000).toISOString().replace('T',' ').slice(0,16); }
@@ -2229,17 +2230,21 @@ function sheetStamp(){ return new Date(Date.now()+9*3600*1000).toISOString().rep
 async function buildMtfSheetCanvas(){
   if(!currentChartSymbol) throw new Error('종목이 선택되지 않았습니다');
   const tfs = quadTfs();
-  const cellH  = Math.floor(SHEET_H / tfs.length);
+  const cols   = SHEET_COLS;
+  const rows   = Math.ceil(tfs.length / cols);
+  const cellW  = Math.floor(SHEET_W / cols);        // 620
+  const cellH  = Math.floor(SHEET_H / rows);        // 876
   const priceH = Math.round(cellH * SHEET_PR);
   const rsiH   = cellH - priceH;
 
   // 숨긴 호스트: display:none이면 clientWidth가 0이라 차트 폭이 죽는다 → 화면 밖으로 밀어낸다
+  // 배치는 캔버스에서 하므로 호스트는 그냥 세로로 쌓되, 폭만 셀 폭(=모바일 스케일)으로 맞춘다
   const host = document.createElement('div');
-  host.style.cssText = 'position:fixed;left:-30000px;top:0;width:'+SHEET_W+'px;background:'+SHEET_BG+';z-index:-1;pointer-events:none';
+  host.style.cssText = 'position:fixed;left:-30000px;top:0;width:'+cellW+'px;background:'+SHEET_BG+';z-index:-1;pointer-events:none';
   host.innerHTML = tfs.map(()=>
-    '<div style="width:'+SHEET_W+'px">'+
-      '<div class="pchart" style="width:'+SHEET_W+'px;height:'+priceH+'px"></div>'+
-      '<div class="rchart" style="width:'+SHEET_W+'px;height:'+rsiH+'px"></div>'+
+    '<div style="width:'+cellW+'px">'+
+      '<div class="pchart" style="width:'+cellW+'px;height:'+priceH+'px"></div>'+
+      '<div class="rchart" style="width:'+cellW+'px;height:'+rsiH+'px"></div>'+
     '</div>').join('');
   document.body.appendChild(host);
 
@@ -2266,23 +2271,28 @@ async function buildMtfSheetCanvas(){
 
     let ok = 0;
     tfs.forEach((tf,k)=>{
-      const y = k*cellH;
+      const cx = (k % cols) * cellW;
+      const cy = Math.floor(k / cols) * cellH;
       const p = shot(cells[k].querySelector('.pchart'));
       const r = shot(cells[k].querySelector('.rchart'));
-      if(p){ x.drawImage(p, 0, y, SHEET_W, priceH); ok++; }
-      if(r){ x.drawImage(r, 0, y+priceH, SHEET_W, rsiH); }
-      if(k){ x.fillStyle='#3a2e14'; x.fillRect(0, y, SHEET_W, 1); }   // 단 구분선
-      x.fillStyle = 'rgba(11,9,6,.74)'; x.fillRect(0, y, 92, 28);   // TF 배지 (높이 차지 없음)
-      x.fillStyle = '#e3b64f'; x.font = "700 19px 'JetBrains Mono', monospace"; x.textBaseline = 'top';
-      x.fillText(tf.toUpperCase(), 8, y+5);
+      if(p){ x.drawImage(p, cx, cy, cellW, priceH); ok++; }
+      if(r){ x.drawImage(r, cx, cy+priceH, cellW, rsiH); }
+      // 셀 구분선 (1px) — 여백을 만들지 않고 경계만
+      x.fillStyle = '#3a2e14';
+      if(k % cols) x.fillRect(cx, cy, 1, cellH);
+      if(Math.floor(k / cols)) x.fillRect(cx, cy, cellW, 1);
+      // TF 배지 (높이 차지 없이 셀 좌상단에 겹쳐 씀)
+      x.fillStyle = 'rgba(11,9,6,.74)'; x.fillRect(cx+1, cy+1, 84, 26);
+      x.fillStyle = '#e3b64f'; x.font = "700 18px 'JetBrains Mono', monospace"; x.textBaseline = 'top';
+      x.fillText(tf.toUpperCase(), cx+9, cy+5);
     });
     if(!ok) throw new Error('차트 캡처 실패');
 
-    // 식별용 오버레이 (여백을 늘리지 않고 좌상단에 겹쳐 씀)
+    // 식별용 오버레이 — 좌상단 셀의 TF 배지 오른쪽에만 겹쳐 씀 (2열이라 전폭을 덮으면 안 됨)
     const sym = currentChartSymbol.replace('USDT','')+'/USDT';
-    x.fillStyle = 'rgba(11,9,6,.74)'; x.fillRect(92, 0, SHEET_W-92, 28);
-    x.fillStyle = '#efe4cb'; x.font = "700 17px 'JetBrains Mono', monospace"; x.textBaseline = 'top';
-    x.fillText(sym+' · '+EX[exchange].name+' · '+sheetStamp()+' KST', 100, 6);
+    x.fillStyle = 'rgba(11,9,6,.74)'; x.fillRect(86, 1, cellW-87, 26);
+    x.fillStyle = '#efe4cb'; x.font = "700 15px 'JetBrains Mono', monospace"; x.textBaseline = 'top';
+    x.fillText(sym+' · '+EX[exchange].name+' · '+sheetStamp()+' KST', 94, 6);
 
     out = cv;
   } finally {
