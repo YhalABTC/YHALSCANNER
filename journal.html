@@ -457,10 +457,23 @@
   body.mobile .modal{padding:0;align-items:stretch;justify-content:stretch}
   body.mobile .modal-card{max-width:100%;max-height:100%;height:100%;border-radius:0;border:none;display:flex;flex-direction:column;padding-top:calc(env(safe-area-inset-top, 0px) + 18px)}
   body.mobile .modal-head,body.mobile .tfbar,body.mobile .mobi-hint,body.mobile .chartinfo{flex:none}
-  body.mobile .modal-head{background:var(--surface);overflow:hidden}
+  body.mobile .modal-head{background:var(--surface);overflow:visible}
   body.mobile #chartTitle{display:none}
   body.mobile .chart-ctrls{display:none}              /* 4분할·SMA 토글 숨김 */
-  body.mobile .modal-head{gap:8px;padding:9px 14px;flex-wrap:nowrap}
+  /* 모바일 헤더 2줄 배치 — 1줄: 종목이동·갱신·닫기 / 2줄: 기록 도구 */
+  body.mobile .modal-head{gap:6px;row-gap:7px;padding:9px 12px;flex-wrap:wrap}
+  body.mobile .modal-head > *{flex:none}
+  body.mobile #chartPrev{order:1} body.mobile #chartNavPos{order:2} body.mobile #chartNext{order:3}
+  body.mobile #chartHeadInfo{order:4;flex:1 1 auto;min-width:0}
+  body.mobile #chartReload{order:5}
+  body.mobile #chartClose{order:6}
+  body.mobile #chartFav{order:7} body.mobile #chartMark{order:8} body.mobile #dirseg{order:9}
+  body.mobile #chartShare{order:10} body.mobile #chartPdf{order:11}
+  body.mobile .modal-share{padding:7px 10px;font-size:11.5px}
+  /* 닫기 = 저널로 돌아가기. 폰에서 확실히 보이게 라벨+골드 테두리 */
+  body.mobile .modal-close{width:auto;height:34px;padding:0 13px;font-size:12.5px;font-weight:700;
+    color:var(--amber);border-color:var(--amber);background:var(--amber-soft)}
+  body.mobile .modal-close::after{content:' 저널'}
   body.mobile .modal-card{overflow:hidden}
   body.mobile .modal-body{padding:6px 12px 10px;flex:1 1 auto;display:flex;flex-direction:column;touch-action:pan-y;overflow:hidden;min-height:0}
   body.mobile .chart-pane{margin-bottom:8px}
@@ -1978,6 +1991,7 @@ function openChart(symbol, list){
   const mb = $('chartMark'); if(mb) mb.classList.remove('on');
   const ds = $('dirseg'); if(ds){ ds.style.display='none'; [...ds.children].forEach((x,i)=>x.classList.toggle('on', i===0)); }
   $('chartModal').classList.add('show');
+  if(!chartHistPushed){ try{ history.pushState({chart:1}, ''); chartHistPushed = true; }catch(e){} }
   updateChartTitle();
   updateNavUI();
   renderChartView();
@@ -1998,13 +2012,20 @@ function updateNavUI(){
   if(pos) pos.textContent = has ? `${navIdx+1}/${navList.length}` : '';
   ['chartPrev','chartNext'].forEach(id=>{ const b=$(id); if(b) b.style.display = has ? '' : 'none'; });
 }
+let chartHistPushed = false;   // 뒤로가기로 차트를 닫기 위한 히스토리 항목
 function closeChart(){
   chartRenderSeq++;
   chartInfoSeq++;
   $('chartModal').classList.remove('show');
   clearCharts();
   $('chartBody').innerHTML='';
+  if(chartHistPushed){ chartHistPushed = false; try{ history.back(); }catch(e){} }
 }
+// 뒤로가기 제스처 / 안드로이드 하드웨어 버튼 = 차트 닫기 (앱이 종료되지 않게)
+window.addEventListener('popstate', ()=>{
+  chartHistPushed = false;
+  if($('chartModal').classList.contains('show')) closeChart();
+});
 
 // ── 모바일 차트 인터랙션: 탭=TF순환 / 스와이프=종목 ──
 const TF_SEQ = ['1m','3m','5m','15m','1h','4h','1d'];
