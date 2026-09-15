@@ -460,20 +460,22 @@
   body.mobile .modal-head{background:var(--surface);overflow:visible}
   body.mobile #chartTitle{display:none}
   body.mobile .chart-ctrls{display:none}              /* 4분할·SMA 토글 숨김 */
-  /* 모바일 헤더 2줄 배치 — 1줄: 종목이동·갱신·닫기 / 2줄: 기록 도구 */
-  body.mobile .modal-head{gap:6px;row-gap:7px;padding:9px 12px;flex-wrap:wrap}
+  /* 모바일 헤더: 글자 라벨을 숨기고 아이콘만 남겨 한 줄에 */
+  body.mobile .modal-head{gap:5px;padding:6px 10px;flex-wrap:nowrap;
+    overflow-x:auto;scrollbar-width:none}                    /* 혹시 넘쳐도 잘리지 않고 스크롤 */
+  body.mobile .modal-head::-webkit-scrollbar{display:none}
   body.mobile .modal-head > *{flex:none}
-  body.mobile #chartPrev{order:1} body.mobile #chartNavPos{order:2} body.mobile #chartNext{order:3}
-  body.mobile #chartHeadInfo{order:4;flex:1 1 auto;min-width:0}
-  body.mobile #chartReload{order:5}
-  body.mobile #chartClose{order:6}
-  body.mobile #chartFav{order:7} body.mobile #chartMark{order:8} body.mobile #dirseg{order:9}
-  body.mobile #chartShare{order:10} body.mobile #chartPdf{order:11}
-  body.mobile .modal-share{padding:7px 10px;font-size:11.5px}
-  /* 닫기 = 저널로 돌아가기. 폰에서 확실히 보이게 라벨+골드 테두리 */
-  body.mobile .modal-close{width:auto;height:34px;padding:0 13px;font-size:12.5px;font-weight:700;
+  body.mobile .btxt{display:none}                            /* ← 1줄 배치의 핵심 */
+  body.mobile #chartPrev,body.mobile #chartNext{display:none}  /* 종목 이동은 좌우 스와이프로 */
+  body.mobile #chartHeadInfo{flex:1 1 auto;min-width:0}
+  body.mobile .modal-share{padding:0 9px;height:31px;font-size:14px;line-height:31px;
+    display:flex;align-items:center;justify-content:center}
+  body.mobile .modal-nav{width:31px;height:31px;font-size:16px}
+  body.mobile .modal-navpos{font-size:11px;min-width:34px}
+  body.mobile .seg.sm button{padding:4px 9px;font-size:11px}
+  /* 닫기 = 저널로 돌아가기 — 골드로 눈에 띄게 */
+  body.mobile .modal-close{width:auto;height:31px;padding:0 10px;font-size:14px;font-weight:700;
     color:var(--amber);border-color:var(--amber);background:var(--amber-soft)}
-  body.mobile .modal-close::after{content:' 저널'}
   body.mobile .modal-card{overflow:hidden}
   body.mobile .modal-body{padding:6px 12px 10px;flex:1 1 auto;display:flex;flex-direction:column;touch-action:pan-y;overflow:hidden;min-height:0}
   body.mobile .chart-pane{margin-bottom:8px}
@@ -525,6 +527,12 @@
   body.mobile .modal-head{box-shadow:0 8px 24px rgba(0,0,0,.18)}
   body.mobile .tfbar{overflow-x:auto;justify-content:flex-start;padding-left:14px;padding-right:14px;scrollbar-width:none}
   body.mobile .tfbar::-webkit-scrollbar{display:none}
+  /* 홈(런처) 플로팅 버튼 — standalone 앱은 주소창이 없어 이게 유일한 탈출구 */
+  .homefab{position:fixed;z-index:40;right:14px;bottom:calc(env(safe-area-inset-bottom, 0px) + 14px);
+    width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:20px;text-decoration:none;background:var(--surface);border:1px solid var(--amber);
+    box-shadow:0 6px 18px rgba(0,0,0,.45)}
+  .homefab:active{background:var(--amber-soft)}
   /* ── 매매일지 화면 ── */
   .brand h1{letter-spacing:.02em}
   .brand h1 .wm{color:var(--amber);font-weight:700;letter-spacing:.14em}
@@ -654,6 +662,8 @@
 
 </div>
 
+<a class="homefab" href="index.html" title="런처(홈)로">🏠</a>
+
 <div class="modal" id="chartModal">
   <div class="modal-card">
     <div class="modal-head">
@@ -677,13 +687,13 @@
       <button class="modal-nav" id="chartPrev" title="이전 종목 (←)">‹</button>
       <span class="modal-navpos" id="chartNavPos"></span>
       <button class="modal-nav" id="chartNext" title="다음 종목 (→)">›</button>
-      <button class="modal-share" id="chartFav" title="즐겨찾기 추가/제거">☆ 즐찾</button>
-      <button class="modal-share" id="chartMark" title="봉 클릭으로 사후표시 (진입→청산 자동 번갈기)">📍 매매표시</button>
+      <button class="modal-share" id="chartFav" title="즐겨찾기 추가/제거"><b class="bic">☆</b><span class="btxt"> 즐찾</span></button>
+      <button class="modal-share" id="chartMark" title="봉 클릭으로 사후표시 (진입→청산 자동 번갈기)"><b class="bic">📍</b><span class="btxt"> 매매표시</span></button>
       <div class="seg sm" id="dirseg" style="display:none"><button data-dir="long" class="on">롱</button><button data-dir="short">숏</button></div>
-      <button class="modal-share" id="chartShare" title="차트 이미지로 공유 / 에어드랍">📷 공유</button>
-      <button class="modal-share" id="chartPdf" title="4TF 복기 시트 PDF (A4 세로 · 2×2 · 여백 없음)">📄 PDF</button>
+      <button class="modal-share" id="chartShare" title="차트 이미지로 공유 / 에어드랍"><b class="bic">📷</b><span class="btxt"> 공유</span></button>
+      <button class="modal-share" id="chartPdf" title="4TF 복기 시트 PDF (A4 세로 · 2×2 · 여백 없음)"><b class="bic">📄</b><span class="btxt"> PDF</span></button>
       <button class="modal-nav" id="chartReload" title="최신 데이터로 갱신">↻</button>
-      <button class="modal-close" id="chartClose">✕</button>
+      <button class="modal-close" id="chartClose" title="차트 닫기 (저널로)"><b class="bic">✕</b><span class="btxt"> 저널</span></button>
     </div>
     <div class="tfbar" id="tfbar">
       <span class="tfdot" data-tf="1m">1M</span>
@@ -2105,7 +2115,7 @@ $('chartClose').addEventListener('click', closeChart);
 function updateChartFavBtn(){
   const b = $('chartFav'); if(!b || !currentChartSymbol) return;
   const on = isFav(currentChartSymbol);
-  b.textContent = on ? '★ 즐찾' : '☆ 즐찾';
+  const ic = b.querySelector('.bic'); if(ic) ic.textContent = on ? '★' : '☆';
   b.classList.toggle('on', on);
 }
 $('chartFav').addEventListener('click', ()=>{
@@ -2340,14 +2350,14 @@ async function exportMtfSheetPdf(){
   await deliverFile(pdf.output('blob'), fbase+'.pdf', 'application/pdf');
 }
 $('chartShare').addEventListener('click', async ()=>{
-  const btn=$('chartShare'); btn.disabled=true; const o=btn.textContent; btn.textContent='생성 중…';
+  const btn=$('chartShare'); btn.disabled=true; const o=btn.innerHTML; btn.textContent='생성 중…';
   try{ await shareChartImage(); }catch(e){ alert('공유 실패: '+e.message); }
-  btn.disabled=false; btn.textContent=o;
+  btn.disabled=false; btn.innerHTML=o;
 });
 $('chartPdf').addEventListener('click', async ()=>{
-  const btn=$('chartPdf'); btn.disabled=true; const o=btn.textContent; btn.textContent='생성 중…';
+  const btn=$('chartPdf'); btn.disabled=true; const o=btn.innerHTML; btn.textContent='생성 중…';
   try{ await exportMtfSheetPdf(); }catch(e){ alert('PDF 생성 실패: '+e.message); }
-  btn.disabled=false; btn.textContent=o;
+  btn.disabled=false; btn.innerHTML=o;
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeChart(); });
 </script>
