@@ -1596,6 +1596,8 @@ function priceFmtFor(p){
   const prec = Math.max(2, Math.min(10, 4 - Math.floor(Math.log10(a))));
   return {type:'price', precision:prec, minMove:1/Math.pow(10,prec)};
 }
+// 매매 표시 색 — 롱: 밝은 연두 / 숏: 밝은 주황 (캔들 녹·적과 겹치지 않게 일부러 다른 톤)
+const POS_COLOR = {long:'#a6ff4d', short:'#ffa23a'};
 const CANDLE = {upColor:'#46cd8a',downColor:'#e0584f',wickUpColor:'#46cd8a',wickDownColor:'#e0584f',borderVisible:false};
 
 // limit visible candles; both panels share the same range so candles line up
@@ -1820,21 +1822,35 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     if(tr.e && tr.x){
       const y1 = midAt(tr.e.kt), y2 = midAt(tr.x.kt);
       if(y1==null || y2==null) return;
-      const ln = pc.addLineSeries({color:'#ffffff', lineWidth:2, lineStyle:LightweightCharts.LineStyle.Dashed,
+      const ln = pc.addLineSeries({color:POS_COLOR[tr.dir], lineWidth:2, lineStyle:LightweightCharts.LineStyle.Dashed,
         priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false});
       ln.setData([{time:tr.e.kt,value:y1},{time:tr.x.kt,value:y2}]);
     }
   });
-  // 봉 마커: 세트번호로 진입/청산이 한 쌍임을 표시 (롱 초록 / 숏 빨강)
+  // 봉 마커 (롱=밝은 연두 / 숏=밝은 주황) — 가격·RSI 패널에 같이 찍는다
   symPos.forEach(p=>{
-    const long = p.dir==='long', entry = p.side==='entry';
+    const entry = p.side==='entry';
     posMarks.push({ time: toKt(p),
       position: entry ? 'belowBar' : 'aboveBar',
-      color: long ? '#46cd8a' : '#e0584f',
+      color: POS_COLOR[p.dir] || '#a6926a',
       shape: entry ? 'arrowUp' : 'arrowDown',
-      text: (long?'L':'S') + (entry?'진입':'청산') });
+      text: (p.dir==='long'?'L':'S') + (entry?'진입':'청산') });
   });
-  pcs.setMarkers(posMarks.slice().sort((a,b)=>a.time-b.time));
+  const posMarksSorted = posMarks.slice().sort((a,b)=>a.time-b.time);
+  pcs.setMarkers(posMarksSorted);
+
+  // ── RSI 패널에도 같은 매매 표시 ──
+  // 진입/청산 시점의 RSI 위치를 같이 봐야 복기가 된다 (그때 RSI가 어디였나)
+  const rsiMidAt = kt => { const i = t.indexOf(kt); return (i>=0 && rO[i]!=null && rC[i]!=null) ? (rO[i]+rC[i])/2 : null; };
+  trades.forEach(tr=>{
+    if(!(tr.e && tr.x)) return;
+    const y1 = rsiMidAt(tr.e.kt), y2 = rsiMidAt(tr.x.kt);
+    if(y1==null || y2==null) return;
+    const rln = rc.addLineSeries({color:POS_COLOR[tr.dir], lineWidth:2, lineStyle:LightweightCharts.LineStyle.Dashed,
+      priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false, autoscaleInfoProvider:rsiAutoscale});
+    rln.setData([{time:tr.e.kt,value:y1},{time:tr.x.kt,value:y2}]);
+  });
+  rcs.setMarkers(posMarksSorted);
   // 봉 클릭 → 사후 매매표시 (clickable 패널만, markMode일 때만)
   if(clickable){
     pc.subscribeClick(param=>{
