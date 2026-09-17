@@ -1815,22 +1815,45 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     });
     if(open) trades.push({dir,e:open,x:null,n:++n});
   });
-  // 봉 몸통 중심값(oc2) 조회 — 그 시각 봉의 (시가+종가)/2
-  const midAt = kt => { const idx = t.indexOf(kt); return idx>=0 ? (opens[idx]+closes[idx])/2 : null; };
-  // 세트 연결선(진입↔청산) — 흰색, 캔들 중심끼리
+  // ── 매매 시각 → 봉 맞추기 ──
+  // 기록된 시각은 '찍은 TF'의 봉 시각이다. 다른 TF에서 보면 봉 중간에 떨어지는데,
+  // lightweight-charts는 데이터에 없는 시각을 받으면 (1) 다음 봉으로 밀거나
+  // (2) 구간을 벗어난 시각이면 마지막 봉에 몰아 찍는다. 그래서 직접 스냅한다.
+  const tfSec = (TF_MS[tf] || 3600e3) / 1000;
+  const idxAt = kt => {                                  // 그 시각을 '포함하는' 봉의 인덱스
+    if(!t.length || kt < t[0] || kt >= t[t.length-1] + tfSec) return -1;   // 로드 구간 밖 → 안 찍음
+    let lo = 0, hi = t.length - 1, res = -1;
+    while(lo <= hi){ const m = (lo + hi) >> 1; if(t[m] <= kt){ res = m; lo = m + 1; } else hi = m - 1; }
+    return res;
+  };
+  const midAt    = i => (i>=0) ? (opens[i]+closes[i])/2 : null;                        // 봉 몸통 중심
+  const rsiMidAt = i => (i>=0 && rO[i]!=null && rC[i]!=null) ? (rO[i]+rC[i])/2 : null;
+
+  // 세트 연결선(진입↔청산) — 가격·RSI 패널 양쪽, 방향색 점선
   trades.forEach(tr=>{
-    if(tr.e && tr.x){
-      const y1 = midAt(tr.e.kt), y2 = midAt(tr.x.kt);
-      if(y1==null || y2==null) return;
+    if(!(tr.e && tr.x)) return;
+    const i1 = idxAt(tr.e.kt), i2 = idxAt(tr.x.kt);
+    if(i1 < 0 || i2 < 0 || i1 === i2) return;            // 한쪽이 구간 밖이거나 같은 봉이면 선 생략
+    const p1 = midAt(i1), p2 = midAt(i2);
+    if(p1!=null && p2!=null){
       const ln = pc.addLineSeries({color:POS_COLOR[tr.dir], lineWidth:2, lineStyle:LightweightCharts.LineStyle.Dashed,
         priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false});
-      ln.setData([{time:tr.e.kt,value:y1},{time:tr.x.kt,value:y2}]);
+      ln.setData([{time:t[i1],value:p1},{time:t[i2],value:p2}]);
+    }
+    const r1 = rsiMidAt(i1), r2 = rsiMidAt(i2);
+    if(r1!=null && r2!=null){
+      const rln = rc.addLineSeries({color:POS_COLOR[tr.dir], lineWidth:2, lineStyle:LightweightCharts.LineStyle.Dashed,
+        priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false, autoscaleInfoProvider:rsiAutoscale});
+      rln.setData([{time:t[i1],value:r1},{time:t[i2],value:r2}]);
     }
   });
-  // 봉 마커 (롱=밝은 연두 / 숏=밝은 주황) — 가격·RSI 패널에 같이 찍는다
+
+  // 봉 마커 (롱=밝은 연두 / 숏=밝은 주황) — 가격·RSI 패널에 같이, 포함하는 봉 위에
   symPos.forEach(p=>{
+    const i = idxAt(toKt(p));
+    if(i < 0) return;                                    // 아직 안 나온 구간의 매매는 찍지 않는다
     const entry = p.side==='entry';
-    posMarks.push({ time: toKt(p),
+    posMarks.push({ time: t[i],
       position: entry ? 'belowBar' : 'aboveBar',
       color: POS_COLOR[p.dir] || '#a6926a',
       shape: entry ? 'arrowUp' : 'arrowDown',
@@ -1838,18 +1861,6 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   });
   const posMarksSorted = posMarks.slice().sort((a,b)=>a.time-b.time);
   pcs.setMarkers(posMarksSorted);
-
-  // ── RSI 패널에도 같은 매매 표시 ──
-  // 진입/청산 시점의 RSI 위치를 같이 봐야 복기가 된다 (그때 RSI가 어디였나)
-  const rsiMidAt = kt => { const i = t.indexOf(kt); return (i>=0 && rO[i]!=null && rC[i]!=null) ? (rO[i]+rC[i])/2 : null; };
-  trades.forEach(tr=>{
-    if(!(tr.e && tr.x)) return;
-    const y1 = rsiMidAt(tr.e.kt), y2 = rsiMidAt(tr.x.kt);
-    if(y1==null || y2==null) return;
-    const rln = rc.addLineSeries({color:POS_COLOR[tr.dir], lineWidth:2, lineStyle:LightweightCharts.LineStyle.Dashed,
-      priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false, autoscaleInfoProvider:rsiAutoscale});
-    rln.setData([{time:tr.e.kt,value:y1},{time:tr.x.kt,value:y2}]);
-  });
   rcs.setMarkers(posMarksSorted);
   // 봉 클릭 → 사후 매매표시 (clickable 패널만, markMode일 때만)
   if(clickable){
