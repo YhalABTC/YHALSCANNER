@@ -184,10 +184,19 @@
   .field label{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
 
   .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:3px}
-  .seg button{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--muted);
+  .seg button{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--dim);
     background:transparent;border:0;padding:7px 15px;border-radius:6px;cursor:pointer;transition:.12s}
   .seg button:hover{color:var(--text)}
-  .seg button.on{background:var(--amber);color:#1a1205}
+  .seg button.on{background:var(--amber);color:#1a1205;font-weight:800;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.28), 0 1px 3px rgba(0,0,0,.35)}
+
+  /* 다중 선택(AND) 토글: ○=꺼짐 ●=켜짐 을 글머리로 명시 */
+  .seg.multi button::before{content:'\25CB';margin-right:5px;opacity:.45;font-size:11px;vertical-align:1px}
+  .seg.multi button.on::before{content:'\25CF';opacity:.9}
+  /* 3단 토글(끄기→근처→위만) */
+  .seg.tri button::before{content:'\25CB';margin-right:5px;opacity:.45;font-size:11px;vertical-align:1px}
+  .seg.tri button.on::before{content:'\25CF';opacity:.9}
+  .seg.tri button.above::before{content:'\25B2';opacity:1}
   .seg.compact{flex-wrap:wrap}
   .seg.compact button{padding:7px 10px}
   .mode-row{margin-bottom:16px;display:grid;grid-template-columns:1fr;gap:10px}
@@ -207,7 +216,9 @@
   .seg.modeswitch button[data-sm="resist"].on{background:#d4674a;color:#0a0e16}
   .seg.modeswitch button[data-sm="mania"].on{background:#f0883c;color:#0a0e16}
   .seg.modeswitch button[data-sm="oversold"].on{background:#4aa8d8;color:#0a0e16}
-  .modeswitch-new button{background:linear-gradient(135deg,rgba(244,167,60,.16),rgba(224,88,79,.12));border-color:var(--amber)}
+  .modeswitch-new button{background:transparent;box-shadow:inset 0 0 0 1px var(--border)}
+  .modeswitch-new button:hover{box-shadow:inset 0 0 0 1px var(--muted)}
+  .modeswitch-new button.on{box-shadow:none}
   #maproxtfseg button.above,#maproxrsi9 button.above{background:rgba(70,205,138,.22)!important;border-color:#46cd8a!important;color:#46cd8a!important}
   .seg.modeswitch button[data-sm="volx"].on{background:#f4c84b;color:#0a0e16}
   .seg.modeswitch button[data-sm="maprox"].on{background:#5b9bd5;color:#0a0e16}
@@ -720,7 +731,7 @@
     <div class="field" id="maproxfield" style="display:none;margin-bottom:10px">
       <label>이평 근접 (켠 TF 전부 SMA200 ±% 이내 · AND)</label>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <div class="seg" id="maproxtfseg">
+        <div class="seg tri" id="maproxtfseg">
           <button data-mtf="1m">1m</button>
           <button data-mtf="3m">3m</button>
           <button data-mtf="5m">5m</button>
@@ -734,7 +745,7 @@
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">
         <span style="color:#d77b38;font-size:11px;font-weight:700">가격 이평 위 &nbsp;TF:</span>
-        <div class="seg" id="maproxpxtf" title="가격 종가가 선택한 가격 이평 위인지 볼 TF (중복 = AND · 전부 끄면 비활성)">
+        <div class="seg multi" id="maproxpxtf" title="가격 종가가 선택한 가격 이평 위인지 볼 TF (중복 = AND · 전부 끄면 비활성)">
           <button data-ptf="15m">15M</button>
           <button data-ptf="1h">1H</button>
           <button data-ptf="4h">4H</button>
@@ -748,7 +759,7 @@
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">
         <span style="color:#5b9bd5;font-size:11px;font-weight:700">RSI 이평 위 &nbsp;TF:</span>
-        <div class="seg" id="maproxrsitf" title="RSI 종가가 선택한 RSI 이평 위인지 볼 TF (중복 = AND · 전부 끄면 비활성)">
+        <div class="seg multi" id="maproxrsitf" title="RSI 종가가 선택한 RSI 이평 위인지 볼 TF (중복 = AND · 전부 끄면 비활성)">
           <button data-rtf="15m">15M</button>
           <button data-rtf="1h">1H</button>
           <button data-rtf="4h">4H</button>
@@ -762,7 +773,7 @@
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">
         <span style="color:var(--muted);font-size:11px">RSI 정배(9&gt;20):</span>
-        <div class="seg" id="maproxbulltf" title="현재 RSI SMA9 > RSI SMA20 인 TF (중복 선택 = AND · 전부 끄면 비활성)">
+        <div class="seg multi" id="maproxbulltf" title="현재 RSI SMA9 > RSI SMA20 인 TF (중복 선택 = AND · 전부 끄면 비활성)">
           <button data-mb9="15m">15M</button>
           <button data-mb9="1h">1H</button>
           <button data-mb9="4h">4H</button>
@@ -777,7 +788,7 @@
           <button data-lv="60">60</button>
           <button data-lv="70">70</button>
         </div>
-        <div class="seg" id="maproxs9tf" title="RSI-SMA9가 임계값 이상인 TF (중복 = AND)">
+        <div class="seg multi" id="maproxs9tf" title="RSI-SMA9가 임계값 이상인 TF (중복 = AND)">
           <button data-s9="15m">15M</button>
           <button data-s9="1h">1H</button>
           <button data-s9="4h">4H</button>
@@ -792,7 +803,7 @@
           <button data-lv="60">60</button>
           <button data-lv="70">70</button>
         </div>
-        <div class="seg" id="maproxs20tf" title="RSI-SMA20이 임계값 이상인 TF (중복 = AND)">
+        <div class="seg multi" id="maproxs20tf" title="RSI-SMA20이 임계값 이상인 TF (중복 = AND)">
           <button data-s20="15m">15M</button>
           <button data-s20="1h">1H</button>
           <button data-s20="4h">4H</button>
@@ -851,7 +862,7 @@
       <div class="field" id="pxretfield">
         <label>가격 캔들 리테 <span style="color:var(--amber);font-weight:700;font-size:10px">(공통 동시조건)</span></label>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <div class="seg" id="pxretseg" title="스캔 조건에 AND로 덧붙는 필터 — 최근 '봉 개수' 구간 안에서 가격 캔들이 해당 가격 이평을 지지 리테했는지. 둘 다 켜면 둘 다 만족해야 통과.">
+          <div class="seg multi" id="pxretseg" title="스캔 조건에 AND로 덧붙는 필터 — 최근 '봉 개수' 구간 안에서 가격 캔들이 해당 가격 이평을 지지 리테했는지. 둘 다 켜면 둘 다 만족해야 통과.">
             <button data-pr="p5">가격 5선 리테</button>
             <button data-pr="p20">가격 20선 리테</button>
           </div>
@@ -868,7 +879,7 @@
       <div class="field" id="bullretfield">
         <label>리테 라인 (정배)</label>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <div class="seg" id="bullretseg" title="켠 라인마다 지지 리테스트(인트라바 또는 봉간크로스)를 찾습니다. 전부 끄면 결과 없음.">
+          <div class="seg multi" id="bullretseg" title="켠 라인마다 지지 리테스트(인트라바 또는 봉간크로스)를 찾습니다. 전부 끄면 결과 없음.">
             <button data-br="r9" class="on">RSI SMA9</button>
             <button data-br="r20" class="on">RSI SMA20</button>
             <button data-br="p5">가격 SMA5</button>
@@ -1256,6 +1267,78 @@ document.getElementById('maproxrsiopt').addEventListener('click', e=>{
   b.classList.add('on'); maproxRsiOpt=b.dataset.r;
   updateCondChips();
 });
+// ── 복구: 3+1 반전 · RSI 정배 · RS 스캔 패널 컨트롤 ──
+// (이평 리테 횟수 블록을 제거할 때 인접 핸들러들이 함께 삭제되어 있었음)
+function bindSingleSeg(id, attr, apply){
+  const el = document.getElementById(id); if(!el) return;
+  el.addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    const v = b.dataset[attr]; if(v === undefined) return;
+    [...el.children].forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    apply(v);
+  });
+}
+function bindMultiSeg(id, attr, store){
+  const el = document.getElementById(id); if(!el) return;
+  el.addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    const k = b.dataset[attr]; if(k === undefined) return;
+    b.classList.toggle('on');
+    store[k] = b.classList.contains('on');
+    updateCondChips();
+  });
+}
+// 3+1 반전
+bindSingleSeg('seqdir',  'sq',  v=>{ seqDir = v;  updateCondChips(); });
+bindSingleSeg('seqtf',   'stf', v=>{ seqTf = v;   updateCondChips(); });
+bindSingleSeg('seqlive', 'sl',  v=>{ seqLive = v; updateCondChips(); });
+// 이평근접 — 현재 RSI 정배(SMA9 > SMA20) TF 토글
+bindMultiSeg('maproxbulltf', 'mb9', maproxBull);
+// RS 스캔 — 차트 TF / 구간(봉)
+bindSingleSeg('rstfseg', 'rtf2', v=>{ rsChartTf = v; initRsChart(true); });
+{
+  const el = document.getElementById('rsquick');
+  if(el) el.addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    const q = +b.dataset.q; if(!q) return;
+    [...el.children].forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    if(rsBars && rsBars.length){          // 차트가 로드된 뒤에만 구간 재설정
+      rsToIdx = rsBars.length-1;
+      rsFromIdx = Math.max(0, rsToIdx - q);
+      paintRsRange();
+    }
+  });
+}
+
+// ── 과매수/과매도 패널 컨트롤 ──
+// maniacnt 입력칸 비활성 토글은 스캔모드 핸들러 안에 있으므로, 조건 모드가 바뀌면 그 로직을 다시 태워준다
+function syncManiaCntRow(){
+  const cntRow = document.getElementById('maniacnt'); if(!cntRow) return;
+  const dim = (maniaMode === 'now');
+  cntRow.disabled = dim;
+  cntRow.parentElement.style.opacity = dim ? '.4' : '1';
+}
+function bindManiaSeg(id, attr, apply){
+  const el = document.getElementById(id); if(!el) return;
+  el.addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    const v = b.dataset[attr]; if(v === undefined) return;
+    [...el.children].forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    apply(v);
+    updateCondChips();
+  });
+}
+bindManiaSeg('manianow',  'mn',   v=>{ maniaMode = v; syncManiaCntRow(); });
+bindManiaSeg('maniaback', 'mb',   v=>{ maniaBack = +v; updateManiaBackHint(); });
+bindManiaSeg('maniasrc',  'msrc', v=>{ maniaSrc = v; });
+bindManiaSeg('manialive', 'ml',   v=>{ maniaLive = v; });
+{
+  const c = document.getElementById('maniacnt');
+  if(c) c.addEventListener('input', ()=>{ maniaCnt = Math.max(1, parseInt(c.value)||1); updateCondChips(); });
+}
 document.getElementById('maproxs9lv').addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b) return;
   [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
