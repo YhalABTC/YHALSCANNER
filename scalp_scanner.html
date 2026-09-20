@@ -312,6 +312,10 @@
   .rc-sym .favstar{cursor:pointer;font-size:14px;color:var(--dim)}
   .rc-sym .favstar.on{color:var(--amber)}
   .rc-vol{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+  .rsvbtn{background:rgba(255,157,77,.16);color:#ff9d4d;border:1px solid rgba(255,157,77,.45);
+    border-radius:6px;padding:3px 8px;font-size:10.5px;font-weight:700;cursor:pointer;
+    font-family:var(--mono);white-space:nowrap;line-height:1.5}
+  .rsvbtn:hover{background:#ff9d4d;color:#0a0e16}
   .rc-tags{display:flex;flex-direction:column;gap:4px;margin-bottom:7px}
   .rc-tagline{display:flex;flex-wrap:wrap;gap:3px;align-items:center}
   .rc-tagline .pxtf{display:inline-flex;align-items:center;gap:1px;background:var(--surface-2);border:1px solid var(--border);border-radius:5px;padding:1px 5px;font-family:var(--mono);font-size:9.5px}
@@ -413,6 +417,18 @@
     border-bottom:1px solid var(--hair);font-family:var(--mono);font-weight:600;font-size:14px;color:var(--text)}
   .modal-head .sub{font-weight:400;font-size:11px;color:var(--dim)}
   .chart-ctrls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto}
+  /* RS 뷰 헤더 — 컨트롤은 접히되 X·네비는 오른쪽 위에 고정 */
+  .rsv-head{position:relative;flex-wrap:wrap;align-items:flex-start;padding-right:156px}
+  .rsv-ctrls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-left:auto}
+  .rsv-head-right{position:absolute;top:10px;right:14px;display:flex;align-items:center;gap:7px;z-index:2}
+  #rsvNavPos{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:34px;text-align:center}
+  .rsvnav{background:var(--surface-2);color:var(--text);border:1px solid var(--border);
+    border-radius:7px;padding:5px 9px;font-size:12px;cursor:pointer;line-height:1}
+  .rsvnav:hover{border-color:var(--amber);color:var(--amber)}
+  .rsvnav:disabled{opacity:.3;cursor:default}
+  body.mobile .rsv-head{padding-right:132px;gap:7px}
+  body.mobile .rsv-head-right{top:8px;right:10px;gap:5px}
+  body.mobile .rsv-ctrls{display:flex}   /* .chart-ctrls 숨김 규칙에 휩쓸리지 않게 */
   .seg.sm button{padding:5px 11px;font-size:11.5px}
   .chk{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;
     color:var(--muted);cursor:pointer;user-select:none}
@@ -901,6 +917,7 @@
       <input type="hidden" id="rsilen" value="14"><input type="hidden" id="smaf" value="9"><input type="hidden" id="smas" value="20"><input type="hidden" id="conc" value="10">
       <button class="scanbtn" id="scanbtn">스캔 실행</button>
       <button class="scanbtn" id="gainbtn" title="24h 상승률 TOP5" style="background:linear-gradient(135deg,#e0584f,#f0883c)">🚀 24h 상승 TOP5</button>
+      <button class="scanbtn" id="rsviewbtn" title="종목 ÷ 기준(BTC) 상대강도 전용 차트" style="background:linear-gradient(135deg,#ff9d4d,#d9762c)">🔺 RS 차트</button>
       <div class="searchbox">
         <input id="coinsearch" type="text" placeholder="코인 검색 (예: BTC, PEPE) → 차트 바로 보기" autocomplete="off" spellcheck="false">
         <button id="searchbtn" type="button">차트</button>
@@ -1022,6 +1039,59 @@
     <div class="chartinfo" id="chartInfo"></div>
     <div class="modal-body" id="chartBody"></div>
     <div id="chartJournal"></div>
+  </div>
+</div>
+
+<!-- ── RS 전용 뷰 (종목/기준 상대강도 3패널) ── -->
+<div class="modal" id="rsViewModal">
+  <div class="modal-card">
+    <div class="modal-head rsv-head">
+      <span id="rsvTitle">🔺 RS 차트</span>
+      <span id="rsvInfo" style="color:var(--muted);font-size:11.5px"></span>
+      <div class="rsv-ctrls">
+        <input type="text" id="rsvSym" placeholder="종목 (예: SOL)" value="SOL"
+               style="width:104px;text-transform:uppercase;font-weight:700">
+        <span style="color:var(--dim);font-size:11px">÷</span>
+        <input type="text" id="rsvRef" placeholder="기준" value="BTC"
+               style="width:92px;text-transform:uppercase;font-weight:700">
+        <div class="seg sm" id="rsvTfSeg" title="타임프레임">
+          <button data-rvtf="5m">5M</button>
+          <button data-rvtf="15m" class="on">15M</button>
+          <button data-rvtf="1h">1H</button>
+          <button data-rvtf="4h">4H</button>
+        </div>
+        <div class="seg sm" id="rsvBarSeg" title="표시 구간 (최대 1주 기준)">
+          <button data-rvb="1d">1일</button>
+          <button data-rvb="3d">3일</button>
+          <button data-rvb="1w" class="on">1주</button>
+          <button data-rvb="1mo">1달</button>
+        </div>
+        <div class="seg sm" id="rsvP3Seg" title="③번 패널에 무엇을 그릴지">
+          <button data-rvp3="cum" class="on">누적 %p</button>
+          <button data-rvp3="pp">롤링 %p</button>
+          <button data-rvp3="mans">Mansfield</button>
+        </div>
+        <button class="drillbtn" id="rsvLoad" style="padding:6px 12px">불러오기</button>
+      </div>
+      <!-- 오른쪽 상단 고정 — 컨트롤이 여러 줄로 접혀도 절대 안 밀린다 -->
+      <div class="rsv-head-right">
+        <button class="rsvnav" id="rsvPrev" title="이전 종목">◀</button>
+        <span id="rsvNavPos"></span>
+        <button class="rsvnav" id="rsvNext" title="다음 종목">▶</button>
+        <button class="xbtn" id="rsvClose">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="rsvBody" style="padding:8px 10px 14px">
+      <div id="rsvP0Lab" class="pane-label" style="margin:2px 0 3px">① 종목 차트 <span style="color:var(--dim)">가격</span> · <span class="l5">SMA5</span> <span class="l20">BB(20,2)</span></div>
+      <div id="rsvP0" style="height:195px"></div>
+      <div id="rsvP1Lab" class="pane-label" style="margin:9px 0 3px">② 비율 캔들 <span style="color:var(--dim)">종목÷기준</span> · <span class="l5">SMA5</span> <span class="l20">BB(20,2)</span></div>
+      <div id="rsvP1" style="height:180px"></div>
+      <div class="pane-label" style="margin:9px 0 3px">③ RS 캔들 <span style="color:var(--dim)">비율의 RSI · 0~100</span> · <span class="l5">SMA9</span> <span class="l20">BB(20,2)</span></div>
+      <div id="rsvP2" style="height:150px"></div>
+      <div id="rsvP3Lab" class="pane-label" style="margin:9px 0 3px">④ 수익률 차이 <span style="color:var(--dim)">%p · 0선 = 기준과 동일</span></div>
+      <div id="rsvP3" style="height:135px"></div>
+      <div id="rsvMsg" style="margin-top:9px;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7"></div>
+    </div>
   </div>
 </div>
 
@@ -2636,7 +2706,10 @@ function render(){
     html += `<div class="rescard rowclick" data-symbol="${r.symbol}">
       <div class="rc-top">
         <span class="rc-sym"><span class="favstar${isFav(r.symbol)?' on':''}" data-favtoggle="${r.symbol}">★</span>${base}</span>
-        <span class="rc-vol">${fmtVol(r.vol)}</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto">
+          <button class="rsvbtn" data-rsview="${r.symbol}" title="${base} ÷ BTC 상대강도 차트">🔺 RS</button>
+          <span class="rc-vol">${fmtVol(r.vol)}</span>
+        </span>
       </div>
       ${tagRows?`<div class="rc-tags">${tagRows}</div>`:''}
       <div class="rc-meta"><span>펀비 ${fnd}</span><span>${condTx}</span></div>
@@ -2665,6 +2738,9 @@ function render(){
   });
   el.querySelectorAll('.favstar[data-favtoggle]').forEach(st=>{
     st.addEventListener('click', e=>{ e.stopPropagation(); toggleFav(st.dataset.favtoggle); render(); });
+  });
+  el.querySelectorAll('.rsvbtn[data-rsview]').forEach(b=>{
+    b.addEventListener('click', e=>{ e.stopPropagation(); openRsView(b.dataset.rsview, viewSymbols); });
   });
   el.querySelectorAll('.rescard[data-symbol]').forEach(c=>{
     c.addEventListener('click', ()=> openChart(c.dataset.symbol, viewSymbols));
@@ -3607,7 +3683,10 @@ function renderFavs(){
     return `<div class="rescard rowclick" data-symbol="${sym}">
       <div class="rc-top">
         <span class="rc-sym"><span class="favstar on" data-favtoggle="${sym}">★</span>${base}</span>
-        <button class="fdel" data-del="${sym}" title="제거">✕</button>
+        <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto">
+          <button class="rsvbtn" data-rsview="${sym}" title="${base} ÷ BTC 상대강도 차트">🔺 RS</button>
+          <button class="fdel" data-del="${sym}" title="제거">✕</button>
+        </span>
       </div>
       ${tagRows?`<div class="rc-tags">${tagRows}</div>`:''}
       ${charts}
@@ -3616,6 +3695,10 @@ function renderFavs(){
   wrap.innerHTML = html;
   wrap.querySelectorAll('.favstar[data-favtoggle]').forEach(st=>{
     st.addEventListener('click', e=>{ e.stopPropagation(); toggleFav(st.dataset.favtoggle); renderFavs(); });
+  });
+  wrap.querySelectorAll('.rsvbtn[data-rsview]').forEach(b=>{
+    const favList = [...wrap.querySelectorAll('.rsvbtn[data-rsview]')].map(x=>x.dataset.rsview);
+    b.addEventListener('click', e=>{ e.stopPropagation(); openRsView(b.dataset.rsview, favList); });
   });
   wrap.querySelectorAll('.fdel[data-del]').forEach(d=>{
     d.addEventListener('click', e=>{ e.stopPropagation(); const sym=d.dataset.del; favs=favs.filter(x=>x!==sym); saveFavs(); renderFavs(); });
@@ -4931,6 +5014,331 @@ $('chartShare').addEventListener('click', async ()=>{
   btn.disabled=false; btn.textContent=o;
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeChart(); });
+
+// ══════════════════════════════════════════════════════════════
+//  RS 전용 뷰 — 종목 ÷ 기준(BTC 등) 상대강도 3패널
+//  ① 비율 캔들  ② RS 캔들(비율의 RSI)  ③ %p 차이 / Mansfield
+// ══════════════════════════════════════════════════════════════
+let rsvTf = '15m', rsvSpan = '1w', rsvP3 = 'cum';   // cum=누적(기본) · pp=롤링 · mans=Mansfield
+let rsvCharts = [];          // 생성된 차트 (정리용)
+let rsvNavList = [], rsvNavIdx = -1;   // RS 뷰 종목 순환 (스캔 결과 순서)
+let rsvSyncLock = false;
+
+// 구간 → 봉 수 (일주일까지만 본다는 전제)
+const RSV_CAP = 1000;   // 1회 요청 상한 (Binance 1500 · Bybit 1000 → 공통 안전선)
+function rsvPerDay(){ return {'5m':288,'15m':96,'1h':24,'4h':6}[rsvTf] || 96; }
+function rsvDays(){ return {'1d':1,'3d':3,'1w':7,'1mo':30}[rsvSpan] || 7; }
+function rsvBars(){ return Math.min(RSV_CAP, Math.round(rsvPerDay()*rsvDays())); }
+// 요청 구간이 상한을 넘으면 실제로 몇 일치만 담기는지 (경고 표시용)
+function rsvTrunc(){
+  const want = Math.round(rsvPerDay()*rsvDays());
+  if(want <= RSV_CAP) return null;
+  return { want, days: rsvDays(), actualDays: RSV_CAP/rsvPerDay() };
+}
+function rsvNorm(x){
+  x = (x||'').trim().toUpperCase().replace(/\s+/g,'');
+  if(!x) return '';
+  return /USDT$/.test(x) ? x : x+'USDT';
+}
+// 두 거래소 중 데이터가 있는 쪽에서 봉을 가져옴
+async function rsvKlines(sym, tf, lim){
+  for(const ex of [exchange, exchange==='bybit'?'binance':'bybit']){
+    try{ const b = await EX[ex].klines(sym, tf, lim); if(b && b.length>=30) return {bars:b, ex}; }catch(e){}
+  }
+  return null;
+}
+// ★ 타임스탬프로 정합 — 인덱스로 맞추면 상장 시점이 다른 종목에서 엉뚱한 봉끼리 나눠진다
+function rsvAlign(aBars, bBars){
+  const m = new Map();
+  bBars.forEach(b=>m.set(b.t, b));
+  const out = [];
+  for(const a of aBars){
+    const b = m.get(a.t);
+    if(!b) continue;
+    if(!(b.o>0 && b.h>0 && b.l>0 && b.c>0)) continue;
+    out.push({
+      t: a.t,
+      // 비율 OHLC — 종가끼리는 정확, 고/저는 근사치(두 종목의 극값이 봉 안에서 동시에 나오지 않음)
+      o: a.o/b.o, h: a.h/b.h, l: a.l/b.l, c: a.c/b.c,
+      // 종목 원본 OHLC (①번 종목 차트용) + 기준 종가
+      ao: a.o, ah: a.h, al: a.l, ac: a.c, bc: b.c
+    });
+  }
+  return out;
+}
+function rsvClear(){
+  rsvCharts.forEach(c=>{ try{ c.remove(); }catch(e){} });
+  rsvCharts = [];
+  ['rsvP0','rsvP1','rsvP2','rsvP3'].forEach(id=>{ const e=document.getElementById(id); if(e) e.innerHTML=''; });
+}
+
+// null 안전 볼린저 — 중간선은 정의상 SMA(period)와 동일하므로 SMA20 자리를 그대로 대체한다
+// times를 따로 받는 이유: ④번 지표선은 자체 시간축을 쓴다
+function rsvBB(arr, times, period, mult){
+  const up=[], mid=[], lo=[];
+  for(let i=period-1;i<arr.length;i++){
+    let ok=true, sum=0;
+    for(let k=i-period+1;k<=i;k++){ const v=arr[k]; if(v==null||!isFinite(v)){ ok=false; break; } sum+=v; }
+    if(!ok) continue;
+    const m=sum/period;
+    let acc=0; for(let k=i-period+1;k<=i;k++){ const d=arr[k]-m; acc+=d*d; }
+    const sd=Math.sqrt(acc/period);
+    up.push({time:times[i], value:m+mult*sd});
+    mid.push({time:times[i], value:m});
+    lo.push({time:times[i], value:m-mult*sd});
+  }
+  return {up, mid, lo};
+}
+// BB 3선을 한 번에 그림 (상·하 실선 / 중간선=SMA20 점선)
+function rsvDrawBB(chart, arr, times, period, mult, pls, colBand, colMid){
+  const b = rsvBB(arr, times, period, mult);
+  if(!b.mid.length) return null;
+  chart.addLineSeries({color:colBand,lineWidth:1,...pls}).setData(b.up);
+  chart.addLineSeries({color:colBand,lineWidth:1,...pls}).setData(b.lo);
+  chart.addLineSeries({color:colMid,lineWidth:1.5,lineStyle:LightweightCharts.LineStyle.Dotted,...pls}).setData(b.mid);
+  return b;
+}
+async function rsvRender(){
+  const symIn = rsvNorm(document.getElementById('rsvSym').value);
+  const refIn = rsvNorm(document.getElementById('rsvRef').value);
+  const msg = document.getElementById('rsvMsg');
+  const info = document.getElementById('rsvInfo');
+  if(!symIn || !refIn){ msg.innerHTML = '<span style="color:#e0584f">종목과 기준을 모두 입력하세요.</span>'; return; }
+  if(symIn === refIn){ msg.innerHTML = '<span style="color:#e0584f">종목과 기준이 같습니다. 비율이 항상 1이라 의미가 없습니다.</span>'; return; }
+  rsvClear();
+  const lim = rsvBars();
+  info.textContent = '로딩…';
+  msg.textContent = '';
+
+  const [A, B] = await Promise.all([ rsvKlines(symIn, rsvTf, lim), rsvKlines(refIn, rsvTf, lim) ]);
+  if(!A){ info.textContent=''; msg.innerHTML = `<span style="color:#e0584f">${symIn} 데이터 없음 (바낸·바빗 모두). 심볼을 확인하세요.</span>`; return; }
+  if(!B){ info.textContent=''; msg.innerHTML = `<span style="color:#e0584f">기준 ${refIn} 데이터 없음.</span>`; return; }
+
+  const R = rsvAlign(A.bars, B.bars);
+  if(R.length < 30){
+    info.textContent='';
+    msg.innerHTML = `<span style="color:#e0584f">겹치는 봉이 ${R.length}개뿐입니다.</span> 상장 시점이 달라 비교 구간이 부족합니다. 구간을 줄이거나 TF를 올려보세요.`;
+    return;
+  }
+  const t  = R.map(x=>Math.floor(x.t/1000) + CHART_TZ);
+  const rO = R.map(x=>x.o), rH = R.map(x=>x.h), rL = R.map(x=>x.l), rC = R.map(x=>x.c);
+
+  const rsiLen = Math.max(2,+$('rsilen').value||14);
+  const smaF   = Math.max(1,+$('smaf').value||9);
+  const smaS   = Math.max(2,+$('smas').value||20);
+
+  const MOB = ((window.innerWidth||1200) <= 900) || (typeof IS_MOBILE!=='undefined' && IS_MOBILE);
+  const el0=document.getElementById('rsvP0'), el1=document.getElementById('rsvP1'),
+        el2=document.getElementById('rsvP2'), el3=document.getElementById('rsvP3');
+  // 4패널이라 세로가 길어져 각 패널을 줄였다 (합계 데스크톱 660 / 모바일 515)
+  el0.style.height = (MOB?150:195)+'px';
+  el1.style.height = (MOB?140:180)+'px';
+  el2.style.height = (MOB?120:150)+'px';
+  el3.style.height = (MOB?105:135)+'px';
+  const W = ()=> (el0.clientWidth||600);
+  const SCALE_W = 64;
+  const base = {...chartCommon()};
+  const common = {...base, rightPriceScale:{...(base.rightPriceScale||{}), minimumWidth: SCALE_W}};
+  const pls = {priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false};
+
+  // ── ① 종목 자체 차트 (가격 + SMA5/20 + BB) ──
+  const aC = R.map(x=>x.ac);
+  const c0 = LightweightCharts.createChart(el0, {...common, width:W(), height:el0.clientHeight||195});
+  c0.addCandlestickSeries({upColor:'#46cd8a',downColor:'#e0584f',borderVisible:false,wickUpColor:'#46cd8a',wickDownColor:'#e0584f'})
+    .setData(R.map((x,i)=>({time:t[i],open:x.ao,high:x.ah,low:x.al,close:x.ac})));
+  if(aC.length>=5){
+    const d=[]; for(let i=4;i<aC.length;i++){ const v=smaAt(aC,5,i); if(v!=null) d.push({time:t[i],value:v}); }
+    c0.addLineSeries({color:'#5fd6c4',lineWidth:1.5,...pls}).setData(d);
+  }
+  rsvDrawBB(c0, aC, t, smaS, 2, pls, 'rgba(215,123,56,.55)', '#d77b38');
+
+  // ── ② 비율 캔들 ──
+  const c1 = LightweightCharts.createChart(el1, {...common, width:W(), height:el1.clientHeight||180});
+  const s1 = c1.addCandlestickSeries({upColor:'#46cd8a',downColor:'#e0584f',borderVisible:false,wickUpColor:'#46cd8a',wickDownColor:'#e0584f'});
+  s1.setData(R.map((x,i)=>({time:t[i],open:x.o,high:x.h,low:x.l,close:x.c})));
+  if(rC.length>=5){
+    const d=[]; for(let i=4;i<rC.length;i++){ const v=smaAt(rC,5,i); if(v!=null) d.push({time:t[i],value:v}); }
+    c1.addLineSeries({color:'#5fd6c4',lineWidth:1.5,...pls}).setData(d);
+  }
+  rsvDrawBB(c1, rC, t, smaS, 2, pls, 'rgba(215,123,56,.55)', '#d77b38');
+
+  // ── ② RS 캔들 (비율 OHLC → 기존 RSI 캔들 엔진) ──
+  const RS = rsiCandles(rO, rH, rL, rC, rsiLen);
+  const c2 = LightweightCharts.createChart(el2, {...common, width:W(), height:el2.clientHeight||150});
+  const d2 = [];
+  for(let i=0;i<t.length;i++){
+    if(RS.rC[i]==null) continue;
+    d2.push({time:t[i], open:RS.rO[i], high:RS.rH[i], low:RS.rL[i], close:RS.rC[i]});
+  }
+  const s2 = c2.addCandlestickSeries({upColor:'#46cd8a',downColor:'#e0584f',borderVisible:false,wickUpColor:'#46cd8a',wickDownColor:'#e0584f'});
+  s2.setData(d2);
+  {
+    // 색은 ①②④ 패널과 통일 — 민트=짧은 이평, 주황=BB (라벨의 l5/l20 색과 일치)
+    const d=[]; for(let i=0;i<t.length;i++){ const v=smaAt(RS.rC,smaF,i); if(v!=null) d.push({time:t[i],value:v}); }
+    if(d.length) c2.addLineSeries({color:'#5fd6c4',lineWidth:1.5,...pls}).setData(d);
+  }
+  rsvDrawBB(c2, RS.rC, t, smaS, 2, pls, 'rgba(215,123,56,.55)', '#d77b38');
+  [[70,'rgba(224,88,79,.55)'],[50,'rgba(143,163,196,.45)'],[30,'rgba(74,168,216,.55)']].forEach(([lv,col])=>{
+    c2.addLineSeries({color:col,lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,...pls})
+      .setData(t.map(x=>({time:x, value:lv})));
+  });
+
+  // ── ③ %p 차이 또는 Mansfield ──
+  const c3 = LightweightCharts.createChart(el3, {...common, width:W(), height:el3.clientHeight||135});
+  let d3 = [], lab = '';
+  if(rsvP3 === 'cum'){
+    // 누적 수익률 차이 — 구간 시작을 0으로 두고 벌어진 격차를 쌓는다.
+    // RS 스캔(구간 시작→끝 두 점)의 연속 버전이며, 마지막 값 = 구간 전체 성과 차이.
+    const a0 = R[0].ac, b0 = R[0].bc;
+    if(a0>0 && b0>0){
+      for(let i=0;i<R.length;i++){
+        const a1=R[i].ac, b1=R[i].bc;
+        if(!(a1>0&&b1>0)) continue;
+        d3.push({time:t[i], value:((a1/a0-1) - (b1/b0-1))*100});
+      }
+    }
+    lab = `④ 누적 수익률 차이 <span style="color:var(--dim)">구간 시작부터 · %p · 0선 = 기준과 동일</span>`;
+  } else if(rsvP3 === 'pp'){
+    // 롤링 n봉 수익률 차이 — 최근 구간 상대 모멘텀 (누적과 달리 앞선 성과가 창 밖으로 빠져나간다)
+    const n = smaS;
+    for(let i=n;i<R.length;i++){
+      const a0=R[i-n].ac, a1=R[i].ac, b0=R[i-n].bc, b1=R[i].bc;
+      if(!(a0>0&&b0>0)) continue;
+      d3.push({time:t[i], value:((a1/a0-1) - (b1/b0-1))*100});
+    }
+    lab = `④ 롤링 수익률 차이 <span style="color:var(--dim)">최근 ${n}봉만 · %p · 0선 = 기준과 동일</span>`;
+  } else {
+    // Mansfield RS: (비율 / 비율SMA - 1) * 100
+    const n = smaS;
+    for(let i=n-1;i<rC.length;i++){
+      const m = smaAt(rC, n, i);
+      if(m==null || !(m>0)) continue;
+      d3.push({time:t[i], value:(rC[i]/m - 1)*100});
+    }
+    lab = `④ Mansfield RS <span style="color:var(--dim)">비율÷SMA${n} · 0선 = 평소 강도</span>`;
+  }
+  document.getElementById('rsvP3Lab').innerHTML = lab
+    + ' · <span style="color:#5fd6c4">SMA5</span> <span style="color:#d77b38">BB(20,2)</span>';
+  c3.addLineSeries({color:'#ff9d4d',lineWidth:2,...pls}).setData(d3);
+  // 0선
+  c3.addLineSeries({color:'rgba(143,163,196,.5)',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,...pls})
+    .setData(t.map(x=>({time:x, value:0})));
+  // 지표선 자체의 SMA5 / SMA20 — 노이즈 걸러 방향 보기
+  {
+    const v3 = d3.map(x=>x.value), t3 = d3.map(x=>x.time);
+    if(v3.length >= 5){
+      const d=[]; for(let i=4;i<v3.length;i++){ const m=smaAt(v3,5,i); if(m!=null) d.push({time:t3[i], value:m}); }
+      if(d.length) c3.addLineSeries({color:'#5fd6c4',lineWidth:1.5,...pls}).setData(d);
+    }
+    rsvDrawBB(c3, v3, t3, smaS, 2, pls, 'rgba(215,123,56,.55)', '#d77b38');
+  }
+
+  rsvCharts = [c0,c1,c2,c3];
+
+  // ── 세 패널 시간축 + 크로스헤어 동기화 ──
+  rsvCharts.forEach(a=>{
+    a.timeScale().subscribeVisibleLogicalRangeChange(r=>{
+      if(rsvSyncLock || !r) return;
+      rsvSyncLock = true;
+      rsvCharts.forEach(b=>{ if(b!==a){ try{ b.timeScale().setVisibleLogicalRange(r); }catch(e){} } });
+      rsvSyncLock = false;
+    });
+    a.subscribeCrosshairMove(param=>{
+      if(rsvSyncLock) return;
+      rsvSyncLock = true;
+      rsvCharts.forEach(b=>{ if(b!==a){ try{ param.time ? b.setCrosshairPosition(0, param.time, b.__anchor||null) : b.clearCrosshairPosition(); }catch(e){} } });
+      rsvSyncLock = false;
+    });
+  });
+  // 최근 구간만 보이게 (봉 수는 패널 폭에 맞춰 setBars가 minBarSpacing까지 조정)
+  rsvCharts.forEach((c,i)=> setBars(c, Math.min(R.length, lim), R.length, t[t.length-1], t, [el0,el1,el2,el3][i]));
+  // 폭 변화 추적 — ResizeObserver가 없거나 실패해도 아래 요약 렌더까지 죽지 않게 감싼다
+  try{
+    if(typeof ResizeObserver !== 'undefined'){
+      const ro = new ResizeObserver(()=>{ const w=W(); rsvCharts.forEach(c=>{ try{ c.applyOptions({width:w}); }catch(e){} }); });
+      ro.observe(el0);
+    }
+  }catch(e){}
+
+  // ── 요약 ──
+  const last = RS.rC[RS.rC.length-1], l9 = smaAt(RS.rC,smaF,RS.rC.length-1), l20 = smaAt(RS.rC,smaS,RS.rC.length-1);
+  const p3last = d3.length ? d3[d3.length-1].value : null;
+  const SY=symIn.replace(/USDT$/,''), RF=refIn.replace(/USDT$/,'');
+  document.getElementById('rsvP0Lab').innerHTML =
+    `① <b>${SY}</b> 차트 <span style="color:var(--dim)">가격</span> · <span style="color:#5fd6c4">SMA5</span> <span style="color:#d77b38">BB(20,2)</span> <span style="color:var(--dim)">(중간선=SMA20)</span>`;
+  document.getElementById('rsvP1Lab').innerHTML =
+    `② 비율 캔들 <span style="color:var(--dim)">${SY} ÷ ${RF}</span> · <span style="color:#5fd6c4">SMA5</span> <span style="color:#d77b38">BB(20,2)</span>`;
+  info.textContent = `${SY} ÷ ${RF} · ${rsvTf.toUpperCase()} · ${R.length}봉`;
+  rsvUpdateNav();
+  const exN = e=> e==='bybit'?'Bybit':'Binance';
+  const tr = rsvTrunc();
+  const trWarn = tr
+    ? `<div style="color:#f0883c;margin-bottom:3px">⚠ ${rsvTf.toUpperCase()}에서 ${tr.days}일은 ${tr.want}봉이 필요한데 1회 요청 상한이 ${RSV_CAP}봉입니다 → 실제로는 약 <b>${tr.actualDays.toFixed(1)}일</b>치만 표시됩니다. TF를 올리면 전 구간이 담깁니다.</div>`
+    : '';
+  msg.innerHTML = trWarn +
+    `RS 캔들 <b style="color:${last>=70?'#e0584f':last<=30?'#4aa8d8':'#f1f4f8'}">${last!=null?last.toFixed(1):'-'}</b>`
+    + ` · ${(l9!=null&&l20!=null) ? (l9>l20?'<b style="color:#46cd8a">RS 정배(9&gt;20)</b>':'<b style="color:#e0584f">RS 역배(9&lt;20)</b>') : ''}`
+    + (p3last!=null ? ` · ${rsvP3==='cum'?'누적 수익률차':rsvP3==='pp'?'롤링 수익률차':'Mansfield'} <b style="color:${p3last>=0?'#46cd8a':'#e0584f'}">${p3last>=0?'+':''}${p3last.toFixed(2)}${rsvP3==='mans'?'':'%p'}</b>` : '')
+    + `<br><span style="color:var(--dim)">데이터: ${SY} ${exN(A.ex)} · ${RF} ${exN(B.ex)}`
+    + (A.bars.length!==R.length || B.bars.length!==R.length ? ` · 겹친 봉 ${R.length}개만 사용` : '')
+    + ` · 비율 고/저는 근사치(두 종목 극값이 봉 안에서 동시에 발생하지 않음)</span>`;
+}
+
+function rsvUpdateNav(){
+  const has = rsvNavList.length >= 2 && rsvNavIdx >= 0;
+  const pos = document.getElementById('rsvNavPos');
+  if(pos) pos.textContent = has ? `${rsvNavIdx+1}/${rsvNavList.length}` : '';
+  ['rsvPrev','rsvNext'].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled = !has; });
+}
+function rsvNav(dir){
+  if(rsvNavList.length < 2 || rsvNavIdx < 0) return;
+  rsvNavIdx = (rsvNavIdx + dir + rsvNavList.length) % rsvNavList.length;   // 순환
+  document.getElementById('rsvSym').value = String(rsvNavList[rsvNavIdx]).replace(/USDT$/,'');
+  const b = document.getElementById('rsvBody'); if(b) b.scrollTop = 0;
+  rsvUpdateNav();
+  rsvRender();   // 기준(÷) 종목은 그대로 두고 대상만 교체
+}
+function openRsView(sym, list){
+  if(sym){ document.getElementById('rsvSym').value = String(sym).replace(/USDT$/,''); }
+  // 순환 목록: 넘겨받은 목록 → 현재 스캔 결과 순서 → 없으면 단일
+  const full = (Array.isArray(list) && list.length) ? list
+             : (Array.isArray(viewSymbols) && viewSymbols.length ? viewSymbols : []);
+  rsvNavList = full.slice();
+  rsvNavIdx = sym ? rsvNavList.indexOf(String(sym).toUpperCase().replace(/USDT$/,'')+'USDT') : -1;
+  if(rsvNavIdx < 0 && sym) rsvNavIdx = rsvNavList.indexOf(String(sym));
+  if(rsvNavIdx < 0 && rsvNavList.length) rsvNavIdx = 0;
+  document.getElementById('rsViewModal').classList.add('show');
+  rsvUpdateNav();
+  rsvRender();
+}
+$('rsviewbtn').addEventListener('click', ()=>{
+  const q = ($('coinsearch').value||'').trim();
+  openRsView(q || null);
+});
+$('rsvClose').addEventListener('click', ()=>{
+  document.getElementById('rsViewModal').classList.remove('show');
+  rsvClear();
+});
+$('rsvLoad').addEventListener('click', rsvRender);
+$('rsvPrev').addEventListener('click', ()=>rsvNav(-1));
+$('rsvNext').addEventListener('click', ()=>rsvNav(1));
+// RS 뷰가 열려 있을 때 ←/→ 로 종목 이동, Esc 로 닫기 (입력칸에 포커스면 제외)
+document.addEventListener('keydown', e=>{
+  const m = document.getElementById('rsViewModal');
+  if(!m || !m.classList.contains('show')) return;
+  const tag = (e.target && e.target.tagName) || '';
+  if(tag === 'INPUT' || tag === 'TEXTAREA') return;
+  if(e.key === 'ArrowLeft'){ e.preventDefault(); rsvNav(-1); }
+  else if(e.key === 'ArrowRight'){ e.preventDefault(); rsvNav(1); }
+  else if(e.key === 'Escape'){ m.classList.remove('show'); rsvClear(); }
+});
+['rsvSym','rsvRef'].forEach(id=>{
+  $(id).addEventListener('keydown', e=>{ if(e.key==='Enter') rsvRender(); });
+});
+bindSingleSeg('rsvTfSeg',  'rvtf', v=>{ rsvTf = v;   rsvRender(); });
+bindSingleSeg('rsvBarSeg', 'rvb',  v=>{ rsvSpan = v; rsvRender(); });
+bindSingleSeg('rsvP3Seg',  'rvp3', v=>{ rsvP3 = v;   rsvRender(); });
+
 </script>
 </body>
 </html>
