@@ -1853,10 +1853,12 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     const i = idxAt(toKt(p));
     if(i < 0) return;                                    // 아직 안 나온 구간의 매매는 찍지 않는다
     const entry = p.side==='entry';
+    // 롱: 진입=캔들 아래 ↑ / 청산=캔들 위 ↓   숏: 진입=캔들 위 ↓ / 청산=캔들 아래 ↑
+    const below = (p.dir==='short') ? !entry : entry;
     posMarks.push({ time: t[i],
-      position: entry ? 'belowBar' : 'aboveBar',
+      position: below ? 'belowBar' : 'aboveBar',
       color: POS_COLOR[p.dir] || '#a6926a',
-      shape: entry ? 'arrowUp' : 'arrowDown',
+      shape: below ? 'arrowUp' : 'arrowDown',
       text: (p.dir==='long'?'L':'S') + (entry?'진입':'청산') });
   });
   const posMarksSorted = posMarks.slice().sort((a,b)=>a.time-b.time);
