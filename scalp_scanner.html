@@ -1059,12 +1059,15 @@
           <button data-rvtf="15m" class="on">15M</button>
           <button data-rvtf="1h">1H</button>
           <button data-rvtf="4h">4H</button>
+          <button data-rvtf="1d">1D</button>
         </div>
         <div class="seg sm" id="rsvBarSeg" title="표시 구간 (최대 1주 기준)">
           <button data-rvb="1d">1일</button>
           <button data-rvb="3d">3일</button>
           <button data-rvb="1w" class="on">1주</button>
           <button data-rvb="1mo">1달</button>
+          <button data-rvb="3mo">3달</button>
+          <button data-rvb="1y">1년</button>
         </div>
         <div class="seg sm" id="rsvP3Seg" title="③번 패널에 무엇을 그릴지">
           <button data-rvp3="cum" class="on">누적 %p</button>
@@ -5026,14 +5029,50 @@ let rsvSyncLock = false;
 
 // 구간 → 봉 수 (일주일까지만 본다는 전제)
 const RSV_CAP = 1000;   // 1회 요청 상한 (Binance 1500 · Bybit 1000 → 공통 안전선)
-function rsvPerDay(){ return {'5m':288,'15m':96,'1h':24,'4h':6}[rsvTf] || 96; }
-function rsvDays(){ return {'1d':1,'3d':3,'1w':7,'1mo':30}[rsvSpan] || 7; }
-function rsvBars(){ return Math.min(RSV_CAP, Math.round(rsvPerDay()*rsvDays())); }
-// 요청 구간이 상한을 넘으면 실제로 몇 일치만 담기는지 (경고 표시용)
+function rsvPerDay(){ return {'5m':288,'15m':96,'1h':24,'4h':6,'1d':1}[rsvTf] || 96; }
+const RSV_SPAN_DAYS = {'1d':1,'3d':3,'1w':7,'1mo':30,'3mo':90,'1y':365};
+const RSV_MIN_SHOW = 20;   // 이보다 봉이 적으면 차트로서 의미가 없다 (일봉 1주 = 7봉)
+function rsvDays(){ return RSV_SPAN_DAYS[rsvSpan] || 7; }
+// 화면에 보여줄 봉 수 (구간 기준)
+function rsvBars(){ return Math.min(RSV_CAP, Math.max(2, Math.round(rsvPerDay()*rsvDays()))); }
+// 지표 워밍업 — RSI 캔들(rsiLen) + 그 위의 SMA20/BB20 만큼 앞쪽을 더 받아야
+// 화면 왼쪽 끝부터 지표가 그려진다. 일봉·짧은 구간에서 특히 중요.
+function rsvWarmup(){
+  const rl = Math.max(2, +($('rsilen')||{}).value || 14);
+  const ss = Math.max(2, +($('smas')||{}).value || 20);
+  return rl + ss + 10;
+}
+// 실제로 요청할 봉 수
+function rsvFetchBars(){ return Math.min(RSV_CAP, rsvBars() + rsvWarmup()); }
+// TF가 바뀌면 봉이 너무 적은 구간은 못 누르게 하고, 현재 선택이 막혔으면 가능한 최소 구간으로 올린다
+function rsvSyncSpans(){
+  const seg = document.getElementById('rsvBarSeg'); if(!seg) return;
+  const per = rsvPerDay();
+  let firstOk = null, curOk = false;
+  [...seg.children].forEach(b=>{
+    const k = b.dataset.rvb; if(!k) return;
+    const bars = Math.round(per * (RSV_SPAN_DAYS[k]||7));
+    const ok = bars >= RSV_MIN_SHOW;
+    b.disabled = !ok;
+    b.style.opacity = ok ? '' : '.32';
+    b.title = ok ? '' : `${rsvTf.toUpperCase()}에서는 ${bars}봉뿐이라 사용할 수 없습니다`;
+    if(ok && firstOk === null) firstOk = k;
+    if(k === rsvSpan && ok) curOk = true;
+  });
+  if(!curOk && firstOk){
+    rsvSpan = firstOk;
+    [...seg.children].forEach(x=>x.classList.toggle('on', x.dataset.rvb === firstOk));
+    return true;   // 구간이 바뀌었음
+  }
+  [...seg.children].forEach(x=>x.classList.toggle('on', x.dataset.rvb === rsvSpan));
+  return false;
+}
+// 구간+워밍업이 상한을 넘으면 실제로 몇 일치만 담기는지 (경고 표시용)
 function rsvTrunc(){
-  const want = Math.round(rsvPerDay()*rsvDays());
+  const want = Math.round(rsvPerDay()*rsvDays()) + rsvWarmup();
   if(want <= RSV_CAP) return null;
-  return { want, days: rsvDays(), actualDays: RSV_CAP/rsvPerDay() };
+  const usable = Math.max(0, RSV_CAP - rsvWarmup());
+  return { want, days: rsvDays(), actualDays: usable/rsvPerDay() };
 }
 function rsvNorm(x){
   x = (x||'').trim().toUpperCase().replace(/\s+/g,'');
@@ -5106,7 +5145,8 @@ async function rsvRender(){
   if(!symIn || !refIn){ msg.innerHTML = '<span style="color:#e0584f">종목과 기준을 모두 입력하세요.</span>'; return; }
   if(symIn === refIn){ msg.innerHTML = '<span style="color:#e0584f">종목과 기준이 같습니다. 비율이 항상 1이라 의미가 없습니다.</span>'; return; }
   rsvClear();
-  const lim = rsvBars();
+  const lim = rsvFetchBars();      // 받아올 봉 (워밍업 포함)
+  const showN = rsvBars();         // 화면에 보여줄 봉 (구간만)
   info.textContent = '로딩…';
   msg.textContent = '';
 
@@ -5188,10 +5228,11 @@ async function rsvRender(){
   let d3 = [], lab = '';
   if(rsvP3 === 'cum'){
     // 누적 수익률 차이 — 구간 시작을 0으로 두고 벌어진 격차를 쌓는다.
-    // RS 스캔(구간 시작→끝 두 점)의 연속 버전이며, 마지막 값 = 구간 전체 성과 차이.
-    const a0 = R[0].ac, b0 = R[0].bc;
+    // 기준점은 워밍업 봉이 아니라 '화면에 보이는 구간의 첫 봉'이어야 한다.
+    const base0 = Math.max(0, R.length - showN);
+    const a0 = R[base0].ac, b0 = R[base0].bc;
     if(a0>0 && b0>0){
-      for(let i=0;i<R.length;i++){
+      for(let i=base0;i<R.length;i++){
         const a1=R[i].ac, b1=R[i].bc;
         if(!(a1>0&&b1>0)) continue;
         d3.push({time:t[i], value:((a1/a0-1) - (b1/b0-1))*100});
@@ -5251,7 +5292,7 @@ async function rsvRender(){
     });
   });
   // 최근 구간만 보이게 (봉 수는 패널 폭에 맞춰 setBars가 minBarSpacing까지 조정)
-  rsvCharts.forEach((c,i)=> setBars(c, Math.min(R.length, lim), R.length, t[t.length-1], t, [el0,el1,el2,el3][i]));
+  rsvCharts.forEach((c,i)=> setBars(c, Math.min(R.length, showN), R.length, t[t.length-1], t, [el0,el1,el2,el3][i]));
   // 폭 변화 추적 — ResizeObserver가 없거나 실패해도 아래 요약 렌더까지 죽지 않게 감싼다
   try{
     if(typeof ResizeObserver !== 'undefined'){
@@ -5268,7 +5309,7 @@ async function rsvRender(){
     `① <b>${SY}</b> 차트 <span style="color:var(--dim)">가격</span> · <span style="color:#5fd6c4">SMA5</span> <span style="color:#d77b38">BB(20,2)</span> <span style="color:var(--dim)">(중간선=SMA20)</span>`;
   document.getElementById('rsvP1Lab').innerHTML =
     `② 비율 캔들 <span style="color:var(--dim)">${SY} ÷ ${RF}</span> · <span style="color:#5fd6c4">SMA5</span> <span style="color:#d77b38">BB(20,2)</span>`;
-  info.textContent = `${SY} ÷ ${RF} · ${rsvTf.toUpperCase()} · ${R.length}봉`;
+  info.textContent = `${SY} ÷ ${RF} · ${rsvTf.toUpperCase()} · ${Math.min(R.length, showN)}봉 표시` + (R.length>showN?` (+워밍업 ${R.length-showN})`:'');
   rsvUpdateNav();
   const exN = e=> e==='bybit'?'Bybit':'Binance';
   const tr = rsvTrunc();
@@ -5308,6 +5349,7 @@ function openRsView(sym, list){
   if(rsvNavIdx < 0 && sym) rsvNavIdx = rsvNavList.indexOf(String(sym));
   if(rsvNavIdx < 0 && rsvNavList.length) rsvNavIdx = 0;
   document.getElementById('rsViewModal').classList.add('show');
+  rsvSyncSpans();
   rsvUpdateNav();
   rsvRender();
 }
@@ -5335,7 +5377,7 @@ document.addEventListener('keydown', e=>{
 ['rsvSym','rsvRef'].forEach(id=>{
   $(id).addEventListener('keydown', e=>{ if(e.key==='Enter') rsvRender(); });
 });
-bindSingleSeg('rsvTfSeg',  'rvtf', v=>{ rsvTf = v;   rsvRender(); });
+bindSingleSeg('rsvTfSeg',  'rvtf', v=>{ rsvTf = v; rsvSyncSpans(); rsvRender(); });
 bindSingleSeg('rsvBarSeg', 'rvb',  v=>{ rsvSpan = v; rsvRender(); });
 bindSingleSeg('rsvP3Seg',  'rvp3', v=>{ rsvP3 = v;   rsvRender(); });
 
