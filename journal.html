@@ -1157,12 +1157,12 @@ async function logPositionPostHoc(symbol, dir, side, dateMs, priceInput, priceTf
       sma9 = smaAt(rC, cfg.smaF, i); sma20 = smaAt(rC, cfg.smaS, i);
     }
   }catch(e){}
-  // 가격: 클릭 봉 종가가 안 넘어왔으면 클릭 패널 TF(priceTf) 봉으로 보강
+  // 가격: 클릭 봉 가격이 안 넘어왔으면 클릭 패널 TF(priceTf) 봉으로 보강 (진입=시가 / 청산=종가)
   if(price==null){
     try{
       const ptf = priceTf || currentTF;
       const pb = await EX[exchange].klinesUntil(symbol, ptf, endMs, 5);
-      if(pb && pb.length) price = pb[pb.length-1].c;
+      if(pb && pb.length) price = (side==='entry') ? pb[pb.length-1].o : pb[pb.length-1].c;   // 진입=시가 / 청산=종가
     }catch(e){}
   }
   // MTF 태그 역산 (endTime 지정)
@@ -1834,7 +1834,8 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     if(!(tr.e && tr.x)) return;
     const i1 = idxAt(tr.e.kt), i2 = idxAt(tr.x.kt);
     if(i1 < 0 || i2 < 0 || i1 === i2) return;            // 한쪽이 구간 밖이거나 같은 봉이면 선 생략
-    const p1 = midAt(i1), p2 = midAt(i2);
+    const p1 = (tr.e.price!=null) ? +tr.e.price : midAt(i1);   // 진입 기록가(시가)
+    const p2 = (tr.x.price!=null) ? +tr.x.price : midAt(i2);   // 청산 기록가(종가)
     if(p1!=null && p2!=null){
       const ln = pc.addLineSeries({color:POS_COLOR[tr.dir], lineWidth:2, lineStyle:LightweightCharts.LineStyle.Dashed,
         priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false});
@@ -1870,9 +1871,9 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
       if(!markMode || param.time==null) return;
       const utcMs = (param.time - KST) * 1000;
       const side = nextSide(symbol, markDir);
-      // 클릭한 바로 그 봉(이 패널 TF)의 종가를 직접 가격으로 — currentTF 봉과 안 섞이게
+      // 클릭한 그 봉(이 패널 TF) 가격 — 진입=시가 / 청산=종가
       const ci = t.indexOf(param.time);
-      const clickPrice = (ci>=0) ? closes[ci] : null;
+      const clickPrice = (ci>=0) ? (side==='entry' ? opens[ci] : closes[ci]) : null;
       logPositionPostHoc(symbol, markDir, side, utcMs, clickPrice, tf).then(()=>renderChartView());
     });
   }
