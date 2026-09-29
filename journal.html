@@ -701,7 +701,7 @@
       <button class="modal-share" id="chartMark" title="봉 클릭으로 사후표시 (진입→청산 자동 번갈기)"><b class="bic">📍</b><span class="btxt"> 매매표시</span></button>
       <div class="seg sm" id="dirseg" style="display:none"><button data-dir="long" class="on">롱</button><button data-dir="short">숏</button></div>
       <button class="modal-share" id="chartShare" title="차트 이미지로 공유 / 에어드랍"><b class="bic">📷</b><span class="btxt"> 공유</span></button>
-      <button class="modal-share" id="chartPdf" title="복기 시트 PDF — 5M·15M·1H·4H · A4 세로 2×2 · 여백 없음"><b class="bic">📄</b><span class="btxt"> PDF</span></button>
+      <button class="modal-share" id="chartPdf" title="복기 시트 PDF — 최근 매매 구간 · 5M·15M·1H·4H · A4 세로 2×2"><b class="bic">📄</b><span class="btxt"> PDF</span></button>
       <button class="modal-nav" id="chartReload" title="최신 데이터로 갱신">↻</button>
       <button class="modal-close" id="chartClose" title="차트 닫기 (저널로)"><b class="bic">✕</b><span class="btxt"> 저널</span></button>
     </div>
@@ -1401,7 +1401,8 @@ async function exportTradeSheet(s){
   const pad  = Math.min(4*3600e3, Math.max(30*60000, dur*0.25));  // 청산 뒤 여유 (4시간 상한 — 5m 창을 낭비하지 않게)
   const end  = Math.min(Date.now(), lastMs + pad);
   const pnl  = setPnl(s);
-  const sym  = s.symbol.replace('USDT','');
+  const symbol = s.symbol || currentChartSymbol;
+  const sym  = symbol.replace('USDT','');
   const ex   = (s.e && s.e.exchange) || (s.x && s.x.exchange) || exchange;
   const dirK = s.dir === 'long' ? '롱' : '숏';
   const label = sym+'/USDT · '+dirK
@@ -1410,7 +1411,19 @@ async function exportTradeSheet(s){
     + (s.x ? ' → '+fmtTs(s.x.ts).slice(11) : '') + ' KST';
   const fname = sym+'_'+(s.dir==='long'?'LONG':'SHORT')+'_'
     + fmtTs(s.e ? s.e.ts : s.x.ts).replace(/[: ]/g,'-');
-  await exportMtfSheetPdf({symbol:s.symbol, ex, endTime:end, fromMs, label, fname});
+  await exportMtfSheetPdf({symbol, ex, endTime:end, fromMs, label, fname});
+}
+
+// 차트 헤더의 📄 — 이 종목에 기록된 매매가 있으면 '가장 최근 매매' 구간으로 뽑는다.
+// 최신 봉 기준으로 뽑으면 5m 시트가 약 6시간(70봉)밖에 안 담겨서,
+// 몇 시간 지난 매매는 진입·청산이 창 밖으로 나가 마커가 사라진다.
+async function exportChartSheet(){
+  // allTradeSets()는 심볼이 붙어 있고 최신순 정렬 — tradeSets()는 심볼이 없어 쓰면 안 된다
+  const sets = currentChartSymbol
+    ? allTradeSets().filter(s=> s.symbol===currentChartSymbol && (s.e || s.x))
+    : [];
+  if(sets.length) return exportTradeSheet(sets[0]);   // 최근 매매 기준
+  return exportMtfSheetPdf();                          // 기록이 없으면 최신 구간
 }
 
 $('jfilterseg').addEventListener('click', e=>{
@@ -2457,7 +2470,7 @@ $('chartShare').addEventListener('click', async ()=>{
 });
 $('chartPdf').addEventListener('click', async ()=>{
   const btn=$('chartPdf'); btn.disabled=true; const o=btn.innerHTML; btn.textContent='생성 중…';
-  try{ await exportMtfSheetPdf(); }catch(e){ alert('PDF 생성 실패: '+e.message); }
+  try{ await exportChartSheet(); }catch(e){ alert('PDF 생성 실패: '+e.message); }
   btn.disabled=false; btn.innerHTML=o;
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeChart(); });
