@@ -216,6 +216,7 @@
   .seg.modeswitch button[data-sm="resist"].on{background:#d4674a;color:#0a0e16}
   .seg.modeswitch button[data-sm="mania"].on{background:#f0883c;color:#0a0e16}
   .seg.modeswitch button[data-sm="oversold"].on{background:#4aa8d8;color:#0a0e16}
+  .seg.modeswitch button[data-sm="macond"].on{background:#46cd8a;color:#0a0e16}
   .modeswitch-new button{background:transparent;box-shadow:inset 0 0 0 1px var(--border)}
   .modeswitch-new button:hover{box-shadow:inset 0 0 0 1px var(--muted)}
   .modeswitch-new button.on{box-shadow:none}
@@ -418,6 +419,11 @@
   .modal-head .sub{font-weight:400;font-size:11px;color:var(--dim)}
   .chart-ctrls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto}
   /* RS 뷰 헤더 — 컨트롤은 접히되 X·네비는 오른쪽 위에 고정 */
+  .mcrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
+  .mclab{color:var(--muted);font-size:11px;min-width:168px}
+  .mctri button[data-v="up"].on{background:#46cd8a;color:#0a0e16}
+  .mctri button[data-v="dn"].on{background:#e0584f;color:#fff}
+  body.mobile .mclab{min-width:0}
   .rsv-head{position:relative;flex-wrap:wrap;align-items:flex-start;padding-right:156px}
   .rsv-ctrls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-left:auto}
   .rsv-head-right{position:absolute;top:10px;right:14px;display:flex;align-items:center;gap:7px;z-index:2}
@@ -568,6 +574,9 @@
           <div class="seg modeswitch modeswitch-new">
             <button data-sm="mania">🔥 과매수</button>
             <button data-sm="oversold">🧊 과매도</button>
+          </div>
+          <div class="seg modeswitch modeswitch-new">
+            <button data-sm="macond">🎚️ 이평조건 스캔</button>
           </div>
         </div>
       </div>
@@ -744,6 +753,85 @@
         </div>
       </div>
     </div>
+    <div class="field" id="macondfield" style="display:none;margin-bottom:10px">
+      <label>🎚️ 이평조건 스캔 — <span style="color:var(--dim)">고른 봉 하나를 기준으로 켠 조건 전부 만족(AND)</span></label>
+      <div class="mcrow" style="margin-bottom:9px">
+        <span class="mclab">타임프레임 <span style="color:var(--dim)">먼저 결정</span></span>
+        <div class="seg" id="mctfseg">
+          <button data-mctf="1m">1M</button>
+          <button data-mctf="5m">5M</button>
+          <button data-mctf="15m" class="on">15M</button>
+          <button data-mctf="1h">1H</button>
+          <button data-mctf="4h">4H</button>
+          <button data-mctf="1d">1D</button>
+          <button data-mctf="1w">1W</button>
+        </div>
+      </div>
+      <div class="mcrow" style="margin-bottom:9px">
+        <span class="mclab">대상 봉</span>
+        <div class="seg sm" id="mcbarseg">
+          <button data-mcb="0" class="on">0봉전(현재)</button>
+          <button data-mcb="1">1봉전</button>
+          <button data-mcb="2">2봉전</button>
+          <button data-mcb="3">3봉전</button>
+        </div>
+        <span style="color:var(--muted);font-size:11px">직접</span>
+        <input type="number" id="mcbarn" value="0" min="0" max="200" step="1" style="width:56px">
+        <span style="color:var(--dim);font-size:10.5px">봉 전 · 위 TF 기준</span>
+      </div>
+      <div class="mcrow">
+        <span class="mclab">RSI 종가 vs <b>RSI SMA9</b></span>
+        <div class="seg sm mctri" id="mcC9">
+          <button data-v="off" class="on">끄기</button>
+          <button data-v="up">위</button>
+          <button data-v="dn">아래</button>
+        </div>
+      </div>
+      <div class="mcrow">
+        <span class="mclab">RSI 종가 vs <b>RSI SMA20</b></span>
+        <div class="seg sm mctri" id="mcC20">
+          <button data-v="off" class="on">끄기</button>
+          <button data-v="up">위</button>
+          <button data-v="dn">아래</button>
+        </div>
+      </div>
+      <div class="mcrow">
+        <span class="mclab"><b>RSI SMA9</b> 레벨</span>
+        <div class="seg sm" id="mcL9lv">
+          <button data-lv="30">30</button><button data-lv="40">40</button>
+          <button data-lv="50" class="on">50</button><button data-lv="60">60</button><button data-lv="70">70</button>
+        </div>
+        <div class="seg sm mctri" id="mcL9">
+          <button data-v="off" class="on">끄기</button><button data-v="up">위</button><button data-v="dn">아래</button>
+        </div>
+      </div>
+      <div class="mcrow">
+        <span class="mclab"><b>RSI SMA20</b> 레벨</span>
+        <div class="seg sm" id="mcL20lv">
+          <button data-lv="30">30</button><button data-lv="40">40</button>
+          <button data-lv="50" class="on">50</button><button data-lv="60">60</button><button data-lv="70">70</button>
+        </div>
+        <div class="seg sm mctri" id="mcL20">
+          <button data-v="off" class="on">끄기</button><button data-v="up">위</button><button data-v="dn">아래</button>
+        </div>
+      </div>
+      <div class="mcrow">
+        <span class="mclab">종가 vs <b>가격 SMA5</b></span>
+        <div class="seg sm mctri" id="mcP5">
+          <button data-v="off" class="on">끄기</button>
+          <button data-v="up">위</button>
+          <button data-v="dn">아래</button>
+        </div>
+      </div>
+      <div class="mcrow">
+        <span class="mclab">종가 vs <b>가격 SMA20</b></span>
+        <div class="seg sm mctri" id="mcP20">
+          <button data-v="off" class="on">끄기</button>
+          <button data-v="up">위</button>
+          <button data-v="dn">아래</button>
+        </div>
+      </div>
+    </div>
     <div class="field" id="maproxfield" style="display:none;margin-bottom:10px">
       <label>이평 근접 (켠 TF 전부 SMA200 ±% 이내 · AND)</label>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -836,7 +924,7 @@
           <button data-ex="bybit" class="on">Bybit</button>
         </div>
       </div>
-      <div class="field">
+      <div class="field" id="tffield">
         <label>타임프레임</label>
         <div class="seg" id="tfseg">
           <button data-tf="1m">1M</button>
@@ -1117,6 +1205,13 @@ let maproxRsi9 = {'1h':'off','4h':'off','1d':'off','1w':'off'};   // RSI≈SMA9 
 let maproxRs = {'4h':false,'1d':false,'1w':false,'1M':false};   // RS(BTC대비) 강세 필터
 let maproxS9 = {'15m':false,'1h':false,'4h':false,'1d':false,'1w':false}, maproxS9Lv = 50;    // RSI-SMA9 ≥ 임계
 let maproxS20 = {'15m':false,'1h':false,'4h':false,'1d':false,'1w':false}, maproxS20Lv = 50;  // RSI-SMA20 ≥ 임계
+// 🎚️ 이평조건 스캔 — 고른 봉 하나에 대한 위/아래 조건 (off|up|dn)
+let mcTf = '15m';                     // 이 모드 전용 TF (가장 먼저 결정)
+let mcBarN = 0;                       // 몇 봉 전 (0 = 현재봉)
+let mcC9='off', mcC20='off';          // RSI 종가 vs RSI SMA9 / SMA20
+let mcL9='off',  mcL9Lv=50;           // RSI SMA9  값 vs 레벨
+let mcL20='off', mcL20Lv=50;          // RSI SMA20 값 vs 레벨
+let mcP5='off', mcP20='off';          // 종가 vs 가격 SMA5 / SMA20
 let maproxBull = {'15m':false,'1h':false,'4h':false,'1d':false,'1w':false};   // 현재 RSI 정배 (SMA9 > SMA20)
 // RS 스캔: BTC 1h 구간 지정
 let rsBars = [];            // 기준 코인 봉 (차트용)
@@ -1230,6 +1325,19 @@ function updateCondChips(){
       <div class="chip"><span class="n">①</span><b>RSI 50 지지</b> · 최근 N봉 중 <b>RSI시가 ≥ 50 AND RSI저가 ≤ 50</b>인 봉 (위에서 지지)</div>
       <div class="chip">태그 <span style="color:#46cd8a">RSI50 지지</span> · 반등 예상 → <b style="color:#46cd8a">롱</b></div>
       <div class="chip"><span style="color:#5fd6c4">현재진행형</span> = 현재 RSI가 50 이상 (지지받고 버팀, ● 표시)</div>`;
+  }else if(scanMode === 'macond'){
+    const D = v => v==='up' ? '<b style="color:#46cd8a">위</b>' : v==='dn' ? '<b style="color:#e0584f">아래</b>' : null;
+    const L = [];
+    if(D(mcC9))  L.push(`RSI 종가 ${D(mcC9)} RSI SMA9`);
+    if(D(mcC20)) L.push(`RSI 종가 ${D(mcC20)} RSI SMA20`);
+    if(D(mcL9))  L.push(`RSI SMA9 ${D(mcL9)} ${mcL9Lv}`);
+    if(D(mcL20)) L.push(`RSI SMA20 ${D(mcL20)} ${mcL20Lv}`);
+    if(D(mcP5))  L.push(`종가 ${D(mcP5)} 가격 SMA5`);
+    if(D(mcP20)) L.push(`종가 ${D(mcP20)} 가격 SMA20`);
+    el.innerHTML = `
+      <div class="chip"><span class="n">①</span><b>${mcTf.toUpperCase()}</b> · ${mcBarN===0?'현재(진행)봉':mcBarN+'봉 전'} 하나만 평가 (구간 탐색 없음)</div>
+      <div class="chip"><span class="n">②</span>${L.length ? L.join(' <b>AND</b> ') : '<b style="color:#e0584f">조건 전부 꺼짐 → 결과 없음</b>'}</div>
+      <div class="chip">값이 정확히 같으면 위도 아래도 아니므로 탈락 · 봉이 모자라 이평 계산이 안 되면 제외</div>`;
   }else if(scanMode === 'maprox'){
     const on = Object.keys(maproxTfs).filter(t=>maproxTfs[t]&&maproxTfs[t]!=='off').map(t=>t.toUpperCase());
     el.innerHTML = `
@@ -1263,8 +1371,10 @@ document.getElementById('scanmodeseg').addEventListener('click', e=>{
   document.getElementById('rsscanfield').style.display = isRs ? '' : 'none';
   document.getElementById('seqfield').style.display = isSeq ? '' : 'none';
   document.getElementById('maniafield').style.display = isMania ? '' : 'none';
+  { const mf=document.getElementById('macondfield'); if(mf) mf.style.display = (scanMode==='macond') ? '' : 'none'; }
+  { const tf=document.getElementById('tffield'); if(tf) tf.style.display = (scanMode==='macond') ? 'none' : ''; }
   if(isMania){ const cntRow=document.getElementById('maniacnt'); if(cntRow){ const dim=(maniaMode==='now'); cntRow.disabled=dim; cntRow.parentElement.style.opacity=dim?'.4':'1'; } applyManiaLabels(); }
-  { const rb=document.getElementById('retestbarfield'); if(rb) rb.style.display = isSpecial ? 'none' : ''; }
+  { const rb=document.getElementById('retestbarfield'); if(rb) rb.style.display = (isSpecial||scanMode==='macond') ? 'none' : ''; }
   document.body.dataset.scan = scanMode;   // #pxretfield 표시는 CSS가 담당
   moveOptionsRow(isRs);
   if(isRs) initRsChart();
@@ -1367,6 +1477,34 @@ bindSingleSeg('seqdir',  'sq',  v=>{ seqDir = v;  updateCondChips(); });
 bindSingleSeg('seqtf',   'stf', v=>{ seqTf = v;   updateCondChips(); });
 bindSingleSeg('seqlive', 'sl',  v=>{ seqLive = v; updateCondChips(); });
 // 이평근접 — 현재 RSI 정배(SMA9 > SMA20) TF 토글
+// 이평조건 스캔 컨트롤
+function bindTri(id, setter){
+  const el=document.getElementById(id); if(!el) return;
+  el.addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b||!b.dataset.v) return;
+    [...el.children].forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); setter(b.dataset.v); updateCondChips();
+  });
+}
+bindTri('mcC9',  v=>mcC9=v);
+bindTri('mcC20', v=>mcC20=v);
+bindTri('mcL9',  v=>mcL9=v);
+bindTri('mcL20', v=>mcL20=v);
+bindTri('mcP5',  v=>mcP5=v);
+bindTri('mcP20', v=>mcP20=v);
+bindSingleSeg('mcL9lv',  'lv', v=>{ mcL9Lv=+v;  updateCondChips(); });
+bindSingleSeg('mcL20lv', 'lv', v=>{ mcL20Lv=+v; updateCondChips(); });
+bindSingleSeg('mctfseg', 'mctf', v=>{ mcTf=v; updateCondChips(); });
+bindSingleSeg('mcbarseg','mcb', v=>{ mcBarN=+v; const i=document.getElementById('mcbarn'); if(i) i.value=v; updateCondChips(); });
+{
+  const i=document.getElementById('mcbarn');
+  if(i) i.addEventListener('input', ()=>{
+    mcBarN=Math.max(0, parseInt(i.value)||0);
+    const seg=document.getElementById('mcbarseg');
+    if(seg) [...seg.children].forEach(x=>x.classList.toggle('on', +x.dataset.mcb===mcBarN));
+    updateCondChips();
+  });
+}
 bindMultiSeg('maproxbulltf', 'mb9', maproxBull);
 // RS 스캔 — 차트 TF / 구간(봉)
 bindSingleSeg('rstfseg', 'rtf2', v=>{ rsChartTf = v; initRsChart(true); });
@@ -1876,6 +2014,50 @@ async function scanSymbol(s, cfg){
   }
 
   // ── 📏 이평 근접: 켠 TF 전부 SMA200 ±% 이내 (AND) ──
+  // ── 🎚️ 이평조건 스캔 — 고른 봉 하나(n봉 전)에서 켠 조건 전부 만족(AND) ──
+  if(cfg.scanMode === 'macond'){
+    const n = Math.max(0, cfg.mcBarN|0);
+    const idx = i0 - n;                       // 0 = 현재(진행)봉
+    if(idx < 0) return null;
+    const on = v => v==='up' || v==='dn';
+    if(!(on(cfg.mcC9)||on(cfg.mcC20)||on(cfg.mcL9)||on(cfg.mcL20)||on(cfg.mcP5)||on(cfg.mcP20))) return null;  // 조건 전무 → 제외
+
+    const v9   = smaAt(rC, cfg.smaF, idx);    // RSI SMA9 값
+    const v20  = smaAt(rC, cfg.smaS, idx);    // RSI SMA20 값
+    const rc   = rC[idx];                     // RSI 종가
+    const pc   = closes[idx];                 // 가격 종가
+    const p5   = smaAt(closes, 5, idx);
+    const p20  = smaAt(closes, cfg.smaS, idx);
+
+    const hits = [];
+    // want: 'up' = a > b · 'dn' = a < b (같으면 어느 쪽도 아님 → 탈락)
+    const chk = (want, a, b, label, unit) => {
+      if(!on(want)) return true;
+      if(a==null || b==null) return false;    // 계산 불가(봉 부족) → 탈락
+      const ok = (want==='up') ? (a > b) : (a < b);
+      if(!ok) return false;
+      hits.push({label, dir:want, a, b, unit});
+      return true;
+    };
+    if(!chk(cfg.mcC9,  rc,  v9,  'RSI종가/SMA9',  'r')) return null;
+    if(!chk(cfg.mcC20, rc,  v20, 'RSI종가/SMA20', 'r')) return null;
+    if(!chk(cfg.mcL9,  v9,  cfg.mcL9Lv,  `RSI SMA9 ${cfg.mcL9Lv}`,  'r')) return null;
+    if(!chk(cfg.mcL20, v20, cfg.mcL20Lv, `RSI SMA20 ${cfg.mcL20Lv}`, 'r')) return null;
+    if(!chk(cfg.mcP5,  pc,  p5,  '종가/가격SMA5',  'p')) return null;
+    if(!chk(cfg.mcP20, pc,  p20, '종가/가격SMA20', 'p')) return null;
+
+    return gate({
+      symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
+      rO: rO[i0], rH: rH[i0], rL: rL[i0], rC: rC[i0]!=null?rC[i0]:0,
+      rPrev: [i0-4,i0-3,i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
+      sma9: v9, sma20: v20,
+      gap: (v9!=null&&v20!=null) ? v9-v20 : 0,
+      retestN: n+1,
+      macond: true, mcHits: hits, mcBarN: n, mcRsi: rc,
+      smaInfo
+    });
+  }
+
   if(cfg.scanMode === 'maprox'){
     const tfs = Object.keys(cfg.maproxTfs||{}).filter(tf=>cfg.maproxTfs[tf] && cfg.maproxTfs[tf]!=='off');
     // 활성 필터 유무 체크 (TF 근접 또는 추가필터 중 하나라도 있어야)
@@ -2509,6 +2691,18 @@ function fmtPrice(p){
   return p.toPrecision(4);
 }
 
+// 🎚️ 이평조건 스캔 태그 — 초록=위 · 빨강=아래
+function mcTags(r){
+  if(!r.macond || !r.mcHits || !r.mcHits.length) return '';
+  const bar = `<span class="reftag" style="color:#46cd8a;background:rgba(70,205,138,.14);font-weight:700">${r.mcBarN}봉전 봉</span>`;
+  return bar + r.mcHits.map(h=>{
+    const up = h.dir==='up';
+    const col = up ? '#46cd8a' : '#e0584f';
+    const rgb = up ? '70,205,138' : '224,88,79';
+    const fmt = v => (v==null?'-':(h.unit==='r'? v.toFixed(1) : (v<1? v.toPrecision(4) : v.toFixed(2))));
+    return `<span class="reftag" style="color:${col};background:rgba(${rgb},.15);font-weight:700" title="${fmt(h.a)} ${up?'>':'<'} ${fmt(h.b)}">${h.label} ${up?'▲위':'▼아래'}</span>`;
+  }).join('');
+}
 // 공통 동시조건(가격 5선/20선 리테) 태그 — "+" 로 덧붙은 조건임을 표시
 function pxRetTags(r){
   if(!r.pxRetHits || !r.pxRetHits.length) return '';
@@ -2680,7 +2874,7 @@ function render(){
     // 4) 가격 태그 줄
     const pxLine = `${r.pullback?`<span class="reftag refpx">가격 ${r.pxCount}회</span>`:''}${r.ctPx?`<span class="reftag refpx">가격 BB하단</span>`:''}`;
     // 5) RSI 태그 줄
-    const rsiLine = `${r.pullback?`<span class="reftag ref${r.rsiNear?'px':'ct'}">RSI50 ${r.rsiCount}회</span>`:''}${r.support?`<span class="reftag ref20">RSI50 지지${r.live?' ●':''}</span>`:''}${r.ctlong?`<span class="reftag refct">RSI BB하단</span>`:''}${r.ctBoth?`<span class="reftag refboth">가격+RSI 동시</span>`:''}${bullRetTags(r)}${pxRetTags(r)}`;
+    const rsiLine = `${r.pullback?`<span class="reftag ref${r.rsiNear?'px':'ct'}">RSI50 ${r.rsiCount}회</span>`:''}${r.support?`<span class="reftag ref20">RSI50 지지${r.live?' ●':''}</span>`:''}${r.ctlong?`<span class="reftag refct">RSI BB하단</span>`:''}${r.ctBoth?`<span class="reftag refboth">가격+RSI 동시</span>`:''}${bullRetTags(r)}${pxRetTags(r)}${mcTags(r)}`;
     // 6) 저항/기타 조건 줄
     const condLine = `${r.resist?`${r.r50?`<span class="reftag refshort">50 저항${r.live50?' ●':''}</span>`:''}${r.r70?`<span class="reftag refshort">70 저항${r.live70?' ●':''}</span>`:''}`:''}`;
     // 7) 📏 가격 스캔 결과 (TF별 SMA5/20 화살표 + MACD)
@@ -2782,6 +2976,7 @@ function buildScanCfg(){
     maproxS9: {...maproxS9}, maproxS9Lv: maproxS9Lv,
     maproxS20: {...maproxS20}, maproxS20Lv: maproxS20Lv,
     maproxBull: {...maproxBull},
+    mcBarN, mcC9, mcC20, mcL9, mcL9Lv, mcL20, mcL20Lv, mcP5, mcP20,
     rsFrom: (rsFromIdx!=null && rsBars[rsFromIdx]) ? rsBars[rsFromIdx].t : null,
     rsTo: (rsToIdx!=null && rsBars[rsToIdx]) ? rsBars[rsToIdx].t : null,
     rsBtcRet: (rsFromIdx!=null && rsToIdx!=null && rsBars[rsFromIdx] && rsBars[rsToIdx] && rsBars[rsFromIdx].c>0) ? ((rsBars[rsToIdx].c/rsBars[rsFromIdx].c-1)*100) : null,
@@ -2795,6 +2990,7 @@ function buildScanCfg(){
   cfg.maniaSrc = maniaSrc;
   if(scanMode==='volx') cfg.tf = volxTf;
   if(scanMode==='seq') cfg.tf = seqTf;
+  if(scanMode==='macond') cfg.tf = mcTf;   // 이평조건 스캔은 패널의 TF를 따름
   return cfg;
 }
 // 공통 옵션 row를 RS 모드에선 오른쪽 컬럼으로 이동
@@ -3103,7 +3299,7 @@ async function runScan(){
 
 // ── 필터 체인 (drill-down) ──
 function scanModeLabel(cfg){
-  const M = {bull:'📈정배', pullback:'📉눌림목', support:'RSI50지지', bear:'📉역배', ctlong:'역추세롱', mania:'🔥과매수', oversold:'🧊과매도', short:'숏', resist:'저항', volx:'⚡변동성', maprox:'📏이평근접', rsscan:'🔺RS스캔', seq:'🕯️3+1반전'};
+  const M = {bull:'📈정배', pullback:'📉눌림목', support:'RSI50지지', bear:'📉역배', ctlong:'역추세롱', mania:'🔥과매수', oversold:'🧊과매도', macond:'🎚️이평조건', short:'숏', resist:'저항', volx:'⚡변동성', maprox:'📏이평근접', rsscan:'🔺RS스캔', seq:'🕯️3+1반전'};
   let base = M[cfg.scanMode] || cfg.scanMode;
   if(cfg.scanMode==='volx') base += ` ${cfg.volxPct}%·${(cfg.tf||'').toUpperCase()}`;
   else if(cfg.scanMode==='rsscan') base += ` ${cfg.rsBarCount}봉·${(cfg.rsTf||'1h').toUpperCase()} ≥${cfg.rsScanPct}%p`;
@@ -3175,7 +3371,7 @@ async function drillScan(){
     nr.rsi50 = [...new Set([...(pr.rsi50||[]), ...(nr.rsi50||[])])];
     nr.maprox = pr.maprox || nr.maprox;
     // 다른 모드 태그(정배/변동성 등)도 이전 값 유지
-    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','maniaWick','pxRetHits','maproxBullHits','maproxPxHits','maproxRsiHits'].forEach(k=>{
+    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','maniaWick','pxRetHits','maproxBullHits','maproxPxHits','maproxRsiHits','macond','mcHits','mcBarN'].forEach(k=>{
       if(nr[k]===undefined && pr[k]!==undefined) nr[k]=pr[k];
     });
   });

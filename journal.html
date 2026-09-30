@@ -400,7 +400,7 @@
   .modal{position:fixed;inset:0;background:rgba(5,8,13,.80);backdrop-filter:blur(3px);
     display:none;align-items:center;justify-content:center;z-index:50;padding:24px}
   .modal.show{display:flex}
-  .modal-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  .modal-card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:14px;
     width:100%;max-width:1080px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column}
   .modal-head{display:flex;align-items:center;gap:10px;row-gap:8px;flex-wrap:wrap;padding:13px 18px;
     border-bottom:1px solid var(--hair);font-family:var(--mono);font-weight:600;font-size:14px;color:var(--text)}
@@ -538,6 +538,26 @@
     font-size:20px;text-decoration:none;background:var(--surface);border:1px solid var(--amber);
     box-shadow:0 6px 18px rgba(0,0,0,.45)}
   .homefab:active{background:var(--amber-soft)}
+  /* 매매 위치 확정 바 — 탭한 봉을 미리 보여주고 ◀▶로 옮긴 뒤 확정 */
+  .markbar{display:none;position:absolute;left:0;right:0;bottom:0;z-index:5;
+    align-items:center;gap:7px;padding:9px 10px calc(env(safe-area-inset-bottom, 0px) + 9px);
+    background:rgba(8,10,14,.94);border-top:2px solid var(--amber);
+    box-shadow:0 -8px 22px rgba(0,0,0,.5)}
+  .markbar.show{display:flex}
+  .markbar.long{border-top-color:#a6ff4d}
+  .markbar.short{border-top-color:#ffa23a}
+  .mb-info{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;line-height:1.25}
+  .mb-info b{font:700 14px 'JetBrains Mono',monospace;color:var(--text)}
+  .markbar.long .mb-info b{color:#a6ff4d}
+  .markbar.short .mb-info b{color:#ffa23a}
+  .mb-info span{font:500 11px 'JetBrains Mono',monospace;color:var(--muted)}
+  .mb-nudge{width:40px;height:40px;border-radius:9px;cursor:pointer;
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text);font-size:15px}
+  .mb-nudge:active{border-color:var(--amber);color:var(--amber)}
+  .mb-ok,.mb-no{height:40px;padding:0 13px;border-radius:9px;cursor:pointer;
+    font:700 13px 'Space Grotesk',sans-serif}
+  .mb-ok{background:var(--amber);border:1px solid var(--amber);color:#0b0906}
+  .mb-no{background:var(--surface-2);border:1px solid var(--border);color:var(--muted)}
   /* ── 매매일지 화면 ── */
   .brand h1{letter-spacing:.02em}
   .brand h1 .wm{color:var(--amber);font-weight:700;letter-spacing:.14em}
@@ -722,6 +742,13 @@
     <div class="mobi-hint">탭 = 타임프레임 전환 · 좌우 스와이프 = 종목 이동</div>
     <div class="chartinfo" id="chartInfo"></div>
     <div class="modal-body" id="chartBody"></div>
+    <div class="markbar" id="markbar">
+      <button class="mb-nudge" id="mbPrev" title="한 봉 왼쪽">◀</button>
+      <div class="mb-info"><b id="mbTitle">—</b><span id="mbSub"></span></div>
+      <button class="mb-nudge" id="mbNext" title="한 봉 오른쪽">▶</button>
+      <button class="mb-ok" id="mbOk">확정</button>
+      <button class="mb-no" id="mbNo">취소</button>
+    </div>
     <div id="chartJournal"></div>
   </div>
 </div>
@@ -1880,14 +1907,19 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   rcs.setMarkers(posMarksSorted);
   // 봉 클릭 → 사후 매매표시 (clickable 패널만, markMode일 때만)
   if(clickable){
+    // 폰에서는 손가락이 탭 지점을 가려 어느 봉을 찍었는지 안 보인다.
+    // 바로 저장하지 않고 미리보기 마커를 띄운 뒤 ◀▶로 봉을 옮기고 확정하게 한다.
+    const paint = i => {
+      const arr = (i==null) ? posMarksSorted
+        : [...posMarksSorted, {time:t[i], position:'inBar', color:'#ffffff', shape:'circle', text:'여기'}]
+            .sort((a,b)=>a.time-b.time);
+      pcs.setMarkers(arr); rcs.setMarkers(arr);
+    };
     pc.subscribeClick(param=>{
       if(!markMode || param.time==null) return;
-      const utcMs = (param.time - KST) * 1000;
-      const side = nextSide(symbol, markDir);
-      // 클릭한 그 봉(이 패널 TF) 가격 — 진입=시가 / 청산=종가
       const ci = t.indexOf(param.time);
-      const clickPrice = (ci>=0) ? (side==='entry' ? opens[ci] : closes[ci]) : null;
-      logPositionPostHoc(symbol, markDir, side, utcMs, clickPrice, tf).then(()=>renderChartView());
+      if(ci < 0) return;
+      startPendingMark({symbol, tf, i:ci, t, opens, closes, paint});
     });
   }
   [[70,'#3a2e14'],[50,'#51401c'],[30,'#3a2e14']].forEach(([v,c])=>{
@@ -1915,6 +1947,7 @@ function clearCharts(){
 }
 
 async function renderChartView({forceRefresh=false}={}){
+  cancelPendingMark(false);                     // 다시 그리면 대기 중 표시는 무효
   const renderId = ++chartRenderSeq;
   const body = $('chartBody');
   clearCharts();
@@ -2118,6 +2151,7 @@ function updateNavUI(){
 }
 let chartHistPushed = false;   // 뒤로가기로 차트를 닫기 위한 히스토리 항목
 function closeChart(){
+  cancelPendingMark(false);
   chartRenderSeq++;
   chartInfoSeq++;
   $('chartModal').classList.remove('show');
@@ -2226,8 +2260,60 @@ $('chartReload').addEventListener('click', async ()=>{
   }catch(e){}
   b.textContent = '↻'; b.disabled = false;
 });
+// ── 매매 위치 확정 (탭 → 미리보기 → ◀▶ → 확정) ──
+let pendingMark = null;
+function barTimeLabel(kt){                     // kt = unixSec + KST
+  const d = new Date((kt - 9*3600) * 1000), p = n=>String(n).padStart(2,'0');
+  return `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function startPendingMark(ctx){
+  pendingMark = ctx;
+  pendingMark.dir  = markDir;
+  pendingMark.side = nextSide(ctx.symbol, markDir);   // 진입↔청산 자동 번갈기
+  updatePendingUI();
+}
+function movePendingMark(d){
+  if(!pendingMark) return;
+  pendingMark.i = Math.max(0, Math.min(pendingMark.t.length-1, pendingMark.i + d));
+  updatePendingUI();
+}
+function updatePendingUI(){
+  const bar = $('markbar'); if(!bar) return;
+  if(!pendingMark){ bar.classList.remove('show'); return; }
+  const {t, opens, closes, i, side, dir, tf} = pendingMark;
+  const price = (side==='entry') ? opens[i] : closes[i];
+  pendingMark.paint(i);
+  bar.classList.toggle('long',  dir==='long');
+  bar.classList.toggle('short', dir==='short');
+  $('mbTitle').textContent = `${dir==='long'?'롱':'숏'} ${side==='entry'?'진입':'청산'} · ${fmtPrice(price)}`;
+  $('mbSub').textContent   = `${String(tf).toUpperCase()} ${barTimeLabel(t[i])} 봉 ${side==='entry'?'시가':'종가'}`;
+  bar.classList.add('show');
+}
+function cancelPendingMark(repaint=true){
+  if(pendingMark && repaint){ try{ pendingMark.paint(null); }catch(e){} }
+  pendingMark = null;
+  const bar = $('markbar'); if(bar) bar.classList.remove('show');
+}
+async function commitPendingMark(){
+  if(!pendingMark) return;
+  const {symbol, tf, t, opens, closes, i, side, dir} = pendingMark;
+  const price = (side==='entry') ? opens[i] : closes[i];
+  cancelPendingMark(false);                     // 곧 다시 그리므로 마커 되돌리기 불필요
+  await logPositionPostHoc(symbol, dir, side, (t[i] - 9*3600) * 1000, price, tf);
+  renderChartView();
+}
+$('mbPrev').addEventListener('click', ()=>movePendingMark(-1));
+$('mbNext').addEventListener('click', ()=>movePendingMark(+1));
+$('mbNo').addEventListener('click', ()=>cancelPendingMark());
+$('mbOk').addEventListener('click', async ()=>{
+  const b = $('mbOk'); b.disabled = true; const o = b.textContent; b.textContent = '저장…';
+  try{ await commitPendingMark(); }catch(e){ alert('저장 실패: '+e.message); }
+  b.disabled = false; b.textContent = o;
+});
+
 $('chartMark').addEventListener('click', ()=>{
   markMode = !markMode;
+  if(!markMode) cancelPendingMark();
   $('chartMark').classList.toggle('on', markMode);
   $('dirseg').style.display = markMode ? '' : 'none';
   const body = $('chartBody');
