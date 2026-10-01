@@ -824,6 +824,14 @@
         </div>
       </div>
       <div class="mcrow">
+        <span class="mclab">종가 vs <b>가격 SMA10</b></span>
+        <div class="seg sm mctri" id="mcP10">
+          <button data-v="off" class="on">끄기</button>
+          <button data-v="up">위</button>
+          <button data-v="dn">아래</button>
+        </div>
+      </div>
+      <div class="mcrow">
         <span class="mclab">종가 vs <b>가격 SMA20</b></span>
         <div class="seg sm mctri" id="mcP20">
           <button data-v="off" class="on">끄기</button>
@@ -1211,7 +1219,7 @@ let mcBarN = 0;                       // 몇 봉 전 (0 = 현재봉)
 let mcC9='off', mcC20='off';          // RSI 종가 vs RSI SMA9 / SMA20
 let mcL9='off',  mcL9Lv=50;           // RSI SMA9  값 vs 레벨
 let mcL20='off', mcL20Lv=50;          // RSI SMA20 값 vs 레벨
-let mcP5='off', mcP20='off';          // 종가 vs 가격 SMA5 / SMA20
+let mcP5='off', mcP10='off', mcP20='off';   // 종가 vs 가격 SMA5 / SMA10 / SMA20
 let maproxBull = {'15m':false,'1h':false,'4h':false,'1d':false,'1w':false};   // 현재 RSI 정배 (SMA9 > SMA20)
 // RS 스캔: BTC 1h 구간 지정
 let rsBars = [];            // 기준 코인 봉 (차트용)
@@ -1333,6 +1341,7 @@ function updateCondChips(){
     if(D(mcL9))  L.push(`RSI SMA9 ${D(mcL9)} ${mcL9Lv}`);
     if(D(mcL20)) L.push(`RSI SMA20 ${D(mcL20)} ${mcL20Lv}`);
     if(D(mcP5))  L.push(`종가 ${D(mcP5)} 가격 SMA5`);
+    if(D(mcP10)) L.push(`종가 ${D(mcP10)} 가격 SMA10`);
     if(D(mcP20)) L.push(`종가 ${D(mcP20)} 가격 SMA20`);
     el.innerHTML = `
       <div class="chip"><span class="n">①</span><b>${mcTf.toUpperCase()}</b> · ${mcBarN===0?'현재(진행)봉':mcBarN+'봉 전'} 하나만 평가 (구간 탐색 없음)</div>
@@ -1491,6 +1500,7 @@ bindTri('mcC20', v=>mcC20=v);
 bindTri('mcL9',  v=>mcL9=v);
 bindTri('mcL20', v=>mcL20=v);
 bindTri('mcP5',  v=>mcP5=v);
+bindTri('mcP10', v=>mcP10=v);
 bindTri('mcP20', v=>mcP20=v);
 bindSingleSeg('mcL9lv',  'lv', v=>{ mcL9Lv=+v;  updateCondChips(); });
 bindSingleSeg('mcL20lv', 'lv', v=>{ mcL20Lv=+v; updateCondChips(); });
@@ -2020,13 +2030,14 @@ async function scanSymbol(s, cfg){
     const idx = i0 - n;                       // 0 = 현재(진행)봉
     if(idx < 0) return null;
     const on = v => v==='up' || v==='dn';
-    if(!(on(cfg.mcC9)||on(cfg.mcC20)||on(cfg.mcL9)||on(cfg.mcL20)||on(cfg.mcP5)||on(cfg.mcP20))) return null;  // 조건 전무 → 제외
+    if(!(on(cfg.mcC9)||on(cfg.mcC20)||on(cfg.mcL9)||on(cfg.mcL20)||on(cfg.mcP5)||on(cfg.mcP10)||on(cfg.mcP20))) return null;  // 조건 전무 → 제외
 
     const v9   = smaAt(rC, cfg.smaF, idx);    // RSI SMA9 값
     const v20  = smaAt(rC, cfg.smaS, idx);    // RSI SMA20 값
     const rc   = rC[idx];                     // RSI 종가
     const pc   = closes[idx];                 // 가격 종가
     const p5   = smaAt(closes, 5, idx);
+    const p10  = smaAt(closes, 10, idx);
     const p20  = smaAt(closes, cfg.smaS, idx);
 
     const hits = [];
@@ -2044,6 +2055,7 @@ async function scanSymbol(s, cfg){
     if(!chk(cfg.mcL9,  v9,  cfg.mcL9Lv,  `RSI SMA9 ${cfg.mcL9Lv}`,  'r')) return null;
     if(!chk(cfg.mcL20, v20, cfg.mcL20Lv, `RSI SMA20 ${cfg.mcL20Lv}`, 'r')) return null;
     if(!chk(cfg.mcP5,  pc,  p5,  '종가/가격SMA5',  'p')) return null;
+    if(!chk(cfg.mcP10, pc,  p10, '종가/가격SMA10', 'p')) return null;
     if(!chk(cfg.mcP20, pc,  p20, '종가/가격SMA20', 'p')) return null;
 
     return gate({
@@ -2976,7 +2988,7 @@ function buildScanCfg(){
     maproxS9: {...maproxS9}, maproxS9Lv: maproxS9Lv,
     maproxS20: {...maproxS20}, maproxS20Lv: maproxS20Lv,
     maproxBull: {...maproxBull},
-    mcBarN, mcC9, mcC20, mcL9, mcL9Lv, mcL20, mcL20Lv, mcP5, mcP20,
+    mcBarN, mcC9, mcC20, mcL9, mcL9Lv, mcL20, mcL20Lv, mcP5, mcP10, mcP20,
     rsFrom: (rsFromIdx!=null && rsBars[rsFromIdx]) ? rsBars[rsFromIdx].t : null,
     rsTo: (rsToIdx!=null && rsBars[rsToIdx]) ? rsBars[rsToIdx].t : null,
     rsBtcRet: (rsFromIdx!=null && rsToIdx!=null && rsBars[rsFromIdx] && rsBars[rsToIdx] && rsBars[rsFromIdx].c>0) ? ((rsBars[rsToIdx].c/rsBars[rsFromIdx].c-1)*100) : null,
