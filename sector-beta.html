@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SECTOR BETA">
+<meta name="theme-color" content="#1B2433">
+<link rel="manifest" href="manifest-sector.json">
+<link rel="apple-touch-icon" href="icon-sector-180.png">
+<title>SECTOR BETA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1B2433; --panel:#232E40; --line:#34425A; --text:#E6EAF0; --dim:#9AA6B8;
+  --hold:#4FB3A9; --dip:#E0B25A; --warn:#E08A5A; --broke:#D9636A; --lag:#8FA7FF;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0;background:var(--ink);color:var(--text)}
+body{font:15px/1.5 "IBM Plex Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:760px;margin:0 auto;padding:16px 14px 48px}
+.back{display:inline-block;font-size:13px;color:var(--dim);text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:4px 10px;margin-bottom:8px}
+h1{font-size:22px;font-weight:700;margin:4px 0 2px;letter-spacing:-.01em}
+.sub{color:var(--dim);font-size:13px;margin:0 0 14px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+button,select,input{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+button{cursor:pointer}
+button.go{background:var(--lag);color:#141B28;border-color:var(--lag);font-weight:700}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--lag);outline-offset:2px}
+details.cfg{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:10px}
+details.cfg summary{cursor:pointer;color:var(--dim);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 12px;margin-top:10px}
+.grid label{font-size:12px;color:var(--dim);display:flex;flex-direction:column;gap:3px}
+.grid input{width:100%}
+textarea{width:100%;min-height:220px;font:13px/1.45 ui-monospace,Menlo,monospace;color:var(--text);background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px}
+#status{font-size:13px;color:var(--dim);min-height:20px;margin:6px 0 12px}
+#status.err{color:var(--broke)}
+.sector{border-top:1px solid var(--line);padding:16px 0 14px}
+.shead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px}
+.shead h2{font-size:18px;margin:0;font-weight:700}
+.chip{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
+.chip.ok{border-color:var(--hold);color:var(--hold)}
+.chip.solo{border-color:var(--dip);color:var(--dip)}
+.act{margin:8px 0 10px;font-size:14px;padding:8px 10px;border-radius:8px;background:var(--panel);border-left:4px solid var(--line)}
+.act.s-hold{border-left-color:var(--hold)} .act.s-dip{border-left-color:var(--dip)}
+.act.s-warn{border-left-color:var(--warn)} .act.s-broke{border-left-color:var(--broke)}
+.act b{font-weight:700}
+.ladder{display:grid;grid-template-columns:64px 1fr 62px;gap:4px 8px;align-items:center;font-size:13px}
+.ladder .sym{font-weight:500}
+.track{position:relative;height:14px;background:rgba(255,255,255,.04);border-radius:3px}
+.track .zero{position:absolute;left:20%;top:0;bottom:0;width:1px;background:var(--line)}
+.fill{position:absolute;top:2px;bottom:2px;border-radius:2px;background:#5A6A84}
+.fill.lead{background:var(--hold)} .fill.mover{background:#6F8FA0} .fill.lagc{background:var(--lag)} .fill.neg{background:#6B4C58}
+.pct{text-align:right}
+.lagrow{grid-column:1/-1;margin:-1px 0 6px 72px;font-size:12px;color:var(--lag)}
+.lagrow .ts{color:var(--broke)}
+.miss{font-size:12px;color:var(--dim);margin-top:8px}
+.quiet summary{cursor:pointer;color:var(--dim);font-size:14px;padding:12px 0;border-top:1px solid var(--line)}
+.quiet .row{font-size:13px;color:var(--dim);padding:2px 0}
+@media (prefers-reduced-motion:no-preference){.fill{transition:width .3s ease}}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">↩ 런처</a>
+  <h1>섹터 베타 스캐너</h1>
+  <p class="sub">대장이 간 섹터에서 아직 안 간 후발을 찾습니다. 판단은 대장 차트, 실행은 후발.</p>
+
+  <div class="bar">
+    <select id="ex" aria-label="거래소">
+      <option value="bybit">Bybit</option>
+      <option value="binance">Binance</option>
+    </select>
+    <button class="go" id="scan">스캔</button>
+    <label style="font-size:13px;color:var(--dim);display:flex;gap:6px;align-items:center">
+      <input type="checkbox" id="auto" style="padding:0"> 5분 자동
+    </label>
+  </div>
+
+  <details class="cfg">
+    <summary>조건 설정</summary>
+    <div class="grid" id="cfgGrid"></div>
+  </details>
+
+  <details class="cfg">
+    <summary>섹터 묶음 편집</summary>
+    <textarea id="secJson" spellcheck="false"></textarea>
+    <div class="bar" style="margin-top:8px">
+      <button id="secSave">묶음 저장</button>
+      <button id="secReset">기본값으로</button>
+    </div>
+  </details>
+
+  <div id="status">스캔을 누르면 시작합니다.</div>
+  <div id="out"></div>
+</main>
+
+<script>
+/* CORE-START : 순수 계산 로직 (DOM/네트워크 없음) */
+const DEFAULT_SECTORS = {
+  "RWA·토큰화": ["QNT","ONDO","LINK","POLYX","PLUME","SYRUP","CFG"],
+  "상호운용·브릿지": ["DBR","ZRO","W","AXL","ACX","QNT","LINK"],
+  "프라이버시": ["ZEC","XMR","DASH","ROSE","SCRT","NYM","ZEN"],
+  "Base 생태계": ["AERO","VIRTUAL","ZORA","DEGEN","B3","BRETT"],
+  "게이밍": ["IMX","BEAM","PRIME","YGG","GALA","SAND","B3"],
+  "솔라나 디파이": ["JUP","RAY","DRIFT","JTO","ORCA","KMNO","PYTH"],
+  "폴카닷": ["DOT","KSM","GLMR","MOVR","ASTR"],
+  "AI·DePIN": ["TAO","RENDER","IO","AKT","GRASS","HNT","IOTX","FET"]
+};
+
+const DEFAULT_CFG = {
+  lookbackH: 24,     // 섹터 상승률 측정 구간 (1h봉 개수)
+  confirmPct: 10,    // 이 % 이상 오른 종목이 2개 이상이면 순환매 확인
+  lagRatio: 0.4,     // 대장 상승률의 이 비율 이하 = 후발
+  floorPct: -5,      // 이보다 많이 빠진 종목은 후발에서 제외 (섹터 외 악재 의심)
+  minTurnoverM: 3,   // 최근 24h 거래대금 하한 (백만 USDT)
+  minCorr: 0.4,      // 평소 대장과의 1h 수익률 상관 하한
+  corrBars: 168,     // 상관 측정용 과거 봉 수 (이벤트 구간 제외)
+  wakeH: 3,          // 거래량 깨어남 측정 구간
+  emaLen: 50,        // 대장 추세 판단 EMA (1h)
+  retraceWarn: 0.5,  // 대장 되돌림 경계선
+  retraceBreak: 0.618, // 대장 되돌림 붕괴선
+  timeStopH: 24      // 후발이 이 시간 넘게 안 따라오면 시간손절 표시
+};
+
+function ema(values, len){
+  const k = 2/(len+1); let e = values[0]; const out=[e];
+  for(let i=1;i<values.length;i++){ e = values[i]*k + e*(1-k); out.push(e); }
+  return out;
+}
+
+function pearson(a,b){
+  const n=Math.min(a.length,b.length); if(n<20) return null;
+  let sa=0,sb=0; for(let i=0;i<n;i++){sa+=a[i];sb+=b[i];}
+  const ma=sa/n, mb=sb/n; let cov=0,va=0,vb=0;
+  for(let i=0;i<n;i++){const da=a[i]-ma, db=b[i]-mb; cov+=da*db; va+=da*da; vb+=db*db;}
+  return (va&&vb) ? cov/Math.sqrt(va*vb) : null;
+}
+
+// candles: 오래된 순 [{t,h,l,c,q}]  q = 봉별 거래대금(USDT)
+function analyzeSymbol(candles, cfg){
+  const n=candles.length, L=cfg.lookbackH;
+  if(n < L+cfg.emaLen+2) return null;
+  const closes=candles.map(k=>k.c);
+  const c=closes[n-1], c0=closes[n-1-L];
+  const r=c/c0-1;
+  let hi=-Infinity; for(let i=n-L;i<n;i++) hi=Math.max(hi,candles[i].h);
+  const retrace = hi>c0 ? (hi-c)/(hi-c0) : 0;
+  const e=ema(closes,cfg.emaLen)[n-1];
+  let turnover=0; for(let i=Math.max(0,n-24);i<n;i++) turnover+=candles[i].q;
+  // 거래량 깨어남: 최근 wakeH봉 평균 대비, 이벤트 구간 이전 평균
+  const W=cfg.wakeH; let recent=0; for(let i=n-W;i<n;i++) recent+=candles[i].q; recent/=W;
+  let base=0,cnt=0; for(let i=Math.max(0,n-L-cfg.corrBars);i<n-L;i++){base+=candles[i].q;cnt++;}
+  base = cnt? base/cnt : 0;
+  const volWake = base>0 ? recent/base : null;
+  const peak=hi/c0-1;
+  return {r, peak, c, hi, retrace, ema:e, aboveEma:c>=e, turnover, volWake};
+}
+
+// 이벤트 구간(최근 L봉)을 빼고 평소 상관을 잰다
+function corrToLeader(candA, candL, cfg){
+  const mapL=new Map(candL.map(k=>[k.t,k.c]));
+  const pairs=[]; for(const k of candA){ if(mapL.has(k.t)) pairs.push([k.c,mapL.get(k.t)]); }
+  const end=pairs.length-cfg.lookbackH, start=Math.max(1,end-cfg.corrBars);
+  if(end-start<20) return null;
+  const ra=[],rl=[];
+  for(let i=start;i<end;i++){ ra.push(Math.log(pairs[i][0]/pairs[i-1][0])); rl.push(Math.log(pairs[i][1]/pairs[i-1][1])); }
+  return pearson(ra,rl);
+}
+
+function leaderState(a, cfg){
+  if(!a.aboveEma || a.retrace>cfg.retraceBreak) return {key:"broke", label:"꺾임"};
+  if(a.retrace>cfg.retraceWarn) return {key:"warn", label:"경계"};
+  if(a.retrace>=0.25) return {key:"dip", label:"건강한 눌림"};
+  return {key:"hold", label:"추세 유지"};
+}
+
+const ACTION = {
+  hold:  "대장 추세 유지 중. 후발은 대장 눌림 나올 때까지 대기.",
+  dip:   "대장 눌림에서 지지 유지. 후발 진입 구간.",
+  warn:  "대장 되돌림 깊어짐. 신규 진입 보류, 보유분은 타이트하게.",
+  broke: "대장 꺾임. 후발 보유분 정리."
+};
+
+// dataMap: base -> {symbol, candles}
+function analyzeSector(name, members, dataMap, cfg, now, seen){
+  const rows=[], missing=[];
+  for(const base of members){
+    const d=dataMap[base];
+    if(!d){ missing.push(base); continue; }
+    const a=analyzeSymbol(d.candles,cfg);
+    if(!a){ missing.push(base); continue; }
+    rows.push({base, symbol:d.symbol, ...a});
+  }
+  if(!rows.length) return {name, rows, missing, status:"none", movers:0};
+  rows.sort((x,y)=>y.r-x.r);
+  // 대장 = 구간 내 고점 기준 최대 상승 (꺾여도 대장 자리 유지 → 꺾임 감지 가능)
+  const leader=rows.reduce((a,b)=>b.peak>a.peak?b:a);
+  const movers=rows.filter(x=>x.peak*100>=cfg.confirmPct).length;
+  const status = movers>=2 ? "confirmed" : movers===1 ? "solo" : "none";
+  const state = leaderState(leader,cfg);
+  for(const x of rows){
+    x.role = x===leader ? "lead" : (x.peak*100>=cfg.confirmPct ? "mover" : "rest");
+    if(x===leader || status!=="confirmed" || leader.peak<=0) continue;
+    x.corr = corrToLeader(dataMap[x.base].candles, dataMap[leader.base].candles, cfg);
+    const isLag = x.peak <= leader.peak*cfg.lagRatio && x.r*100 >= cfg.floorPct
+      && x.turnover >= cfg.minTurnoverM*1e6 && x.corr!=null && x.corr>=cfg.minCorr;
+    if(isLag){
+      x.role="lag";
+      const gap = 1 - Math.max(x.peak,0)/leader.peak;
+      const wake = x.volWake==null ? 0 : Math.min(x.volWake/2,1);
+      x.score = Math.round(100 * x.corr * gap * (0.5+0.5*wake));
+      const key=name+"|"+x.base;
+      if(seen && !seen[key]) seen[key]=now;
+      x.waitH = seen ? (now-seen[key])/3.6e6 : 0;
+      x.timeStop = x.waitH > cfg.timeStopH;
+    }
+  }
+  if(seen){ // 후발 목록에서 빠진 종목은 대기시간 초기화
+    const live=new Set(rows.filter(x=>x.role==="lag").map(x=>name+"|"+x.base));
+    for(const k of Object.keys(seen)) if(k.startsWith(name+"|") && !live.has(k)) delete seen[k];
+  }
+  return {name, rows, missing, status, movers, leader, state, action:ACTION[state.key]};
+}
+
+function resolveSymbol(base, symbolSet){
+  for(const p of ["","1000","10000","1000000"]){ const s=p+base+"USDT"; if(symbolSet.has(s)) return s; }
+  return null;
+}
+/* CORE-END */
+
+/* ---------- 네트워크 ---------- */
+const EX = {
+  bybit:{
+    async symbols(){
+      const j=await getJSON("https://api.bybit.com/v5/market/tickers?category=linear");
+      return new Set(j.result.list.map(x=>x.symbol));
+    },
+    async klines(sym,limit){
+      const j=await getJSON(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${sym}&interval=60&limit=${limit}`);
+      return j.result.list.map(k=>({t:+k[0],h:+k[2],l:+k[3],c:+k[4],q:+k[6]})).reverse();
+    }
+  },
+  binance:{
+    async symbols(){
+      const j=await getJSON("https://fapi.binance.com/fapi/v1/ticker/24hr");
+      return new Set(j.map(x=>x.symbol));
+    },
+    async klines(sym,limit){
+      const j=await getJSON(`https://fapi.binance.com/fapi/v1/klines?symbol=${sym}&interval=1h&limit=${limit}`);
+      return j.map(k=>({t:+k[0],h:+k[2],l:+k[3],c:+k[4],q:+k[7]}));
+    }
+  }
+};
+async function getJSON(url){
+  const r=await fetch(url); if(!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+async function pool(items,n,fn){
+  const out=new Array(items.length); let i=0;
+  await Promise.all(Array.from({length:n},async()=>{ while(i<items.length){const k=i++; try{out[k]=await fn(items[k]);}catch(e){out[k]=null;} } }));
+  return out;
+}
+
+/* ---------- 저장 ---------- */
+const store={
+  get(k,d){ try{const v=localStorage.getItem(k); return v?JSON.parse(v):d;}catch(e){return d;} },
+  set(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
+};
+let cfg={...DEFAULT_CFG, ...store.get("sbs_cfg",{})};
+let sectors=store.get("sbs_sectors",DEFAULT_SECTORS);
+
+/* ---------- UI ---------- */
+const $=id=>document.getElementById(id);
+const CFG_LABEL={lookbackH:"측정 구간 (시간)",confirmPct:"순환매 기준 상승률 %",lagRatio:"후발 기준 (대장 대비 비율)",
+  floorPct:"후발 하한 %",minTurnoverM:"최소 거래대금 (백만$)",minCorr:"최소 상관계수",corrBars:"상관 측정 봉 수",
+  wakeH:"거래량 깨어남 구간 (시간)",emaLen:"대장 EMA 길이 (1h)",retraceWarn:"대장 되돌림 경계",retraceBreak:"대장 되돌림 붕괴",timeStopH:"시간손절 (시간)"};
+function buildCfg(){
+  $("cfgGrid").innerHTML=Object.keys(DEFAULT_CFG).map(k=>
+    `<label>${CFG_LABEL[k]}<input type="number" step="any" data-k="${k}" value="${cfg[k]}"></label>`).join("");
+  $("cfgGrid").querySelectorAll("input").forEach(inp=>inp.addEventListener("change",()=>{
+    const v=parseFloat(inp.value); if(!isNaN(v)){cfg[inp.dataset.k]=v; store.set("sbs_cfg",cfg);}
+  }));
+}
+function showSectors(){ $("secJson").value=JSON.stringify(sectors,null,2); }
+$("secSave").onclick=()=>{
+  try{ const s=JSON.parse($("secJson").value);
+    if(typeof s!=="object"||Array.isArray(s)) throw 0;
+    for(const v of Object.values(s)) if(!Array.isArray(v)) throw 0;
+    sectors=s; store.set("sbs_sectors",s); setStatus("섹터 묶음을 저장했습니다.");
+  }catch(e){ setStatus("묶음 형식이 맞지 않습니다. {\"섹터명\": [\"티커\", ...]} 형태로 입력하세요.",true); }
+};
+$("secReset").onclick=()=>{ sectors=DEFAULT_SECTORS; store.set("sbs_sectors",sectors); showSectors(); setStatus("기본 묶음으로 되돌렸습니다."); };
+$("ex").value=store.get("sbs_ex","bybit");
+$("ex").onchange=()=>store.set("sbs_ex",$("ex").value);
+function setStatus(t,err){ $("status").textContent=t; $("status").className=err?"err":""; }
+
+const pct=v=>(v>=0?"+":"")+(v*100).toFixed(1)+"%";
+function renderSector(s){
+  const lead=s.leader, maxR=Math.max(lead.peak,0.0001);
+  const statusChip = s.status==="confirmed"
+    ? `<span class="chip ok">순환매 확인 ${s.movers}/${s.rows.length}</span>`
+    : `<span class="chip solo">단독 상승, 고유 재료 의심</span>`;
+  const ladder=s.rows.map(x=>{
+    const zero=20, span=80;
+    let left, width;
+    if(x.r>=0){ left=zero; width=Math.min(x.r/maxR,1)*span; }
+    else { width=Math.min(-x.r/maxR,1)*zero*4; width=Math.min(width,zero); left=zero-width; }
+    const cls = x.r<0?"neg":x.role==="lead"?"lead":x.role==="mover"?"mover":x.role==="lag"?"lagc":"";
+    let extra="";
+    if(x.role==="lag"){
+      extra=`<div class="lagrow">후발 점수 ${x.score} · 상관 ${x.corr.toFixed(2)} · 거래량 ${x.volWake!=null?x.volWake.toFixed(1)+"배":"-"} · 대금 ${(x.turnover/1e6).toFixed(1)}M · 대기 ${x.waitH.toFixed(1)}h${x.timeStop?' <span class="ts">시간손절 초과</span>':""}</div>`;
+    }
+    return `<div class="sym">${x.base}</div><div class="track"><div class="zero"></div><div class="fill ${cls}" style="left:${left}%;width:${width}%"></div></div><div class="pct">${pct(x.r)}</div>${extra}`;
+  }).join("");
+  const act = s.status==="confirmed"
+    ? `<div class="act s-${s.state.key}"><b>대장 ${lead.base} ${s.state.label}</b> (되돌림 ${(lead.retrace*100).toFixed(0)}%, EMA${cfg.emaLen} ${lead.aboveEma?"위":"아래"}). ${s.action}</div>`
+    : `<div class="act">${lead.base} 혼자 상승 중이라 베타 대상이 약합니다. 같은 섹터가 따라붙는지 지켜보세요.</div>`;
+  return `<section class="sector"><div class="shead"><h2>${s.name}</h2>${statusChip}</div>${act}<div class="ladder">${ladder}</div>${s.missing.length?`<div class="miss">데이터 없음: ${s.missing.join(", ")}</div>`:""}</section>`;
+}
+
+let busy=false;
+async function scan(){
+  if(busy) return; busy=true; $("scan").disabled=true;
+  const ex=EX[$("ex").value];
+  try{
+    setStatus("상장 목록 불러오는 중…");
+    const symSet=await ex.symbols();
+    const bases=[...new Set(Object.values(sectors).flat())];
+    const resolved=bases.map(b=>[b,resolveSymbol(b,symSet)]).filter(x=>x[1]);
+    const limit=Math.min(1000, cfg.corrBars+cfg.lookbackH+cfg.emaLen+10);
+    let done=0;
+    const kl=await pool(resolved,6,async([b,s])=>{ const k=await ex.klines(s,limit); setStatus(`차트 불러오는 중… ${++done}/${resolved.length}`); return k; });
+    const dataMap={}; resolved.forEach(([b,s],i)=>{ if(kl[i]&&kl[i].length) dataMap[b]={symbol:s,candles:kl[i]}; });
+    const seen=store.get("sbs_seen",{}), now=Date.now();
+    const results=Object.entries(sectors).map(([n,m])=>analyzeSector(n,m,dataMap,cfg,now,seen));
+    store.set("sbs_seen",seen);
+    const active=results.filter(s=>s.status!=="none").sort((a,b)=>(a.status===b.status?b.leader.peak-a.leader.peak:a.status==="confirmed"?-1:1));
+    const quiet=results.filter(s=>s.status==="none");
+    $("out").innerHTML = (active.length? active.map(renderSector).join("") :
+      `<p class="sub">${cfg.lookbackH}시간 동안 ${cfg.confirmPct}% 넘게 오른 섹터가 없습니다. 기준을 낮추거나 나중에 다시 스캔하세요.</p>`)
+      + (quiet.length? `<details class="quiet"><summary>움직임 없는 섹터 ${quiet.length}개</summary>${quiet.map(s=>`<div class="row">${s.name}${s.rows.length?` · 최고 ${s.rows[0].base} ${pct(s.rows[0].r)}`:""}</div>`).join("")}</details>`:"");
+    const t=new Date(); setStatus(`${$("ex").selectedOptions[0].text} · ${t.getHours()}:${String(t.getMinutes()).padStart(2,"0")} 스캔 완료 · 종목 ${Object.keys(dataMap).length}개`);
+  }catch(e){
+    setStatus(`불러오기 실패: ${e.message}. 네트워크나 거래소 API 접속 상태를 확인하고 다시 스캔하세요.`,true);
+  }finally{ busy=false; $("scan").disabled=false; }
+}
+$("scan").onclick=scan;
+let timer=null;
+$("auto").onchange=()=>{ clearInterval(timer); if($("auto").checked){ scan(); timer=setInterval(scan,5*60*1000);} };
+buildCfg(); showSectors();
+</script>
+</body>
+</html>

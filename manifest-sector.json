@@ -1,0 +1,24 @@
+{
+  "name": "SECTOR BETA",
+  "short_name": "BETA",
+  "start_url": "sector-beta.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1B2433",
+  "theme_color": "#1B2433",
+  "icons": [
+    {
+      "src": "icon-sector-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-sector-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

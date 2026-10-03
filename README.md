@@ -4,6 +4,7 @@
 - `index.html` — 런처
 - `scalp_scanner.html` — **YHAL RADAR** (저타임프레임 스캐너 + RS 스캔)
 - `journal.html` — **YHAL JOURNAL** (매매일지 · 차트 봉 클릭으로 진입/청산 기록 · A4 복기 PDF)
+- `sector-beta.html` — **SECTOR BETA** (섹터 순환매 확인 · 대장 상태 · 후발 베타 후보)
 - `rsi_candle_scanner_mobile.html` — RSI 스캐너 (모바일 카드형)
 - `rsi_candle_scanner.html` — RSI 스캐너 (PC 테이블)
 - `xaut_dashboard.html` — GOLD DESK
@@ -23,3 +24,4 @@ https://yhalabtc.github.io/YHALSCANNER/
 - 바이낸스는 한국에서 VPN 필요
 - 즐겨찾기·프리셋·매매일지는 기기별 저장 (기기 간 공유 안 됨) → 기기 이동은 JOURNAL의 `⬇ JSON` / `⬆ 가져오기`
 - RADAR와 JOURNAL은 같은 도메인이라 매매 기록(localStorage)을 공유한다 — RADAR에서 찍은 매매가 JOURNAL에 그대로 보임
+- SECTOR BETA의 섹터 묶음은 앱 안 "섹터 묶음 편집"에서 수정 (기기별 저장) — 월 1회 정도 갱신
