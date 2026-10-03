@@ -768,6 +768,17 @@
         </div>
       </div>
       <div class="mcrow" style="margin-bottom:9px">
+        <span class="mclab">데이터 기준</span>
+        <div class="seg" id="mcsrcseg">
+          <button data-mcsrc="px" class="on">가격</button>
+          <button data-mcsrc="rs">🔺 RS (÷ 기준)</button>
+        </div>
+        <span id="mcrefwrap" style="display:none;align-items:center;gap:6px">
+          <span style="color:var(--dim);font-size:11px">기준</span>
+          <input type="text" id="mcref" value="BTC" style="width:78px;text-transform:uppercase;font-weight:700">
+        </span>
+      </div>
+      <div class="mcrow" style="margin-bottom:9px">
         <span class="mclab">대상 봉</span>
         <div class="seg sm" id="mcbarseg">
           <button data-mcb="0" class="on">0봉전(현재)</button>
@@ -780,7 +791,7 @@
         <span style="color:var(--dim);font-size:10.5px">봉 전 · 위 TF 기준</span>
       </div>
       <div class="mcrow">
-        <span class="mclab">RSI 종가 vs <b>RSI SMA9</b></span>
+        <span class="mclab" data-px="RSI 종가 vs &lt;b&gt;RSI SMA9&lt;/b&gt;" data-rs="RS 종가 vs &lt;b&gt;RS SMA9&lt;/b&gt;">RSI 종가 vs <b>RSI SMA9</b></span>
         <div class="seg sm mctri" id="mcC9">
           <button data-v="off" class="on">끄기</button>
           <button data-v="up">위</button>
@@ -788,7 +799,7 @@
         </div>
       </div>
       <div class="mcrow">
-        <span class="mclab">RSI 종가 vs <b>RSI SMA20</b></span>
+        <span class="mclab" data-px="RSI 종가 vs &lt;b&gt;RSI SMA20&lt;/b&gt;" data-rs="RS 종가 vs &lt;b&gt;RS SMA20&lt;/b&gt;">RSI 종가 vs <b>RSI SMA20</b></span>
         <div class="seg sm mctri" id="mcC20">
           <button data-v="off" class="on">끄기</button>
           <button data-v="up">위</button>
@@ -796,7 +807,7 @@
         </div>
       </div>
       <div class="mcrow">
-        <span class="mclab"><b>RSI SMA9</b> 레벨</span>
+        <span class="mclab" data-px="&lt;b&gt;RSI SMA9&lt;/b&gt; 레벨" data-rs="&lt;b&gt;RS SMA9&lt;/b&gt; 레벨"><b>RSI SMA9</b> 레벨</span>
         <div class="seg sm" id="mcL9lv">
           <button data-lv="30">30</button><button data-lv="40">40</button>
           <button data-lv="50" class="on">50</button><button data-lv="60">60</button><button data-lv="70">70</button>
@@ -806,7 +817,7 @@
         </div>
       </div>
       <div class="mcrow">
-        <span class="mclab"><b>RSI SMA20</b> 레벨</span>
+        <span class="mclab" data-px="&lt;b&gt;RSI SMA20&lt;/b&gt; 레벨" data-rs="&lt;b&gt;RS SMA20&lt;/b&gt; 레벨"><b>RSI SMA20</b> 레벨</span>
         <div class="seg sm" id="mcL20lv">
           <button data-lv="30">30</button><button data-lv="40">40</button>
           <button data-lv="50" class="on">50</button><button data-lv="60">60</button><button data-lv="70">70</button>
@@ -816,7 +827,7 @@
         </div>
       </div>
       <div class="mcrow">
-        <span class="mclab">종가 vs <b>가격 SMA5</b></span>
+        <span class="mclab" data-px="종가 vs &lt;b&gt;가격 SMA5&lt;/b&gt;" data-rs="비율 vs &lt;b&gt;비율 SMA5&lt;/b&gt;">종가 vs <b>가격 SMA5</b></span>
         <div class="seg sm mctri" id="mcP5">
           <button data-v="off" class="on">끄기</button>
           <button data-v="up">위</button>
@@ -824,7 +835,7 @@
         </div>
       </div>
       <div class="mcrow">
-        <span class="mclab">종가 vs <b>가격 SMA10</b></span>
+        <span class="mclab" data-px="종가 vs &lt;b&gt;가격 SMA10&lt;/b&gt;" data-rs="비율 vs &lt;b&gt;비율 SMA10&lt;/b&gt;">종가 vs <b>가격 SMA10</b></span>
         <div class="seg sm mctri" id="mcP10">
           <button data-v="off" class="on">끄기</button>
           <button data-v="up">위</button>
@@ -832,7 +843,7 @@
         </div>
       </div>
       <div class="mcrow">
-        <span class="mclab">종가 vs <b>가격 SMA20</b></span>
+        <span class="mclab" data-px="종가 vs &lt;b&gt;가격 SMA20&lt;/b&gt;" data-rs="비율 vs &lt;b&gt;비율 SMA20&lt;/b&gt;">종가 vs <b>가격 SMA20</b></span>
         <div class="seg sm mctri" id="mcP20">
           <button data-v="off" class="on">끄기</button>
           <button data-v="up">위</button>
@@ -1215,6 +1226,7 @@ let maproxS9 = {'15m':false,'1h':false,'4h':false,'1d':false,'1w':false}, maprox
 let maproxS20 = {'15m':false,'1h':false,'4h':false,'1d':false,'1w':false}, maproxS20Lv = 50;  // RSI-SMA20 ≥ 임계
 // 🎚️ 이평조건 스캔 — 고른 봉 하나에 대한 위/아래 조건 (off|up|dn)
 let mcTf = '15m';                     // 이 모드 전용 TF (가장 먼저 결정)
+let mcSrc = 'px';                     // 'px'=가격 기준 · 'rs'=RS(종목÷기준) 기준
 let mcBarN = 0;                       // 몇 봉 전 (0 = 현재봉)
 let mcC9='off', mcC20='off';          // RSI 종가 vs RSI SMA9 / SMA20
 let mcL9='off',  mcL9Lv=50;           // RSI SMA9  값 vs 레벨
@@ -1336,15 +1348,18 @@ function updateCondChips(){
   }else if(scanMode === 'macond'){
     const D = v => v==='up' ? '<b style="color:#46cd8a">위</b>' : v==='dn' ? '<b style="color:#e0584f">아래</b>' : null;
     const L = [];
-    if(D(mcC9))  L.push(`RSI 종가 ${D(mcC9)} RSI SMA9`);
-    if(D(mcC20)) L.push(`RSI 종가 ${D(mcC20)} RSI SMA20`);
-    if(D(mcL9))  L.push(`RSI SMA9 ${D(mcL9)} ${mcL9Lv}`);
-    if(D(mcL20)) L.push(`RSI SMA20 ${D(mcL20)} ${mcL20Lv}`);
-    if(D(mcP5))  L.push(`종가 ${D(mcP5)} 가격 SMA5`);
-    if(D(mcP10)) L.push(`종가 ${D(mcP10)} 가격 SMA10`);
-    if(D(mcP20)) L.push(`종가 ${D(mcP20)} 가격 SMA20`);
+    const RS_ = (mcSrc==='rs'), R_ = RS_?'RS':'RSI', P_ = RS_?'비율':'가격', C_ = RS_?'비율':'종가';
+    if(D(mcC9))  L.push(`${R_} 종가 ${D(mcC9)} ${R_} SMA9`);
+    if(D(mcC20)) L.push(`${R_} 종가 ${D(mcC20)} ${R_} SMA20`);
+    if(D(mcL9))  L.push(`${R_} SMA9 ${D(mcL9)} ${mcL9Lv}`);
+    if(D(mcL20)) L.push(`${R_} SMA20 ${D(mcL20)} ${mcL20Lv}`);
+    if(D(mcP5))  L.push(`${C_} ${D(mcP5)} ${P_} SMA5`);
+    if(D(mcP10)) L.push(`${C_} ${D(mcP10)} ${P_} SMA10`);
+    if(D(mcP20)) L.push(`${C_} ${D(mcP20)} ${P_} SMA20`);
+    const refName = (((document.getElementById('mcref')||{}).value)||'BTC').trim().toUpperCase().replace(/USDT$/,'') || 'BTC';
     el.innerHTML = `
       <div class="chip"><span class="n">①</span><b>${mcTf.toUpperCase()}</b> · ${mcBarN===0?'현재(진행)봉':mcBarN+'봉 전'} 하나만 평가 (구간 탐색 없음)</div>
+      ${RS_ ? `<div class="chip" style="border-color:rgba(255,157,77,.5)"><b style="color:#ff9d4d">🔺 RS 기준</b> · 종목 ÷ ${refName} 비율로 판정 — 비율 캔들(RS 차트 ②) · RS 캔들(RS 차트 ③)과 같은 값</div>` : ''}
       <div class="chip"><span class="n">②</span>${L.length ? L.join(' <b>AND</b> ') : '<b style="color:#e0584f">조건 전부 꺼짐 → 결과 없음</b>'}</div>
       <div class="chip">값이 정확히 같으면 위도 아래도 아니므로 탈락 · 봉이 모자라 이평 계산이 안 되면 제외</div>`;
   }else if(scanMode === 'maprox'){
@@ -1505,6 +1520,16 @@ bindTri('mcP20', v=>mcP20=v);
 bindSingleSeg('mcL9lv',  'lv', v=>{ mcL9Lv=+v;  updateCondChips(); });
 bindSingleSeg('mcL20lv', 'lv', v=>{ mcL20Lv=+v; updateCondChips(); });
 bindSingleSeg('mctfseg', 'mctf', v=>{ mcTf=v; updateCondChips(); });
+// 가격 ↔ RS 기준 전환 시 행 라벨과 기준 입력칸을 바꿔준다
+function mcApplySrc(){
+  const rs = (mcSrc === 'rs');
+  document.querySelectorAll('#macondfield .mclab[data-px]').forEach(el=>{
+    el.innerHTML = rs ? el.dataset.rs : el.dataset.px;
+  });
+  const w = document.getElementById('mcrefwrap'); if(w) w.style.display = rs ? 'inline-flex' : 'none';
+}
+bindSingleSeg('mcsrcseg', 'mcsrc', v=>{ mcSrc=v; mcApplySrc(); updateCondChips(); });
+{ const r=document.getElementById('mcref'); if(r) r.addEventListener('input', ()=>updateCondChips()); }
 bindSingleSeg('mcbarseg','mcb', v=>{ mcBarN=+v; const i=document.getElementById('mcbarn'); if(i) i.value=v; updateCondChips(); });
 {
   const i=document.getElementById('mcbarn');
@@ -2025,21 +2050,44 @@ async function scanSymbol(s, cfg){
 
   // ── 📏 이평 근접: 켠 TF 전부 SMA200 ±% 이내 (AND) ──
   // ── 🎚️ 이평조건 스캔 — 고른 봉 하나(n봉 전)에서 켠 조건 전부 만족(AND) ──
+  //    데이터 기준이 '가격'이면 종목 자체, 'RS'면 (종목 ÷ 기준) 비율 시리즈로 같은 조건을 판정
   if(cfg.scanMode === 'macond'){
-    const n = Math.max(0, cfg.mcBarN|0);
-    const idx = i0 - n;                       // 0 = 현재(진행)봉
-    if(idx < 0) return null;
     const on = v => v==='up' || v==='dn';
     if(!(on(cfg.mcC9)||on(cfg.mcC20)||on(cfg.mcL9)||on(cfg.mcL20)||on(cfg.mcP5)||on(cfg.mcP10)||on(cfg.mcP20))) return null;  // 조건 전무 → 제외
 
-    const v9   = smaAt(rC, cfg.smaF, idx);    // RSI SMA9 값
-    const v20  = smaAt(rC, cfg.smaS, idx);    // RSI SMA20 값
-    const rc   = rC[idx];                     // RSI 종가
-    const pc   = closes[idx];                 // 가격 종가
-    const p5   = smaAt(closes, 5, idx);
-    const p10  = smaAt(closes, 10, idx);
-    const p20  = smaAt(closes, cfg.smaS, idx);
+    const isRS = (cfg.mcSrc === 'rs');
+    // 판정에 쓸 시리즈 — 가격 모드는 기존 배열 그대로
+    let PC = closes, RC = rC, I0 = i0;
+    if(isRS){
+      if(s.symbol === cfg.mcRef) return null;          // 기준 자신은 비율이 항상 1 → 의미 없음
+      const ref = cfg.mcRefBars; if(!ref || !ref.length) return null;
+      // ★ 타임스탬프로 정합 (상장 시점이 다르면 인덱스로 맞추면 엉뚱한 봉끼리 나눠진다)
+      const m = new Map(); ref.forEach(b=>m.set(b.t, b));
+      const xo=[], xh=[], xl=[], xc=[];
+      for(const a of bars){
+        const b = m.get(a.t);
+        if(!b || !(b.o>0&&b.h>0&&b.l>0&&b.c>0)) continue;
+        xo.push(a.o/b.o); xh.push(a.h/b.h); xl.push(a.l/b.l); xc.push(a.c/b.c);
+      }
+      if(xc.length < cfg.rsiLen + cfg.smaS + 5) return null;   // 겹치는 봉이 너무 적음
+      const RS = rsiCandles(xo, xh, xl, xc, cfg.rsiLen);     // 비율 → RS 캔들 (기존 엔진 그대로)
+      PC = xc; RC = RS.rC; I0 = xc.length - 1;
+    }
 
+    const n = Math.max(0, cfg.mcBarN|0);
+    const idx = I0 - n;                       // 0 = 현재(진행)봉
+    if(idx < 0) return null;
+
+    const v9   = smaAt(RC, cfg.smaF, idx);    // RSI(또는 RS) SMA9
+    const v20  = smaAt(RC, cfg.smaS, idx);    // RSI(또는 RS) SMA20
+    const rc   = RC[idx];                     // RSI(또는 RS) 종가
+    const pc   = PC[idx];                     // 가격(또는 비율) 종가
+    const p5   = smaAt(PC, 5, idx);
+    const p10  = smaAt(PC, 10, idx);
+    const p20  = smaAt(PC, cfg.smaS, idx);
+
+    const R_ = isRS ? 'RS' : 'RSI';
+    const P_ = isRS ? '비율' : '가격';
     const hits = [];
     // want: 'up' = a > b · 'dn' = a < b (같으면 어느 쪽도 아님 → 탈락)
     const chk = (want, a, b, label, unit) => {
@@ -2050,13 +2098,13 @@ async function scanSymbol(s, cfg){
       hits.push({label, dir:want, a, b, unit});
       return true;
     };
-    if(!chk(cfg.mcC9,  rc,  v9,  'RSI종가/SMA9',  'r')) return null;
-    if(!chk(cfg.mcC20, rc,  v20, 'RSI종가/SMA20', 'r')) return null;
-    if(!chk(cfg.mcL9,  v9,  cfg.mcL9Lv,  `RSI SMA9 ${cfg.mcL9Lv}`,  'r')) return null;
-    if(!chk(cfg.mcL20, v20, cfg.mcL20Lv, `RSI SMA20 ${cfg.mcL20Lv}`, 'r')) return null;
-    if(!chk(cfg.mcP5,  pc,  p5,  '종가/가격SMA5',  'p')) return null;
-    if(!chk(cfg.mcP10, pc,  p10, '종가/가격SMA10', 'p')) return null;
-    if(!chk(cfg.mcP20, pc,  p20, '종가/가격SMA20', 'p')) return null;
+    if(!chk(cfg.mcC9,  rc,  v9,  `${R_}종가/SMA9`,  'r')) return null;
+    if(!chk(cfg.mcC20, rc,  v20, `${R_}종가/SMA20`, 'r')) return null;
+    if(!chk(cfg.mcL9,  v9,  cfg.mcL9Lv,  `${R_} SMA9 ${cfg.mcL9Lv}`,  'r')) return null;
+    if(!chk(cfg.mcL20, v20, cfg.mcL20Lv, `${R_} SMA20 ${cfg.mcL20Lv}`, 'r')) return null;
+    if(!chk(cfg.mcP5,  pc,  p5,  `${P_}/SMA5`,  'p')) return null;
+    if(!chk(cfg.mcP10, pc,  p10, `${P_}/SMA10`, 'p')) return null;
+    if(!chk(cfg.mcP20, pc,  p20, `${P_}/SMA20`, 'p')) return null;
 
     return gate({
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
@@ -2066,6 +2114,7 @@ async function scanSymbol(s, cfg){
       gap: (v9!=null&&v20!=null) ? v9-v20 : 0,
       retestN: n+1,
       macond: true, mcHits: hits, mcBarN: n, mcRsi: rc,
+      mcSrc: cfg.mcSrc, mcRef: cfg.mcRef,
       smaInfo
     });
   }
@@ -2706,12 +2755,15 @@ function fmtPrice(p){
 // 🎚️ 이평조건 스캔 태그 — 초록=위 · 빨강=아래
 function mcTags(r){
   if(!r.macond || !r.mcHits || !r.mcHits.length) return '';
-  const bar = `<span class="reftag" style="color:#46cd8a;background:rgba(70,205,138,.14);font-weight:700">${r.mcBarN}봉전 봉</span>`;
+  const src = (r.mcSrc==='rs')
+    ? `<span class="reftag" style="color:#ff9d4d;background:rgba(255,157,77,.16);font-weight:700">🔺 RS ÷${(r.mcRef||'BTCUSDT').replace(/USDT$/,'')}</span>`
+    : '';
+  const bar = src + `<span class="reftag" style="color:#46cd8a;background:rgba(70,205,138,.14);font-weight:700">${r.mcBarN}봉전 봉</span>`;
   return bar + r.mcHits.map(h=>{
     const up = h.dir==='up';
     const col = up ? '#46cd8a' : '#e0584f';
     const rgb = up ? '70,205,138' : '224,88,79';
-    const fmt = v => (v==null?'-':(h.unit==='r'? v.toFixed(1) : (v<1? v.toPrecision(4) : v.toFixed(2))));
+    const fmt = v => (v==null?'-':(h.unit==='r'? v.toFixed(1) : (Math.abs(v)<1? v.toPrecision(5) : v.toFixed(4))));
     return `<span class="reftag" style="color:${col};background:rgba(${rgb},.15);font-weight:700" title="${fmt(h.a)} ${up?'>':'<'} ${fmt(h.b)}">${h.label} ${up?'▲위':'▼아래'}</span>`;
   }).join('');
 }
@@ -2989,6 +3041,8 @@ function buildScanCfg(){
     maproxS20: {...maproxS20}, maproxS20Lv: maproxS20Lv,
     maproxBull: {...maproxBull},
     mcBarN, mcC9, mcC20, mcL9, mcL9Lv, mcL20, mcL20Lv, mcP5, mcP10, mcP20,
+    mcSrc, mcRef: (()=>{ const v=((document.getElementById('mcref')||{}).value||'BTC').trim().toUpperCase().replace(/\s+/g,'');
+                         return v ? (/USDT$/.test(v)?v:v+'USDT') : 'BTCUSDT'; })(),
     rsFrom: (rsFromIdx!=null && rsBars[rsFromIdx]) ? rsBars[rsFromIdx].t : null,
     rsTo: (rsToIdx!=null && rsBars[rsToIdx]) ? rsBars[rsToIdx].t : null,
     rsBtcRet: (rsFromIdx!=null && rsToIdx!=null && rsBars[rsFromIdx] && rsBars[rsToIdx] && rsBars[rsFromIdx].c>0) ? ((rsBars[rsToIdx].c/rsBars[rsFromIdx].c-1)*100) : null,
@@ -3240,6 +3294,17 @@ async function runScan(){
     return;
   }
 
+  // 이평조건 스캔 RS 기준 — 기준 코인 봉을 한 번만 받아 전 종목이 공유 (종목마다 받으면 요청이 2배)
+  if(scanMode==='macond' && cfg.mcSrc==='rs'){
+    $('statustxt').textContent = `${cfg.mcRef.replace(/USDT$/,'')} 기준 봉 로딩…`;
+    const refLim = Math.min(1000, Math.max(300, (cfg.rsiLen||14) + 60));   // scanSymbol 과 같은 산식
+    try{ cfg.mcRefBars = await EX[exchange].klines(cfg.mcRef, cfg.tf, refLim); }catch(e){ cfg.mcRefBars = null; }
+    if(!cfg.mcRefBars || cfg.mcRefBars.length < 30){
+      $('results').innerHTML = `<div class="errbox"><b>기준 ${cfg.mcRef} 데이터를 못 받았습니다.</b><br>심볼을 확인하거나 거래소를 바꿔보세요.</div>`;
+      btn.disabled=false; btn.textContent='스캔 실행'; $('statustxt').textContent='실패';
+      return;
+    }
+  }
   // RS 필터 켜졌으면 BTC 직전봉 수익률 미리 로드
   const rsOn = Object.keys(maproxRs).filter(t=>maproxRs[t]);
   if(scanMode==='maprox' && rsOn.length){ $('statustxt').textContent='BTC 기준 로딩…'; await loadBtcRet(exchange, rsOn); }
@@ -3383,7 +3448,7 @@ async function drillScan(){
     nr.rsi50 = [...new Set([...(pr.rsi50||[]), ...(nr.rsi50||[])])];
     nr.maprox = pr.maprox || nr.maprox;
     // 다른 모드 태그(정배/변동성 등)도 이전 값 유지
-    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','maniaWick','pxRetHits','maproxBullHits','maproxPxHits','maproxRsiHits','macond','mcHits','mcBarN'].forEach(k=>{
+    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','maniaWick','pxRetHits','maproxBullHits','maproxPxHits','maproxRsiHits','macond','mcHits','mcBarN','mcSrc','mcRef'].forEach(k=>{
       if(nr[k]===undefined && pr[k]!==undefined) nr[k]=pr[k];
     });
   });
@@ -5549,6 +5614,17 @@ function rsvNav(dir){
 }
 function openRsView(sym, list){
   if(sym){ document.getElementById('rsvSym').value = String(sym).replace(/USDT$/,''); }
+  // 이평조건 스캔(RS 기준) 결과에서 열면 — 스캔한 TF·기준 그대로 열어 같은 값을 눈으로 확인할 수 있게
+  if(scanMode==='macond' && mcSrc==='rs'){
+    const okTf = ['5m','15m','1h','4h','1d'];
+    if(okTf.includes(mcTf)){
+      rsvTf = mcTf;
+      const seg=document.getElementById('rsvTfSeg');
+      if(seg) [...seg.children].forEach(x=>x.classList.toggle('on', x.dataset.rvtf===mcTf));
+    }
+    const rf=document.getElementById('mcref'), rv=document.getElementById('rsvRef');
+    if(rf && rv) rv.value = (rf.value||'BTC').trim().toUpperCase().replace(/USDT$/,'') || 'BTC';
+  }
   // 순환 목록: 넘겨받은 목록 → 현재 스캔 결과 순서 → 없으면 단일
   const full = (Array.isArray(list) && list.length) ? list
              : (Array.isArray(viewSymbols) && viewSymbols.length ? viewSymbols : []);
