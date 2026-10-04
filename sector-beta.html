@@ -187,7 +187,8 @@ const DEFAULT_CFG = {
   retraceWarn: 0.5,  // 대장 되돌림 경계선
   retraceBreak: 0.618, // 대장 되돌림 붕괴선
   timeStopH: 24,     // 후발이 이 시간 넘게 안 따라오면 시간손절 표시
-  startPct: 5        // 구간 시작 대비 이 % 넘은 시점 = 출발 (알파·베타·감마 순서 판정)
+  startPct: 5,       // 기준 시점 대비 이 % 넘은 시점 = 출발 (알파·베타·감마 순서 판정)
+  waveWeek: 1        // 1 = 이번 주 월요일 09:00(KST)부터 순서 측정, 0 = 측정 구간(최근 N시간) 기준
 };
 
 function ema(values, len){
@@ -221,10 +222,19 @@ function analyzeSymbol(candles, cfg){
   base = cnt? base/cnt : 0;
   const volWake = base>0 ? recent/base : null;
   const peak=hi/c0-1;
-  // 출발 시점: 구간 안에서 처음으로 시작가 대비 startPct% 이상 오른 봉
-  let startT=null;
-  for(let i=n-L;i<n;i++){ if(candles[i].c/c0-1 >= (cfg.startPct??5)/100){ startT=candles[i].t; break; } }
-  return {r, peak, c, hi, retrace, ema:e, aboveEma:c>=e, turnover, volWake, startT};
+  // 출발 시점: 기준 시점 이후 처음으로 기준가 대비 startPct% 이상 오른 봉
+  //  - 주간 기준: 이번 주 월요일 09:00 KST 직전 봉 종가가 기준가 (24시간 롤링창은 창 시작점이 계속 밀려
+  //    먼저 출발한 종목이 창 밖으로 빠지면서 순서가 뒤바뀌기 때문)
+  let startT=null, waveR=null, i0=n-L, wbase=c0;
+  if(cfg.waveWeek && cfg.waveAnchorT){
+    const k=candles.findIndex(x=>x.t>=cfg.waveAnchorT);
+    if(k>0){ i0=k; wbase=candles[k-1].c; } else { i0=-1; }
+  }
+  if(i0>=0){
+    for(let i=i0;i<n;i++){ if(candles[i].c/wbase-1 >= (cfg.startPct??5)/100){ startT=candles[i].t; break; } }
+    waveR=c/wbase-1;
+  }
+  return {r, peak, c, hi, retrace, ema:e, aboveEma:c>=e, turnover, volWake, startT, waveR};
 }
 
 // 이벤트 구간(최근 L봉)을 빼고 평소 상관을 잰다
@@ -365,7 +375,7 @@ let sectors=store.get("sbs_sectors",DEFAULT_SECTORS);
 const $=id=>document.getElementById(id);
 const CFG_LABEL={lookbackH:"측정 구간 (시간)",confirmPct:"순환매 기준 상승률 %",lagRatio:"후발 기준 (대장 대비 비율)",
   floorPct:"후발 하한 %",minTurnoverM:"최소 거래대금 (백만$)",minCorr:"최소 상관계수",corrBars:"상관 측정 봉 수",
-  wakeH:"거래량 깨어남 구간 (시간)",emaLen:"대장 EMA 길이 (1h)",retraceWarn:"대장 되돌림 경계",retraceBreak:"대장 되돌림 붕괴",timeStopH:"시간손절 (시간)",startPct:"출발 판정 상승률 %"};
+  wakeH:"거래량 깨어남 구간 (시간)",emaLen:"대장 EMA 길이 (1h)",retraceWarn:"대장 되돌림 경계",retraceBreak:"대장 되돌림 붕괴",timeStopH:"시간손절 (시간)",startPct:"출발 판정 상승률 %",waveWeek:"순서 기준 (1=주초 월 09시, 0=측정 구간)"};
 function buildCfg(){
   $("cfgGrid").innerHTML=Object.keys(DEFAULT_CFG).map(k=>
     `<label>${CFG_LABEL[k]}<input type="number" step="any" data-k="${k}" value="${cfg[k]}"></label>`).join("");
@@ -415,16 +425,20 @@ function waveTag(x){
   return x.wave<3 ? `<small class="wv w${x.wave}" title="${x.wave+1}번째로 출발">${WAVE[x.wave]}</small>`
                   : `<small class="wv wl" title="${x.wave+1}번째 출발 — 감마 이후">${x.wave+1}</small>`;
 }
-const hhmm = t => { const d=new Date(t); return `${d.getHours()}:${String(d.getMinutes()).padStart(2,"0")}`; };
+function weekAnchor(now){
+  const d=new Date(now), back=(d.getUTCDay()+6)%7;   // 월=0 … 일=6
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()-back, 0, 0, 0);
+}
+const hhmm = t => { const d=new Date(t); return `${cfg.waveWeek?"일월화수목금토"[d.getDay()]+" ":""}${d.getHours()}:${String(d.getMinutes()).padStart(2,"0")}`; };
 function waveLine(s){
   if(!s.waves || !s.waves.length) return "";
-  const head=s.waves.slice(0,3).map((x,i)=>`<b>${x.base}</b> ${WAVE[i]} ${hhmm(x.startT)}`).join(" → ");
+  const head=s.waves.slice(0,3).map((x,i)=>`<b>${x.base}</b> ${WAVE[i]} ${hhmm(x.startT)}${cfg.waveWeek&&x.waveR!=null?` (${pct(x.waveR)})`:""}`).join(" → ");
   const rest=s.waves.length>3 ? ` · 이후 ${s.waves.length-3}개` : "";
   let note;
   if(s.status!=="confirmed") note="";
   else if(s.waves.length>=3) note=`<span class="wnote late">감마까지 나옴. 이후 후발은 추격 비추천</span>`;
   else note=`<span class="wnote">다음 출발 = ${WAVE[s.waves.length]} 자리</span>`;
-  return `<div class="waves">출발 순서: ${head}${rest} ${note}</div>`;
+  return `<div class="waves">${cfg.waveWeek?"이번 주(월 09시~) ":""}출발 순서: ${head}${rest} ${note}</div>`;
 }
 function srcTag(x){
   if(x.ex==="bybit" && x.mk==="fut") return "";
@@ -489,6 +503,7 @@ async function scan(){
     const dataMap={}; plan.forEach((x,i)=>{ if(got[i]) dataMap[x.b]={symbol:got[i].sym, ex:got[i].ex, mk:got[i].mk, candles:got[i].candles}; });
     const resolved=plan.map(x=>[x.b]);
     const seen=store.get("sbs_seen",{}), now=Date.now();
+    cfg.waveAnchorT = weekAnchor(now);
     const results=Object.entries(sectors).map(([n,m])=>analyzeSector(n,m,dataMap,cfg,now,seen,new Set(resolved.map(x=>x[0]))));
     store.set("sbs_seen",seen);
     if(binanceDown) results.forEach(r=>r.missing.forEach(m=>{ if(m.why==="미상장") m.why="Bybit에 없음 · Binance 접속 안 됨"; }));
