@@ -164,14 +164,20 @@ button.sym:focus-visible{outline:2px solid var(--lag);outline-offset:2px;border-
 <script>
 /* CORE-START : 순수 계산 로직 (DOM/네트워크 없음) */
 const DEFAULT_SECTORS = {
-  "RWA·토큰화": ["QNT","ONDO","LINK","POLYX","PLUME","SYRUP","CFG"],
-  "상호운용·브릿지": ["DBR","ZRO","W","AXL","ACX","QNT","LINK"],
-  "프라이버시": ["ZEC","XMR","DASH","ROSE","SCRT","NYM","ZEN"],
-  "Base 생태계": ["AERO","VIRTUAL","ZORA","DEGEN","B3","BRETT"],
-  "게이밍": ["IMX","BEAM","PRIME","YGG","GALA","SAND","B3"],
-  "솔라나 디파이": ["JUP","RAY","DRIFT","JTO","ORCA","KMNO","PYTH"],
-  "폴카닷": ["DOT","KSM","GLMR","MOVR","ASTR"],
-  "AI·DePIN": ["TAO","RENDER","IO","AKT","GRASS","HNT","IOTX","FET"]
+  "RWA·토큰화": ["ONDO", "QNT", "LINK", "PLUME", "POLYX", "SYRUP", "CFG", "OM", "CPOOL", "HBAR", "XDC"],
+  "상호운용·브릿지": ["ZRO", "W", "AXL", "ACX", "DBR", "STG", "ZETA", "QNT", "LINK"],
+  "프라이버시": ["ZEC", "XMR", "DASH", "ROSE", "SCRT", "NYM", "ZEN", "XVG", "ARRR"],
+  "Base 생태계": ["AERO", "VIRTUAL", "ZORA", "DEGEN", "B3", "BRETT", "TOSHI", "MORPHO", "WELL", "AVNT"],
+  "게이밍": ["IMX", "BEAM", "PRIME", "YGG", "GALA", "SAND", "B3", "AXS", "MANA", "ILV", "PIXEL", "MAGIC"],
+  "솔라나 디파이": ["JUP", "RAY", "DRIFT", "JTO", "ORCA", "KMNO", "PYTH", "MET", "CLOUD", "TNSR"],
+  "폴카닷": ["DOT", "KSM", "GLMR", "MOVR", "ASTR", "ACA", "PHA"],
+  "AI": ["TAO", "FET", "RENDER", "NEAR", "WLD", "ARKM", "VIRTUAL", "AIXBT", "KAITO", "IO"],
+  "DePIN": ["GRASS", "HNT", "IOTX", "AKT", "FIL", "AR", "THETA", "ATH"],
+  "밈": ["DOGE", "PEPE", "WIF", "BONK", "FLOKI", "SHIB", "PENGU", "POPCAT", "TRUMP", "SPX"],
+  "L2": ["ARB", "OP", "STRK", "ZK", "MNT", "POL", "IMX", "SCR"],
+  "퍼프 DEX": ["HYPE", "ASTER", "DYDX", "GMX", "AVNT", "DRIFT", "JUP"],
+  "디파이 블루칩": ["AAVE", "UNI", "LDO", "ENA", "PENDLE", "CRV", "COMP", "SKY", "MORPHO"],
+  "결제·스테이블": ["XPL", "ENA", "XRP", "XLM", "TRX", "SKY"]
 };
 
 const DEFAULT_CFG = {
