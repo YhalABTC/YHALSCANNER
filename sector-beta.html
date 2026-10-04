@@ -51,7 +51,7 @@ textarea{width:100%;min-height:220px;font:13px/1.45 ui-monospace,Menlo,monospace
 .act.s-hold{border-left-color:var(--hold)} .act.s-dip{border-left-color:var(--dip)}
 .act.s-warn{border-left-color:var(--warn)} .act.s-broke{border-left-color:var(--broke)}
 .act b{font-weight:700}
-.ladder{display:grid;grid-template-columns:84px 1fr 62px;gap:4px 8px;align-items:center;font-size:13px}
+.ladder{display:grid;grid-template-columns:minmax(84px,max-content) 1fr 62px;gap:4px 8px;align-items:center;font-size:13px}
 .ladder .sym{font-weight:500}
 .track{position:relative;height:14px;background:rgba(255,255,255,.04);border-radius:3px}
 .track .zero{position:absolute;left:20%;top:0;bottom:0;width:1px;background:var(--line)}
@@ -70,6 +70,10 @@ button.msym{color:var(--dim)}
 .wv{font-size:11px;font-weight:700;margin-left:4px;padding:0 4px;border-radius:4px}
 .wv.w0{color:#141B28;background:var(--hold)} .wv.w1{color:#141B28;background:var(--lag)} .wv.w2{color:#141B28;background:var(--dip)}
 .wv.wl{color:var(--dim);border:1px solid var(--line)}
+button.fav{all:unset;cursor:pointer;color:var(--line);font-size:14px;margin-left:4px;padding:0 2px}
+button.fav.on{color:#f4c84b}
+button.fav:focus-visible{outline:2px solid var(--lag);border-radius:3px}
+#cmFav.on{color:#f4c84b;border-color:#f4c84b}
 .waves{font-size:12.5px;color:var(--dim);margin:-2px 0 10px}
 .waves b{color:var(--text);font-weight:500}
 .wnote{margin-left:4px;color:var(--lag)} .wnote.late{color:var(--warn)}
@@ -144,6 +148,7 @@ button.sym:focus-visible{outline:2px solid var(--lag);outline-offset:2px;border-
     <button id="cmPrev" aria-label="이전 종목">‹</button>
     <span class="pos" id="cmPos"></span>
     <button id="cmNext" aria-label="다음 종목">›</button>
+    <button id="cmFav" aria-label="즐겨찾기">☆</button>
     <button id="cmReload" aria-label="새로고침">↻</button>
   </div>
   <div class="cm-info" id="cmInfo"></div>
@@ -380,6 +385,30 @@ $("secReset").onclick=()=>{ sectors=DEFAULT_SECTORS; store.set("sbs_sectors",sec
 function setStatus(t,err){ $("status").textContent=t; $("status").className=err?"err":""; }
 
 const pct=v=>(v>=0?"+":"")+(v*100).toFixed(1)+"%";
+/* ---------- 즐겨찾기: RADAR·JOURNAL과 같은 저장소 키를 써서 공유 ---------- */
+const FAV_KEY='rsiScannerFavs';   // scalp_scanner.html / journal.html 과 동일
+function getFavs(){ try{ const v=JSON.parse(localStorage.getItem(FAV_KEY)); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+function isFav(sym){ return getFavs().includes(sym); }
+function toggleFav(sym){
+  const a=getFavs(); const i=a.indexOf(sym);   // 매번 새로 읽어서 다른 앱에서 바꾼 내용을 덮어쓰지 않게
+  if(i>=0) a.splice(i,1); else a.push(sym);
+  try{ localStorage.setItem(FAV_KEY, JSON.stringify(a)); }catch(e){}
+  refreshFavUI();
+}
+// 스캐너·저널 차트는 선물 데이터만 그려서, 현물로만 보이는 종목은 즐찾 대상에서 뺀다
+function favBtn(x){
+  if(x.mk!=="fut") return "";
+  const on=isFav(x.symbol);
+  return `<button class="fav${on?" on":""}" data-fav="${x.symbol}" aria-label="${x.base} 즐겨찾기" aria-pressed="${on}">${on?"★":"☆"}</button>`;
+}
+function refreshFavUI(){
+  const f=new Set(getFavs());
+  document.querySelectorAll("button.fav").forEach(b=>{ const on=f.has(b.dataset.fav); b.classList.toggle("on",on); b.textContent=on?"★":"☆"; b.setAttribute("aria-pressed",on); });
+  const it=cv.list && cv.list[cv.idx]; const cb=$("cmFav");
+  if(cb && it){ const ok=it.sym && it.mk==="fut"; cb.style.display=ok?"":"none";
+    const on=ok && f.has(it.sym); cb.classList.toggle("on",on); cb.textContent=on?"★":"☆"; cb.setAttribute("aria-pressed",!!on); }
+}
+window.addEventListener("storage",e=>{ if(e.key===FAV_KEY) refreshFavUI(); });
 const WAVE=["α","β","γ"];
 function waveTag(x){
   if(x.wave==null) return "";
@@ -421,7 +450,7 @@ function renderSector(s, si){
     if(x.role==="lag"){
       extra=`<div class="lagrow">후발 점수 ${x.score} · 상관 ${x.corr.toFixed(2)} · 거래량 ${x.volWake!=null?x.volWake.toFixed(1)+"배":"-"} · 대금 ${(x.turnover/1e6).toFixed(1)}M · 대기 ${x.waitH.toFixed(1)}h${x.timeStop?' <span class="ts">시간손절 초과</span>':""}${s.waves.length>=3?' <span class="ts">감마 이후</span>':""}</div>`;
     }
-    return `<div><button class="sym" data-si="${si}" data-sym="${x.symbol}">${x.base}</button>${waveTag(x)}${srcTag(x)}</div><div class="track"><div class="zero"></div><div class="fill ${cls}" style="left:${left}%;width:${width}%"></div></div><div class="pct">${pct(x.r)}</div>${extra}`;
+    return `<div><button class="sym" data-si="${si}" data-sym="${x.symbol}">${x.base}</button>${waveTag(x)}${srcTag(x)}${favBtn(x)}</div><div class="track"><div class="zero"></div><div class="fill ${cls}" style="left:${left}%;width:${width}%"></div></div><div class="pct">${pct(x.r)}</div>${extra}`;
   }).join("");
   const act = s.status==="confirmed"
     ? `<div class="act s-${s.state.key}"><b>대장 ${lead.base} ${s.state.label}</b> (되돌림 ${(lead.retrace*100).toFixed(0)}%, EMA${cfg.emaLen} ${lead.aboveEma?"위":"아래"}). ${s.action}</div>`
@@ -708,10 +737,12 @@ async function renderChart(){
   const it=cv.list[cv.idx];
   $("cmPos").textContent=cv.list.length>1?`${cv.idx+1}/${cv.list.length}`:"";
   $("cmTitle").innerHTML=`${it.base}/USDT <small>${cv.tf.toUpperCase()}</small>`;
+  refreshFavUI();
   $("cmInfo").innerHTML=chartInfo(it);
   if(!it.sym && !it.none){ body.innerHTML='<div class="chart-err" style="color:var(--dim)">다른 소스에서 찾는 중…</div>'; await resolveItem(it); if(seq!==chartSeq) return; }
   if(it.none){ body.innerHTML=`<div class="chart-err">${it.base}는 Bybit·Binance 선물과 현물 어디에도 USDT 마켓이 없습니다. (Binance는 VPN이 꺼져 있으면 확인되지 않아요)<br>티커가 거래소마다 다를 수 있으니 섹터 묶음에서 이름을 확인해 보세요.</div>`; $("cmInfo").innerHTML=chartInfo(it); return; }
   $("cmTitle").innerHTML=`${it.base}/USDT <small>${cv.tf.toUpperCase()} · ${srcName(it)}</small>`;
+  refreshFavUI();
   $("cmInfo").innerHTML=chartInfo(it);
   document.querySelectorAll("#tfbar [data-tf]").forEach(e=>e.classList.toggle("on",e.dataset.tf===cv.tf));
   document.querySelectorAll("#tfbar [data-bars]").forEach(e=>e.classList.toggle("on",+e.dataset.bars===cv.bars));
@@ -747,11 +778,12 @@ function closeChart(fromPop){
   if(lastFocus) try{ lastFocus.focus(); }catch(e){}
 }
 function navChart(d){ if(cv.list.length<2) return; cv.idx=(cv.idx+d+cv.list.length)%cv.list.length; renderChart(); }
-$("out").addEventListener("click",e=>{ const b=e.target.closest("button.sym"); if(b) openChart(+b.dataset.si,b.dataset.sym||null,b.dataset.base||null); });
+$("out").addEventListener("click",e=>{ const fb=e.target.closest("button.fav"); if(fb){ toggleFav(fb.dataset.fav); return; } const b=e.target.closest("button.sym"); if(b) openChart(+b.dataset.si,b.dataset.sym||null,b.dataset.base||null); });
 $("cmClose").onclick=()=>closeChart(false);
 $("cmPrev").onclick=()=>navChart(-1);
 $("cmNext").onclick=()=>navChart(1);
 $("cmReload").onclick=()=>renderChart();
+$("cmFav").onclick=()=>{ const it=cv.list[cv.idx]; if(it&&it.sym&&it.mk==="fut") toggleFav(it.sym); };
 $("tfbar").addEventListener("click",e=>{
   const s=e.target.closest("span"); if(!s) return;
   if(s.dataset.tf){ cv.tf=s.dataset.tf; store.set("sbs_tf",cv.tf); renderChart(); }
