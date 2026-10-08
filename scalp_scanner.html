@@ -850,6 +850,29 @@
           <button data-v="dn">아래</button>
         </div>
       </div>
+      <div class="mcrow" style="margin-top:11px;padding-top:9px;border-top:1px dashed var(--border)">
+        <span class="mclab" data-px="종가 vs &lt;b&gt;가격 BB(20,2)&lt;/b&gt;" data-rs="비율 vs &lt;b&gt;비율 BB(20,2)&lt;/b&gt;">종가 vs <b>가격 BB(20,2)</b></span>
+        <div class="seg sm mctri" id="mcBBp">
+          <button data-v="off" class="on">끄기</button>
+          <button data-v="up">상단 밖</button>
+          <button data-v="dn">하단 밖</button>
+        </div>
+      </div>
+      <div class="mcrow">
+        <span class="mclab" data-px="RSI 종가 vs &lt;b&gt;RSI BB(20,2)&lt;/b&gt;" data-rs="RS 종가 vs &lt;b&gt;RS BB(20,2)&lt;/b&gt;">RSI 종가 vs <b>RSI BB(20,2)</b></span>
+        <div class="seg sm mctri" id="mcBBr">
+          <button data-v="off" class="on">끄기</button>
+          <button data-v="up">상단 밖</button>
+          <button data-v="dn">하단 밖</button>
+        </div>
+      </div>
+      <div class="mcrow">
+        <span class="mclab">BB 밖 판정 기준</span>
+        <div class="seg sm" id="mcbbsrc" title="종가 = 종가가 밴드 밖에서 마감 · 꼬리 = 고가(상단)/저가(하단)가 밴드 밖을 찍기만 해도 인정">
+          <button data-bbs="close" class="on">종가</button>
+          <button data-bbs="wick">꼬리(고·저)</button>
+        </div>
+      </div>
     </div>
     <div class="field" id="maproxfield" style="display:none;margin-bottom:10px">
       <label>이평 근접 (켠 TF 전부 SMA200 ±% 이내 · AND)</label>
@@ -1232,6 +1255,8 @@ let mcC9='off', mcC20='off';          // RSI 종가 vs RSI SMA9 / SMA20
 let mcL9='off',  mcL9Lv=50;           // RSI SMA9  값 vs 레벨
 let mcL20='off', mcL20Lv=50;          // RSI SMA20 값 vs 레벨
 let mcP5='off', mcP10='off', mcP20='off';   // 종가 vs 가격 SMA5 / SMA10 / SMA20
+let mcBBp='off', mcBBr='off';         // 가격 BB / RSI BB — up=상단 밖, dn=하단 밖
+let mcBBsrc='close';                  // 'close'=종가 마감 기준 · 'wick'=고가/저가 터치 기준
 let maproxBull = {'15m':false,'1h':false,'4h':false,'1d':false,'1w':false};   // 현재 RSI 정배 (SMA9 > SMA20)
 // RS 스캔: BTC 1h 구간 지정
 let rsBars = [];            // 기준 코인 봉 (차트용)
@@ -1356,6 +1381,10 @@ function updateCondChips(){
     if(D(mcP5))  L.push(`${C_} ${D(mcP5)} ${P_} SMA5`);
     if(D(mcP10)) L.push(`${C_} ${D(mcP10)} ${P_} SMA10`);
     if(D(mcP20)) L.push(`${C_} ${D(mcP20)} ${P_} SMA20`);
+    const BBD = v => v==='up' ? '<b style="color:#46cd8a">상단 밖</b>' : v==='dn' ? '<b style="color:#e0584f">하단 밖</b>' : null;
+    const BS_ = (mcBBsrc==='wick') ? (v=>v==='up'?'고가':'저가') : (()=> RS_?'비율':'종가');
+    if(BBD(mcBBp)) L.push(`${BS_(mcBBp)} ${BBD(mcBBp)} — ${P_} BB(20,2)`);
+    if(BBD(mcBBr)) L.push(`${R_} ${mcBBsrc==='wick'?BS_(mcBBr):'종가'} ${BBD(mcBBr)} — ${R_} BB(20,2)`);
     const refName = (((document.getElementById('mcref')||{}).value)||'BTC').trim().toUpperCase().replace(/USDT$/,'') || 'BTC';
     el.innerHTML = `
       <div class="chip"><span class="n">①</span><b>${mcTf.toUpperCase()}</b> · ${mcBarN===0?'현재(진행)봉':mcBarN+'봉 전'} 하나만 평가 (구간 탐색 없음)</div>
@@ -1517,6 +1546,9 @@ bindTri('mcL20', v=>mcL20=v);
 bindTri('mcP5',  v=>mcP5=v);
 bindTri('mcP10', v=>mcP10=v);
 bindTri('mcP20', v=>mcP20=v);
+bindTri('mcBBp', v=>mcBBp=v);
+bindTri('mcBBr', v=>mcBBr=v);
+bindSingleSeg('mcbbsrc', 'bbs', v=>{ mcBBsrc=v; updateCondChips(); });
 bindSingleSeg('mcL9lv',  'lv', v=>{ mcL9Lv=+v;  updateCondChips(); });
 bindSingleSeg('mcL20lv', 'lv', v=>{ mcL20Lv=+v; updateCondChips(); });
 bindSingleSeg('mctfseg', 'mctf', v=>{ mcTf=v; updateCondChips(); });
@@ -2053,11 +2085,11 @@ async function scanSymbol(s, cfg){
   //    데이터 기준이 '가격'이면 종목 자체, 'RS'면 (종목 ÷ 기준) 비율 시리즈로 같은 조건을 판정
   if(cfg.scanMode === 'macond'){
     const on = v => v==='up' || v==='dn';
-    if(!(on(cfg.mcC9)||on(cfg.mcC20)||on(cfg.mcL9)||on(cfg.mcL20)||on(cfg.mcP5)||on(cfg.mcP10)||on(cfg.mcP20))) return null;  // 조건 전무 → 제외
+    if(!(on(cfg.mcC9)||on(cfg.mcC20)||on(cfg.mcL9)||on(cfg.mcL20)||on(cfg.mcP5)||on(cfg.mcP10)||on(cfg.mcP20)||on(cfg.mcBBp)||on(cfg.mcBBr))) return null;  // 조건 전무 → 제외
 
     const isRS = (cfg.mcSrc === 'rs');
     // 판정에 쓸 시리즈 — 가격 모드는 기존 배열 그대로
-    let PC = closes, RC = rC, I0 = i0;
+    let PC = closes, PH = highs, PL = lows, RC = rC, RH = rH, RL = rL, I0 = i0;
     if(isRS){
       if(s.symbol === cfg.mcRef) return null;          // 기준 자신은 비율이 항상 1 → 의미 없음
       const ref = cfg.mcRefBars; if(!ref || !ref.length) return null;
@@ -2071,7 +2103,7 @@ async function scanSymbol(s, cfg){
       }
       if(xc.length < cfg.rsiLen + cfg.smaS + 5) return null;   // 겹치는 봉이 너무 적음
       const RS = rsiCandles(xo, xh, xl, xc, cfg.rsiLen);     // 비율 → RS 캔들 (기존 엔진 그대로)
-      PC = xc; RC = RS.rC; I0 = xc.length - 1;
+      PC = xc; PH = xh; PL = xl; RC = RS.rC; RH = RS.rH; RL = RS.rL; I0 = xc.length - 1;
     }
 
     const n = Math.max(0, cfg.mcBarN|0);
@@ -2105,6 +2137,33 @@ async function scanSymbol(s, cfg){
     if(!chk(cfg.mcP5,  pc,  p5,  `${P_}/SMA5`,  'p')) return null;
     if(!chk(cfg.mcP10, pc,  p10, `${P_}/SMA10`, 'p')) return null;
     if(!chk(cfg.mcP20, pc,  p20, `${P_}/SMA20`, 'p')) return null;
+
+    // ── BB(SMA20, 2σ) 밖 — up=상단 밖, dn=하단 밖 ──
+    //    종가 기준: 종가가 밴드 밖에서 마감 / 꼬리 기준: 고가가 상단 위, 저가가 하단 아래면 인정
+    const bbAt = (arr, P, mult, i) => {
+      if(i < P-1) return null;
+      let sum = 0;
+      for(let k=i-P+1;k<=i;k++){ const v=arr[k]; if(v==null || !isFinite(v)) return null; sum += v; }
+      const m = sum/P;
+      let acc = 0; for(let k=i-P+1;k<=i;k++){ const d=arr[k]-m; acc += d*d; }
+      const sd = Math.sqrt(acc/P);
+      return { up: m + 2*sd, lo: m - 2*sd };
+    };
+    const wick = (cfg.mcBBsrc === 'wick');
+    const bbChk = (want, cl, hi, lo, band, label, unit) => {
+      if(!on(want)) return true;
+      if(!band) return false;                                  // 봉 부족 → 탈락
+      const v = (want==='up') ? (wick ? hi : cl) : (wick ? lo : cl);
+      if(v == null) return false;
+      const edge = (want==='up') ? band.up : band.lo;
+      const ok = (want==='up') ? (v > edge) : (v < edge);
+      if(!ok) return false;
+      hits.push({label, dir:want, a:v, b:edge, unit, bb:true});
+      return true;
+    };
+    const SRC_ = wick ? '꼬리' : '종가';
+    if(!bbChk(cfg.mcBBp, pc, PH[idx], PL[idx], bbAt(PC, cfg.smaS, 2, idx), `${P_}BB(${SRC_})`, 'p')) return null;
+    if(!bbChk(cfg.mcBBr, rc, RH[idx], RL[idx], bbAt(RC, cfg.smaS, 2, idx), `${R_}BB(${SRC_})`, 'r')) return null;
 
     return gate({
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
@@ -2764,7 +2823,8 @@ function mcTags(r){
     const col = up ? '#46cd8a' : '#e0584f';
     const rgb = up ? '70,205,138' : '224,88,79';
     const fmt = v => (v==null?'-':(h.unit==='r'? v.toFixed(1) : (Math.abs(v)<1? v.toPrecision(5) : v.toFixed(4))));
-    return `<span class="reftag" style="color:${col};background:rgba(${rgb},.15);font-weight:700" title="${fmt(h.a)} ${up?'>':'<'} ${fmt(h.b)}">${h.label} ${up?'▲위':'▼아래'}</span>`;
+    const word = h.bb ? (up?'▲상단 밖':'▼하단 밖') : (up?'▲위':'▼아래');
+    return `<span class="reftag" style="color:${col};background:rgba(${rgb},.15);font-weight:700" title="${fmt(h.a)} ${up?'>':'<'} ${fmt(h.b)}${h.bb?(up?' (BB 상단)':' (BB 하단)'):''}">${h.label} ${word}</span>`;
   }).join('');
 }
 // 공통 동시조건(가격 5선/20선 리테) 태그 — "+" 로 덧붙은 조건임을 표시
@@ -3040,7 +3100,7 @@ function buildScanCfg(){
     maproxS9: {...maproxS9}, maproxS9Lv: maproxS9Lv,
     maproxS20: {...maproxS20}, maproxS20Lv: maproxS20Lv,
     maproxBull: {...maproxBull},
-    mcBarN, mcC9, mcC20, mcL9, mcL9Lv, mcL20, mcL20Lv, mcP5, mcP10, mcP20,
+    mcBarN, mcC9, mcC20, mcL9, mcL9Lv, mcL20, mcL20Lv, mcP5, mcP10, mcP20, mcBBp, mcBBr, mcBBsrc,
     mcSrc, mcRef: (()=>{ const v=((document.getElementById('mcref')||{}).value||'BTC').trim().toUpperCase().replace(/\s+/g,'');
                          return v ? (/USDT$/.test(v)?v:v+'USDT') : 'BTCUSDT'; })(),
     rsFrom: (rsFromIdx!=null && rsBars[rsFromIdx]) ? rsBars[rsFromIdx].t : null,
