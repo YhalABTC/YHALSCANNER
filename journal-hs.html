@@ -6,11 +6,11 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="YHAL JOURNAL">
-<meta name="theme-color" content="#0b0906">
-<link rel="manifest" href="manifest-journal.json">
-<link rel="apple-touch-icon" href="icon-journal-180.png">
-<title>YHAL JOURNAL</title>
+<meta name="apple-mobile-web-app-title" content="해선 JOURNAL">
+<meta name="theme-color" content="#06090d">
+<link rel="manifest" href="manifest-journal-hs.json">
+<link rel="apple-touch-icon" href="icon-hs-180.png">
+<title>YHAL JOURNAL · 해선</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -21,13 +21,13 @@
   .pchart, .rchart, .mchart, canvas, .tv-lightweight-charts { touch-action: pinch-zoom !important; }   /* 차트는 핀치줌 허용 */
   html { -webkit-text-size-adjust: 100%; }
   :root{
-    /* JOURNAL 팔레트 — 런처와 같은 골드/다크브라운 (RADAR의 네이비와 구분) */
-    --bg:#0b0906; --surface:#151006; --surface-2:#100c07;
-    --border:#3a2e14; --hair:#2a2110;
-    --text:#efe4cb; --muted:#a6926a; --dim:#6e5d3d;
-    --amber:#e3b64f; --amber-soft:rgba(227,182,79,.14);
-    --accent:#e3b64f;
-    --line:#3a2e14; --panel2:#151006; --ink:#efe4cb;
+    /* 해선 JOURNAL 팔레트 — 시안/차콜 (크립토 JOURNAL의 골드와 구분) */
+    --bg:#06090d; --surface:#0d151b; --surface-2:#0a1016;
+    --border:#1d3440; --hair:#152833;
+    --text:#dff0f5; --muted:#7ea6b5; --dim:#4c6b78;
+    --amber:#3fd9e3; --amber-soft:rgba(63,217,227,.14);
+    --accent:#3fd9e3;
+    --line:#1d3440; --panel2:#0d151b; --ink:#dff0f5;
     --green:#46cd8a; --green-soft:rgba(70,205,138,.12);
     --up:#46cd8a; --down:#e0584f; --blue:#5b9bd5;
     --mono:'JetBrains Mono',ui-monospace,monospace;
@@ -154,7 +154,7 @@
   .posthoc-form #phstatus{font-size:11px;color:var(--dim)}
   .jbadge{font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(143,163,196,.18);color:#8fa3c4;font-weight:600}
   .jpending{font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(186,117,23,.16);color:#e8a33c}
-  #chartMark.on{background:#46cd8a;color:#0a0e16;border-color:#46cd8a}
+  #chartMark.on{background:#46cd8a;color:#06090d;border-color:#46cd8a}
   .modal-body.marking .pchart{cursor:crosshair}
   #chartJournal{display:flex;flex-wrap:wrap;gap:8px;padding:8px 18px;border-top:1px solid var(--hair)}
   #chartJournal:empty{display:none}
@@ -191,7 +191,7 @@
   .seg button{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--muted);
     background:transparent;border:0;padding:7px 15px;border-radius:6px;cursor:pointer;transition:.12s}
   .seg button:hover{color:var(--text)}
-  .seg button.on{background:var(--amber);color:#0b0906}
+  .seg button.on{background:var(--amber);color:#06090d}
   .seg.compact{flex-wrap:wrap}
   .seg.compact button{padding:7px 10px}
   .mode-row{margin-bottom:16px;display:grid;grid-template-columns:1fr;gap:10px}
@@ -437,7 +437,7 @@
   .modal-close{background:var(--amber-soft);border:1px solid var(--amber);color:var(--amber);
     width:auto;height:32px;padding:0 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;
     flex:none;display:flex;align-items:center;gap:2px;font-family:inherit}
-  .modal-close:hover{background:var(--amber);color:#0b0906}
+  .modal-close:hover{background:var(--amber);color:#06090d}
   .modal-body{padding:14px 18px 18px;overflow-y:auto}
   .chart-pane{margin-bottom:16px}
   .chart-pane:last-child{margin-bottom:0}
@@ -500,7 +500,7 @@
   .tfbar .barnum{font-size:11px;opacity:.85}
   .tfbar .tfdot{padding:5px 9px;border-radius:7px;border:1px solid var(--border);
     background:var(--surface-2);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer}
-  .tfbar .tfdot.on{background:var(--amber);color:#0b0906;border-color:var(--amber)}
+  .tfbar .tfdot.on{background:var(--amber);color:#06090d;border-color:var(--amber)}
   .mobi-hint{display:none}
   body.mobile .mobi-hint{display:block;text-align:center;font-family:var(--mono);
     font-size:10.5px;color:var(--dim);padding:2px 0 8px}
@@ -555,13 +555,13 @@
   .mb-src button{width:34px;height:28px;border-radius:7px;cursor:pointer;
     background:var(--surface-2);border:1px solid var(--border);color:var(--muted);
     font:700 12px 'JetBrains Mono',monospace;padding:0}
-  .mb-src button.on{background:var(--amber);border-color:var(--amber);color:#0b0906}
+  .mb-src button.on{background:var(--amber);border-color:var(--amber);color:#06090d}
   .mb-nudge{width:40px;height:40px;border-radius:9px;cursor:pointer;
     background:var(--surface-2);border:1px solid var(--border);color:var(--text);font-size:15px}
   .mb-nudge:active{border-color:var(--amber);color:var(--amber)}
   .mb-ok,.mb-no{height:40px;padding:0 13px;border-radius:9px;cursor:pointer;
     font:700 13px 'Space Grotesk',sans-serif}
-  .mb-ok{background:var(--amber);border:1px solid var(--amber);color:#0b0906}
+  .mb-ok{background:var(--amber);border:1px solid var(--amber);color:#06090d}
   .mb-no{background:var(--surface-2);border:1px solid var(--border);color:var(--muted)}
   /* ── 매매일지 화면 ── */
   .brand h1{letter-spacing:.02em}
@@ -643,11 +643,11 @@
 
   <header>
     <div class="brand">
-      <h1><span class="tick">📓</span> <span class="wm">JOURNAL</span></h1>
-      <p>YHAL · 매매일지 — 차트에서 봉 클릭 → 진입·청산 기록 → A4 복기 시트</p>
+      <h1><span class="tick">📘</span> <span class="wm">해선 JOURNAL</span></h1>
+      <p>매매일지 — 봉 클릭으로 진입·청산 기록 → 1M·5M·15M·1H A4 복기 시트</p>
     </div>
     <div class="hlinks">
-      <a href="scalp_scanner.html">◎ RADAR</a>
+      <a href="journal.html">📓 크립토 저널</a>
       <a href="index.html">↩ 런처</a>
     </div>
     <div class="laststamp" id="laststamp">📍 매매표시 ON → 봉 클릭 = 진입 → 다시 클릭 = 청산</div>
@@ -726,7 +726,7 @@
       <button class="modal-share" id="chartMark" title="봉 클릭으로 사후표시 (진입→청산 자동 번갈기)"><b class="bic">📍</b><span class="btxt"> 매매표시</span></button>
       <div class="seg sm" id="dirseg" style="display:none"><button data-dir="long" class="on">롱</button><button data-dir="short">숏</button></div>
       <button class="modal-share" id="chartShare" title="차트 이미지로 공유 / 에어드랍"><b class="bic">📷</b><span class="btxt"> 공유</span></button>
-      <button class="modal-share" id="chartPdf" title="복기 시트 PDF — 최근 매매 구간 · 5M·15M·1H·4H · A4 세로 2×2"><b class="bic">📄</b><span class="btxt"> PDF</span></button>
+      <button class="modal-share" id="chartPdf" title="복기 시트 PDF — 최근 매매 구간 · 1M·5M·15M·1H · A4 세로 2×2"><b class="bic">📄</b><span class="btxt"> PDF</span></button>
       <button class="modal-nav" id="chartReload" title="최신 데이터로 갱신">↻</button>
       <button class="modal-close" id="chartClose" title="차트 닫기 (저널로)"><b class="bic">✕</b><span class="btxt"> 저널</span></button>
     </div>
@@ -768,11 +768,11 @@
 </div>
 
 <script>
-let currentTF = '15m';   // 분석 TF — 사후기록 시 RSI/태그 역산에 쓰는 프레임
-let chartTF = '15m';    // 차트 보기용 TF (단일 기본 15분)
+let currentTF = '5m';    // 분석 TF — 사후기록 시 RSI/태그 역산에 쓰는 프레임
+let chartTF = '5m';     // 차트 보기용 TF (해선 스캘핑 기준 5분)
 let chartBars = 100;    // 단일 차트 가시 봉 수 (스케일창도 연동)
-let quadMode = 'scalp';   // 복기 시트 TF 세트 — 저널은 5m·15m·1h·4h 고정 (UI 토글 없음)
-function quadTfs(){ return quadMode==='swing' ? ['1h','4h','1d','1w'] : ['5m','15m','1h','4h']; }
+let quadMode = 'scalp';   // 해선 저널은 1m·5m·15m·1h 고정 (quadTfs 참조)
+function quadTfs(){ return ['1m','5m','15m','1h']; }   // 해선 전용 — 복기 시트 TF 고정
 const TF_MS = {'1m':6e4,'3m':18e4,'5m':3e5,'15m':9e5,'30m':18e5,'1h':36e5,'4h':1.44e7,'1d':8.64e7,'1w':6.048e8};
 let indShow = {5:true,10:true,20:true,50:true,120:true,200:true,300:true,bb:true,rbb:true,bb120:false};   // 이평/BB 표시 토글 (bb120=특수볼밴 기본꺼짐)
 let exchange = 'bybit';
@@ -1098,7 +1098,7 @@ $('searchbtn').addEventListener('click', doCoinSearch);
 $('coinsearch').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doCoinSearch(); } });
 
 // ---- 즐겨찾기 (localStorage 저장) ----
-const FAV_KEY = 'rsiScannerFavs';
+const FAV_KEY = 'hsJournalFavs';      // 해선 전용 저장소
 let favs = [];          // 심볼 배열
 let favTags = {};       // {symbol: tags} 마지막 리프레시 결과 캐시
 let favMini = {};        // {symbol: {rO,rH,...,pxMini}} 미니캔들 데이터
@@ -1108,8 +1108,8 @@ const FAV_PX_TFS = ['5m','15m','1h','4h'];
 const COND_LETTERS = ['B','P','S','C','X'];
 
 // ── 포지션 로그(매수/매도 시점 박제) + 전체 스냅샷 ──
-const POS_KEY = 'rsiScannerPositions';
-const SNAP_KEY = 'rsiScannerSnapshots';
+const POS_KEY = 'hsJournalPositions';
+const SNAP_KEY = 'hsJournalSnapshots';
 let positionLog = [];   // [{id, ts, symbol, side, price, mode, tf, exchange, tags, row}]
 let snapshots = [];     // [{id, ts, mode, tf, exchange, count, rows}]
 function loadPositions(){
@@ -1638,11 +1638,11 @@ function bollinger(closes, t, period, mult){
 function chartCommon(){
   const m = (typeof IS_MOBILE!=='undefined' && IS_MOBILE);
   return {
-    layout:{background:{type:'solid',color:'transparent'}, textColor:'#a6926a', fontFamily:"'JetBrains Mono', monospace", fontSize: m?9:10},
+    layout:{background:{type:'solid',color:'transparent'}, textColor:'#7ea6b5', fontFamily:"'JetBrains Mono', monospace", fontSize: m?9:10},
     grid:{vertLines:{visible:false}, horzLines:{visible:false}},
-    timeScale:{borderColor:'#3a2e14', timeVisible:true, secondsVisible:false,
+    timeScale:{borderColor:'#1d3440', timeVisible:true, secondsVisible:false,
       rightOffset: 10, barSpacing: m?6:6, minBarSpacing: m?4:0.5},
-    rightPriceScale:{borderColor:'#3a2e14', scaleMargins:{top:0.12, bottom:0.12}, minimumWidth: m?56:0},
+    rightPriceScale:{borderColor:'#1d3440', scaleMargins:{top:0.12, bottom:0.12}, minimumWidth: m?56:0},
     crosshair:{mode:LightweightCharts.CrosshairMode.Normal,
       vertLine:{color:'#4d5a70',labelBackgroundColor:'#212d40'},
       horzLine:{color:'#4d5a70',labelBackgroundColor:'#212d40'}},
@@ -1940,7 +1940,7 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
       startPendingMark({symbol, tf, i:ci, t, opens, highs, lows, closes, paint});
     });
   }
-  [[70,'#3a2e14'],[50,'#51401c'],[30,'#3a2e14']].forEach(([v,c])=>{
+  [[70,'#1d3440'],[50,'#27495a'],[30,'#1d3440']].forEach(([v,c])=>{
     rcs.createPriceLine({price:v,color:c,lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true});
   });
 
@@ -2385,7 +2385,7 @@ function chartCanvasFor(containerEl){
 async function shareChartImage(){
   const body = $('chartBody');
   const isQuad = body.classList.contains('quad');
-  const PAD = 26, GAP = 16, LABEL_H = 26, TITLE_H = 56, BG = '#0b0906';
+  const PAD = 26, GAP = 16, LABEL_H = 26, TITLE_H = 56, BG = '#06090d';
   // 패널 묶음 수집: [{label, price:canvas, rsi:canvas}]
   const groups = [];
   if(isQuad){
@@ -2422,9 +2422,9 @@ async function shareChartImage(){
   // 타이틀
   const sym = currentChartSymbol ? currentChartSymbol.replace('USDT','')+'/USDT' : '차트';
   const now = new Date(Date.now()+9*3600*1000).toISOString().replace('T',' ').slice(0,16)+' KST';
-  x.fillStyle = '#efe4cb'; x.font = "700 22px 'Space Grotesk', sans-serif"; x.textBaseline='top';
+  x.fillStyle = '#dff0f5'; x.font = "700 22px 'Space Grotesk', sans-serif"; x.textBaseline='top';
   x.fillText(sym, PAD, PAD);
-  x.fillStyle = '#a6926a'; x.font = "13px 'JetBrains Mono', monospace";
+  x.fillStyle = '#7ea6b5'; x.font = "13px 'JetBrains Mono', monospace";
   x.fillText(`${EX[exchange].name} Perp · ${isQuad?quadTfs().map(t=>t.toUpperCase()).join('·'):chartTF.toUpperCase()} · ${now}`, PAD, PAD+28);
 
   // 패널 배치
@@ -2432,7 +2432,7 @@ async function shareChartImage(){
     const r = Math.floor(i/cols), c = i%cols;
     const ox = PAD + c*(cw+GAP);
     const oy = PAD + TITLE_H + r*(cellH+GAP);
-    x.fillStyle = '#e3b64f'; x.font = "700 15px 'JetBrains Mono', monospace";
+    x.fillStyle = '#3fd9e3'; x.font = "700 15px 'JetBrains Mono', monospace";
     x.fillText(g.label, ox+2, oy+4);
     x.drawImage(g.price, ox, oy+LABEL_H, cw, g.price.height);
     x.drawImage(g.rsi,   ox, oy+LABEL_H+g.price.height, cw, g.rsi.height);
@@ -2471,7 +2471,7 @@ const SHEET_COLS  = 2;       // 2×2 배치
 const SHEET_BARS  = 70;      // TF별 표시 봉 수 (셀 폭 620px → 폰과 비슷한 봉 밀도)
 const SHEET_FONT  = 13;      // 축 글자 (셀이 좁아진 만큼 15 → 13)
 const SHEET_PR    = 0.58;    // 셀 내 가격패널 비율 — 모바일 단일차트와 동일 분할
-const SHEET_BG    = '#0b0906';
+const SHEET_BG    = '#06090d';
 
 function sheetStamp(){ return new Date(Date.now()+9*3600*1000).toISOString().replace('T',' ').slice(0,16); }
 
@@ -2543,23 +2543,23 @@ async function buildMtfSheetCanvas(o={}){
       if(p){ x.drawImage(p, cx, cy, cellW, priceH); ok++; }
       if(r){ x.drawImage(r, cx, cy+priceH, cellW, rsiH); }
       // 셀 구분선 (1px) — 여백을 만들지 않고 경계만
-      x.fillStyle = '#3a2e14';
+      x.fillStyle = '#1d3440';
       if(k % cols) x.fillRect(cx, cy, 1, cellH);
       if(Math.floor(k / cols)) x.fillRect(cx, cy, cellW, 1);
       // TF 배지 (높이 차지 없이 셀 좌상단에 겹쳐 씀)
       const ef = plan[k].entryFocus;
-      x.fillStyle = 'rgba(11,9,6,.74)'; x.fillRect(cx+1, cy+1, ef?146:84, 26);
-      x.fillStyle = '#e3b64f'; x.font = "700 18px 'JetBrains Mono', monospace"; x.textBaseline = 'top';
+      x.fillStyle = 'rgba(6,9,13,.74)'; x.fillRect(cx+1, cy+1, ef?146:84, 26);
+      x.fillStyle = '#3fd9e3'; x.font = "700 18px 'JetBrains Mono', monospace"; x.textBaseline = 'top';
       x.fillText(tf.toUpperCase(), cx+9, cy+5);
-      if(ef){ x.fillStyle = '#a6926a'; x.font = "600 13px 'JetBrains Mono', monospace";
+      if(ef){ x.fillStyle = '#7ea6b5'; x.font = "600 13px 'JetBrains Mono', monospace";
               x.fillText('진입기준', cx+9+tf.length*13+8, cy+8); }
     });
     if(!ok) throw new Error('차트 캡처 실패');
 
     // 식별용 오버레이 — 좌상단 셀의 TF 배지 오른쪽에만 겹쳐 씀 (2열이라 전폭을 덮으면 안 됨)
     const head = o.label || (symbol.replace('USDT','')+'/USDT · '+EX[ex].name+' · '+sheetStamp()+' KST');
-    x.fillStyle = 'rgba(11,9,6,.74)'; x.fillRect(86, 1, cellW-87, 26);
-    x.fillStyle = '#efe4cb'; x.font = "700 15px 'JetBrains Mono', monospace"; x.textBaseline = 'top';
+    x.fillStyle = 'rgba(6,9,13,.74)'; x.fillRect(86, 1, cellW-87, 26);
+    x.fillStyle = '#dff0f5'; x.font = "700 15px 'JetBrains Mono', monospace"; x.textBaseline = 'top';
     x.fillText(head, 94, 6);
 
     out = cv;
