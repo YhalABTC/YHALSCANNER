@@ -296,6 +296,16 @@
   .preset-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:2px 4px 2px 8px;font-size:11.5px}
   .preset-run{cursor:pointer;color:var(--amber);font-weight:600}
   .preset-del{cursor:pointer;color:var(--dim);font-size:10px;padding:0 3px}
+  .scope-chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:8px;padding:3px 8px;font-size:11.5px;font-weight:700;cursor:pointer;margin:0 4px 4px 0;font-family:var(--mono)}
+  .scope-chip:hover{border-color:var(--amber)}
+  .scope-chip.on{background:var(--amber);color:#1a1205;border-color:var(--amber)}
+  .scope-del{color:var(--dim);font-size:10px;padding:0 1px 0 3px;font-weight:400}
+  .scope-chip.on .scope-del{color:#1a1205;opacity:.6}
+  .scope-del:hover{color:#e0584f !important;opacity:1}
+  .scope-save{background:transparent;border:1px dashed var(--border);color:var(--muted);border-radius:8px;
+    padding:3px 9px;font-size:11.5px;cursor:pointer;margin-bottom:4px}
+  .scope-save:hover{border-color:var(--amber);color:var(--amber)}
   .preset-del:hover{color:#e0584f}
   .drillbtn{background:linear-gradient(135deg,#5b9bd5,#4576a8);color:#fff;border:0;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
   .drillbtn:disabled{opacity:.5}
@@ -1077,6 +1087,11 @@
   <div class="presetrow">
     <span class="preset-lab">프리셋:</span>
     <span id="presetlist"><span class="preset-empty">저장된 프리셋 없음</span></span>
+  </div>
+  <div class="presetrow" id="scoperow">
+    <span class="preset-lab">스캔 대상:</span>
+    <span id="scopelist"></span>
+    <button class="scope-save" id="listsavebtn" title="지금 스캔 결과 종목들을 이름 붙여 저장 → 다음 스캔을 그 안에서만">💾 결과를 리스트로 저장</button>
   </div>
   <div class="resulthead">
     <h2>스캔 결과</h2>
@@ -3351,8 +3366,17 @@ async function runScan(){
   $('results').innerHTML = '';
 
   let universe;
+  let scopeInfo = null;   // 리스트 대상 스캔일 때 {name, want, have}
   try{
-    universe = await EX[exchange].universe(minVol);
+    const L = scanScope && savedLists[scanScope];
+    if(L){
+      // 리스트 종목은 저장할 때 이미 걸러진 것이므로 거래대금 필터는 다시 적용하지 않는다
+      const want = new Set(L.symbols);
+      universe = (await EX[exchange].universe(0)).filter(s=>want.has(s.symbol));
+      scopeInfo = { name: scanScope, want: want.size, have: universe.length };
+    } else {
+      universe = await EX[exchange].universe(minVol);
+    }
   }catch(e){
     $('results').innerHTML = `<div class="errbox"><b>데이터를 가져오지 못했어요.</b><br>
       ${EX[exchange].name} 선물 API 접속이 차단됐을 가능성이 높습니다.
@@ -3362,7 +3386,10 @@ async function runScan(){
     return;
   }
   if(!universe.length){
-    $('results').innerHTML = `<div class="empty"><div class="big">필터를 통과한 종목이 없어요</div>
+    $('results').innerHTML = scopeInfo
+      ? `<div class="empty"><div class="big">${escH(scopeInfo.name)} 리스트 종목이 ${EX[exchange].name}에 없어요</div>
+         <div class="sub">리스트를 저장한 거래소로 바꾸거나 '전체'를 선택하세요</div></div>`
+      : `<div class="empty"><div class="big">필터를 통과한 종목이 없어요</div>
       <div class="sub">거래대금 최소값을 낮춰보세요</div></div>`;
     btn.disabled=false; btn.textContent='스캔 실행'; $('statustxt').textContent='완료';
     return;
@@ -3440,7 +3467,8 @@ async function runScan(){
   // 눌림목: 리테 합산(가격+RSI) 정렬 기본, 다른 모드는 태그점수
   sortKey = (scanMode==='pullback') ? 'retestSum' : (scanMode==='maprox' ? 'maprox' : (scanMode==='volx' ? 'volx' : (scanMode==='rsscan' ? 'rsVal' : 'tagScore'))); sortDir=-1;
   $('barfill').style.width='100%';
-  $('statustxt').innerHTML = `완료 · ${universe.length}개 중 조건 충족 <b>${found.length}</b>개`;
+  $('statustxt').innerHTML = (scopeInfo ? `📋 <b>${escH(scopeInfo.name)}</b> 리스트 ${scopeInfo.have}종목`+(scopeInfo.want>scopeInfo.have?` (${scopeInfo.want-scopeInfo.have}개는 이 거래소에 없음)`:'')+' · ' : '')
+    + `완료 · ${universe.length}개 중 조건 충족 <b>${found.length}</b>개`;
   const now = new Date();
   $('laststamp').textContent = `마지막 스캔 ${now.toLocaleTimeString('ko-KR',{hour12:false})} · ${EX[exchange].name} · ${tfLabel(currentTF)}`;
   render();
@@ -3449,6 +3477,61 @@ async function runScan(){
 }
 
 // ── 필터 체인 (drill-down) ──
+// ── 저장 리스트 & 스캔 대상 ──
+//  스캔 결과를 이름 붙여 저장해두고, 다음 스캔을 그 리스트 안에서만 돌린다 (A → B → C 좁혀가기)
+const LIST_KEY = 'scalp_lists';
+let savedLists = {};       // name → {symbols:[], ts, label, ex, tf}
+let scanScope = null;      // null = 전체 종목, 아니면 리스트 이름
+const escH = x => String(x==null?'':x).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function loadLists(){
+  try{ const v = JSON.parse(localStorage.getItem(LIST_KEY)||'{}'); savedLists = (v && typeof v==='object') ? v : {}; }
+  catch(e){ savedLists = {}; }
+  renderScopeList();
+}
+function saveLists(){ try{ localStorage.setItem(LIST_KEY, JSON.stringify(savedLists)); }catch(e){} }
+function nextListName(){
+  for(const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') if(!savedLists[c]) return c;
+  return 'L' + (Object.keys(savedLists).length + 1);
+}
+function renderScopeList(){
+  const el = document.getElementById('scopelist'); if(!el) return;
+  if(scanScope && !savedLists[scanScope]) scanScope = null;
+  let h = `<span class="scope-chip${scanScope?'':' on'}" data-scope="" title="거래대금 필터를 통과한 전체 종목">전체</span>`;
+  for(const n of Object.keys(savedLists)){
+    const L = savedLists[n];
+    const when = L.ts ? new Date(L.ts).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}) : '';
+    const tip = `${L.label||''}${L.label?'\n':''}${when} 저장 · ${L.ex==='binance'?'Binance':'Bybit'}\n${L.symbols.map(x=>x.replace(/USDT$/,'')).join(', ')}`;
+    h += `<span class="scope-chip${scanScope===n?' on':''}" data-scope="${escH(n)}" title="${escH(tip)}">${escH(n)} · ${L.symbols.length}`
+       + `<span class="scope-del" data-scopedel="${escH(n)}" title="리스트 삭제">✕</span></span>`;
+  }
+  el.innerHTML = h;
+}
+document.getElementById('scopelist').addEventListener('click', e=>{
+  const del = e.target.closest('[data-scopedel]');
+  if(del){
+    e.stopPropagation();
+    const n = del.dataset.scopedel;
+    if(confirm(`"${n}" 리스트를 삭제할까요?`)){ delete savedLists[n]; if(scanScope===n) scanScope=null; saveLists(); renderScopeList(); }
+    return;
+  }
+  const chip = e.target.closest('[data-scope]'); if(!chip) return;
+  scanScope = chip.dataset.scope || null;
+  renderScopeList();
+  const L = scanScope && savedLists[scanScope];
+  $('statustxt').innerHTML = L ? `📋 다음 스캔은 <b>${escH(scanScope)}</b> 리스트 ${L.symbols.length}종목 안에서만` : '다음 스캔은 전체 종목 대상';
+});
+document.getElementById('listsavebtn').addEventListener('click', ()=>{
+  if(!lastRows.length){ alert('저장할 스캔 결과가 없어요. 먼저 스캔하세요.'); return; }
+  let name = prompt(`리스트 이름 — 지금 결과 ${lastRows.length}종목을 저장`, nextListName());
+  if(name == null) return;
+  name = name.trim().slice(0, 20); if(!name) return;
+  if(savedLists[name] && !confirm(`"${name}" 리스트가 이미 있어요. 덮어쓸까요?`)) return;
+  let label = ''; try{ label = scanModeLabel(buildScanCfg()); }catch(e){}
+  if(scanScope) label = `[${scanScope} 안에서] ` + label;
+  savedLists[name] = { symbols: [...new Set(lastRows.map(r=>r.symbol))], ts: Date.now(), label, ex: exchange, tf: currentTF };
+  saveLists(); renderScopeList();
+  $('statustxt').innerHTML = `💾 <b>${escH(name)}</b> 리스트 저장 · ${savedLists[name].symbols.length}종목 — 칩을 누르면 다음 스캔을 그 안에서만`;
+});
 function scanModeLabel(cfg){
   const M = {bull:'📈정배', pullback:'📉눌림목', support:'RSI50지지', bear:'📉역배', ctlong:'역추세롱', mania:'🔥과매수', oversold:'🧊과매도', macond:'🎚️이평조건', short:'숏', resist:'저항', volx:'⚡변동성', maprox:'📏이평근접', rsscan:'🔺RS스캔', seq:'🕯️3+1반전'};
   let base = M[cfg.scanMode] || cfg.scanMode;
@@ -4243,6 +4326,7 @@ async function rollbackChain(ci){
   renderPresetList();
 }
 loadPresets();
+loadLists();
 
 // ---- 📓 매매 저널 렌더 ----
 function fmtTs(iso){
