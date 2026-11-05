@@ -457,6 +457,10 @@
   .pane-label .l200,.chart-indicators .l200{color:#f1f4f8;font-weight:800}
   .pane-label .l300,.chart-indicators .l300{color:#e05a8f;font-weight:800}
   .pane-label .lmd{color:#5b9bd5}
+  .pane-label .lcvd{color:#5fd6c4}
+  .pane-label .flowinfo,.pane-label .cvdinfo{opacity:.75}
+  body.mobile #paneseg .pm-long{display:none}
+  body.mobile #paneseg button{padding:4px 8px}
   .chart-indicators{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--muted)}
   .chart-indicators span{padding:2px 5px;border:1px solid var(--border);border-radius:5px;background:var(--surface-2);cursor:pointer;user-select:none}
   .chart-indicators span.ind-off{opacity:.32;text-decoration:line-through}
@@ -1166,6 +1170,9 @@
       <button class="modal-nav" id="chartPrev" title="이전 종목 (←)">‹</button>
       <span class="modal-navpos" id="chartNavPos"></span>
       <button class="modal-nav" id="chartNext" title="다음 종목 (→)">›</button>
+      <div class="seg sm" id="paneseg" title="하단 지표 전환: RSI·MACD ↔ OI·CVD">
+        <button data-pm="rsi">RSI<span class="pm-long">·MACD</span></button><button data-pm="flow">OI<span class="pm-long">·CVD</span></button>
+      </div>
       <button class="modal-share" id="chartFav" title="즐겨찾기 추가/제거">☆ 즐찾</button>
       <button class="modal-share" id="chartMark" title="봉 클릭으로 사후표시 (진입→청산 자동 번갈기)">📍 매매표시</button>
       <div class="seg sm" id="dirseg" style="display:none"><button data-dir="long" class="on">롱</button><button data-dir="short">숏</button></div>
@@ -1862,13 +1869,13 @@ const EX = {
       const iv = {'1m':'1m','3m':'3m','5m':'5m','15m':'15m','30m':'30m','1h':'1h','4h':'4h','1d':'1d','1w':'1w','1M':'1M'}[tf];
       const raw = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${iv}&limit=${limit}`).then(r=>r.json());
       if(!Array.isArray(raw)) return null;
-      return raw.map(k=>({t:k[0], o:+k[1], h:+k[2], l:+k[3], c:+k[4]}));
+      return raw.map(k=>({t:k[0], o:+k[1], h:+k[2], l:+k[3], c:+k[4], v:+k[5], tb:+k[9]}));   // v·tb = CVD용 (거래량·시장가 매수량)
     },
     async klinesUntil(symbol, tf, endMs, limit){
       const iv = {'1m':'1m','3m':'3m','5m':'5m','15m':'15m','30m':'30m','1h':'1h','4h':'4h','1d':'1d','1w':'1w','1M':'1M'}[tf];
       const raw = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${iv}&endTime=${endMs}&limit=${limit}`).then(r=>r.json());
       if(!Array.isArray(raw)) return null;
-      return raw.map(k=>({t:k[0], o:+k[1], h:+k[2], l:+k[3], c:+k[4]}));
+      return raw.map(k=>({t:k[0], o:+k[1], h:+k[2], l:+k[3], c:+k[4], v:+k[5], tb:+k[9]}));   // v·tb = CVD용 (거래량·시장가 매수량)
     },
     async fundingMap(){
       try{
@@ -4401,6 +4408,170 @@ function nextSide(sym, dir){
 const CHART_KLINE_LIMIT = 700;      // SMA300 + 최근 400봉 표시 여유 (거래소 1회 상한: Binance 1500 · Bybit 1000)
 const CHART_CACHE_TTL_MS = 20_000;
 const CHART_CACHE_MAX = 40;
+
+// ── 하단 패널 모드: 'rsi' = RSI·MACD (기존) / 'flow' = OI·CVD ──
+// 데이터는 저장하지 않는다. 거래소 API에서 그때그때 받아 메모리 캐시(짧은 TTL)에만 둔다.
+// 화면 모드(토글 상태)만 기억한다.
+let paneMode = 'rsi';
+try{ if(localStorage.getItem('scalpPaneMode')==='flow') paneMode='flow'; }catch(e){}
+
+const FLOW = (()=>{
+  const TFMS = {'1m':60e3,'3m':180e3,'5m':300e3,'15m':900e3,'30m':1800e3,'1h':3600e3,'4h':14400e3,'1d':86400e3,'1w':604800e3,'1M':2592000e3};
+  // 두 거래소 공통 OI 주기 (바이낸스 period / 바이빗 intervalTime)
+  const OI_PERIODS = [
+    {k:'5m',  ms:300e3,    bn:'5m',  bb:'5min'},
+    {k:'15m', ms:900e3,    bn:'15m', bb:'15min'},
+    {k:'30m', ms:1800e3,   bn:'30m', bb:'30min'},
+    {k:'1h',  ms:3600e3,   bn:'1h',  bb:'1h'},
+    {k:'4h',  ms:14400e3,  bn:'4h',  bb:'4h'},
+    {k:'1d',  ms:86400e3,  bn:'1d',  bb:'1d'},
+  ];
+  const OI_POINT_BUDGET = 1000;              // 한 패널당 OI 점 수 상한 (바이낸스 2회 · 바이빗 5회 요청)
+  const BN_OI_MAX_AGE = 30*86400e3 - 3600e3; // 바이낸스 OI 기록은 최근 30일만 제공
+  const TTL = 60_000;
+  const cache = new Map();                   // key → {ts, val}  (메모리 전용)
+  const cget = (k, force)=>{ if(force) return null; const c=cache.get(k); return (c && Date.now()-c.ts<TTL) ? c.val : null; };
+  const cset = (k, v)=>{ cache.set(k,{ts:Date.now(), val:v}); if(cache.size>120) cache.delete(cache.keys().next().value); };
+  const getJSON = async url => { const r = await fetch(url); return r.json(); };
+
+  // 차트 TF와 봉 수에 맞는 가장 촘촘한 OI 주기 (차트 TF보다 길면 안 됨)
+  function pickPeriod(tf, nBars){
+    const tfMs = TFMS[tf] || 3600e3;
+    const cands = OI_PERIODS.filter(p=>p.ms<=tfMs);
+    if(!cands.length) return OI_PERIODS[0];          // 1m·3m 차트 → 5분 OI (계단)
+    return cands.find(p=>nBars*tfMs/p.ms <= OI_POINT_BUDGET) || cands[cands.length-1];
+  }
+
+  // OI 스냅샷 [{ts, oi}] 오름차순. 단위 = 코인 수량.
+  async function fetchOI(ex, symbol, period, fromMs, force){
+    const key = `oi|${ex}|${symbol}|${period.k}|${Math.floor(fromMs/period.ms)}`;
+    const hit = cget(key, force); if(hit) return hit;
+    const now = Date.now();
+    let out = [], clipped = false;
+    if(ex==='binance'){
+      let start = fromMs;
+      if(start < now - BN_OI_MAX_AGE){ start = now - BN_OI_MAX_AGE; clipped = true; }
+      const span = 500 * period.ms;
+      for(let s=start, guard=0; s<now && guard<4; s+=span, guard++){
+        const e = Math.min(now, s+span-1);
+        const j = await getJSON(`https://fapi.binance.com/futures/data/openInterestHist?symbol=${symbol}&period=${period.bn}&limit=500&startTime=${Math.floor(s)}&endTime=${Math.floor(e)}`);
+        if(!Array.isArray(j)) throw new Error((j&&j.msg)||'binance OI error');
+        j.forEach(x=>out.push({ts:+x.timestamp, oi:+x.sumOpenInterest}));
+      }
+      try{ // 진행 중인 봉용 실시간 OI
+        const live = await getJSON(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${symbol}`);
+        if(live && live.openInterest!=null) out.push({ts:+live.time||now, oi:+live.openInterest, live:true});
+      }catch(e){}
+    }else{
+      let cursor = '', guard = 0;
+      do{
+        const j = await getJSON(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${symbol}&intervalTime=${period.bb}&startTime=${Math.floor(fromMs)}&endTime=${now}&limit=200${cursor?`&cursor=${encodeURIComponent(cursor)}`:''}`);
+        const list = j && j.result && j.result.list;
+        if(!Array.isArray(list)) throw new Error((j&&j.retMsg)||'bybit OI error');
+        list.forEach(x=>out.push({ts:+x.timestamp, oi:+x.openInterest}));
+        cursor = j.result.nextPageCursor || '';
+        const oldest = list.length ? Math.min(...list.map(x=>+x.timestamp)) : 0;
+        if(!list.length || oldest <= fromMs) break;
+      }while(cursor && ++guard < 6);
+      try{
+        const tk = await getJSON(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${symbol}`);
+        const it = tk && tk.result && tk.result.list && tk.result.list[0];
+        if(it && it.openInterest!=null) out.push({ts:now, oi:+it.openInterest, live:true});
+      }catch(e){}
+    }
+    const seen = new Set();
+    out = out.filter(x=>isFinite(x.oi) && x.oi>0 && !seen.has(x.ts) && seen.add(x.ts)).sort((a,b)=>a.ts-b.ts);
+    const val = {snaps:out, clipped};
+    cset(key, val);
+    return val;
+  }
+
+  // 스냅샷 → 차트 봉별 OI 캔들. 스냅샷 시각 ts는 (봉 시작, 봉 끝] 구간의 봉에 넣는다
+  // (ts = 봉 끝이면 그 봉의 마감 OI). 시가 = 직전 봉 종가.
+  // 반환: 길이 = barStarts.length, 각 원소 {o,h,l,c} 또는 null(데이터 없음)
+  function oiCandles(barStarts, snaps){
+    const n = barStarts.length, buckets = Array.from({length:n}, ()=>[]);
+    let lastIdx = -1;
+    for(const s of snaps){
+      // 가장 큰 i: barStarts[i] < ts
+      let lo=0, hi=n-1, i=-1;
+      while(lo<=hi){ const m=(lo+hi)>>1; if(barStarts[m] < s.ts){ i=m; lo=m+1; } else hi=m-1; }
+      if(i<0) continue;
+      buckets[i].push(s.oi);
+      if(i>lastIdx) lastIdx=i;
+    }
+    // 첫 봉 시가용: 범위 시작 이전 마지막 스냅샷
+    let prev = null;
+    for(const s of snaps){ if(s.ts <= barStarts[0]) prev = s.oi; else break; }
+    const out = new Array(n).fill(null);
+    for(let i=0;i<n;i++){
+      const v = buckets[i];
+      if(!v.length){
+        if(prev!=null && i<=lastIdx) out[i] = {o:prev,h:prev,l:prev,c:prev};   // 변화 없음
+        continue;
+      }
+      const o = (prev!=null) ? prev : v[0];
+      const c = v[v.length-1];
+      out[i] = {o, h:Math.max(o,...v), l:Math.min(o,...v), c};
+      prev = c;
+    }
+    return out;
+  }
+
+  // 바이빗 심볼 → 바이낸스 후보 (SHIB1000USDT → 1000SHIBUSDT 등)
+  function binanceAlias(sym){
+    const c = [sym];
+    const m = sym.match(/^([A-Z0-9]+?)(1000+)USDT$/);
+    if(m) c.push(`${m[2]}${m[1]}USDT`);
+    return c;
+  }
+  // 바이낸스 봉의 시장가 매수량(taker buy)으로 봉별 델타 = 매수 - 매도
+  // 반환: {src:'binance'|null, sym, delta: Map(봉시작ms → 델타)}
+  async function fetchDelta(symbol, tf, limit, force){
+    const key = `cvd|${symbol}|${tf}|${limit}`;
+    const hit = cget(key, force); if(hit) return hit;
+    const iv = tf;
+    let val = {src:null, sym:null, delta:new Map()};
+    for(const s of binanceAlias(symbol)){
+      try{
+        const raw = await getJSON(`https://fapi.binance.com/fapi/v1/klines?symbol=${s}&interval=${iv}&limit=${Math.min(1500,limit)}`);
+        if(!Array.isArray(raw) || !raw.length) continue;
+        const d = new Map();
+        raw.forEach(k=>{ const v=+k[5], tb=+k[9]; d.set(+k[0], 2*tb - v); });
+        val = {src:'binance', sym:s, delta:d};
+        break;
+      }catch(e){}
+    }
+    cset(key, val);
+    return val;
+  }
+  // 이미 taker buy가 들어 있는 바이낸스 봉에서 바로 델타 계산 (추가 요청 없음)
+  function deltaFromBars(bars){
+    if(!bars.length || bars[0].tb==null) return null;
+    const d = new Map(); bars.forEach(b=>d.set(b.t, 2*b.tb - b.v)); return d;
+  }
+  // 봉 시작 배열에 맞춘 누적 CVD (첫 데이터 봉부터 누적, 이후 빈 봉은 변화 0)
+  function cvdSeries(barStarts, delta){
+    const out = new Array(barStarts.length).fill(null);
+    let acc = null;
+    for(let i=0;i<barStarts.length;i++){
+      const d = delta.get(barStarts[i]);
+      if(d==null){ if(acc!=null) out[i]=acc; continue; }
+      acc = (acc==null ? 0 : acc) + d; out[i] = acc;
+    }
+    return out;
+  }
+  return {TFMS, pickPeriod, fetchOI, oiCandles, fetchDelta, deltaFromBars, cvdSeries};
+})();
+
+// OI 축 숫자 축약 (12.3M 등)
+function fmtCompact(v){
+  const a = Math.abs(v);
+  if(a>=1e9) return (v/1e9).toFixed(2)+'B';
+  if(a>=1e6) return (v/1e6).toFixed(2)+'M';
+  if(a>=1e3) return (v/1e3).toFixed(1)+'K';
+  return v.toFixed(a<10?2:0);
+}
 const chartKlineCache = new Map();
 const chartKlineInFlight = new Map();
 const chartCacheVersion = new Map();
@@ -4604,7 +4775,7 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     const col = rsiTag(closes.slice(0, -1), cfg.rsiLen, cfg.smaF, cfg.smaS);
     const s5 = smaAt(closes,5,i0c), s20p = smaAt(closes,20,i0c);
     let badge = '';
-    if(col) badge += `<span class="qtag" style="color:${TAG_COLOR[col]};border-color:${TAG_COLOR[col]}66;background:${TAG_COLOR[col]}22">RSI</span>`;
+    if(col && paneMode!=='flow') badge += `<span class="qtag" style="color:${TAG_COLOR[col]};border-color:${TAG_COLOR[col]}66;background:${TAG_COLOR[col]}22">RSI</span>`;
     if(s5!=null && s20p!=null && closes[i0c]!=null){
       const ar = u=> u ? '<span style="color:#46cd8a">↑</span>' : '<span style="color:#e0584f">↓</span>';
       badge += `<span class="qpx">${ar(closes[i0c]>=s5)}${ar(closes[i0c]>=s20p)}</span>`;
@@ -4642,8 +4813,16 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   });
 
 
+  // ── OI·CVD 모드: MACD 자리에 CVD 선 (데이터는 차트 그린 뒤 비동기로 채움) ──
+  const FLOWON = (paneMode==='flow');
+  let cvdLine = null;
+  if(FLOWON){
+    cvdLine = pc.addLineSeries({priceScaleId:'cvd', color:'#5fd6c4', lineWidth:1.5, priceLineVisible:false, lastValueVisible:false,
+      crosshairMarkerVisible:false, priceFormat:{type:'custom', formatter:fmtCompact, minMove:0.0001}});
+    pc.priceScale('cvd').applyOptions({scaleMargins:{top:0.72, bottom:0.02}, visible:false});
+  }
   // ── MACD: 같은 차트 하단 스케일 (높이 추가 없이 내부 분할) ──
-  {
+  if(!FLOWON){
     const M = macd;
     const hData=[], mData=[], sData=[];
     let fm=0, fs=0;
@@ -4692,7 +4871,15 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   }
   const rPad = Math.max(1.5, (rMax-rMin)*0.06);
   const rsiAutoscale = (isFinite(rMin)&&isFinite(rMax)) ? () => ({priceRange:{minValue:rMin-rPad, maxValue:rMax+rPad}}) : undefined;
-  const rcs = rc.addCandlestickSeries({...CANDLE, autoscaleInfoProvider: rsiAutoscale}); rcs.setData(rsiData);
+  let rcs, oiSeries = null;
+  if(FLOWON){
+    oiSeries = rc.addCandlestickSeries({...CANDLE, priceFormat:{type:'custom', formatter:fmtCompact, minMove:0.0001}});
+    oiSeries.setData(t.map(x=>({time:x})));   // 시간축만 먼저 맞춤 → 가격 패널과 봉 위치 일치
+    // RSI 전용 마커·기준선은 OI 패널에 그리지 않는다
+    rcs = {setMarkers(){}, createPriceLine(){}, priceToCoordinate(){ return null; }};
+  }else{
+    rcs = rc.addCandlestickSeries({...CANDLE, autoscaleInfoProvider: rsiAutoscale}); rcs.setData(rsiData);
+  }
   const rls = {priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,autoscaleInfoProvider:rsiAutoscale};
   // ── 과매수(70↑)/과매도(30↓) 세로 배경 + 30/50/70 기준선 (종가 기준) ──
   const rsiOverlay = document.createElement('canvas');
@@ -4736,20 +4923,22 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     }
   }
   function drawRsiZones(){
-    try{ paintZones(rsiOverlay, rsiEl, rc, rcs, 'rsi'); }catch(e){}
+    if(!FLOWON){ try{ paintZones(rsiOverlay, rsiEl, rc, rcs, 'rsi'); }catch(e){} }
     try{ paintZones(priceOverlay, priceEl, pc, pcs, 'price'); }catch(e){}
   }
   rc.timeScale().subscribeVisibleLogicalRangeChange(drawRsiZones);
   pc.timeScale().subscribeVisibleLogicalRangeChange(drawRsiZones);
   setTimeout(drawRsiZones, 30);
   // RSI BB(20,2)는 항상 표시한다.
-  if((typeof indShow!=='undefined'?indShow.rbb:true)){
+  if(!FLOWON && (typeof indShow!=='undefined'?indShow.rbb:true)){
     rc.addLineSeries({color:'rgba(88,106,134,.82)',lineWidth:1,...rls}).setData(rsiBB.up);
     rc.addLineSeries({color:'rgba(88,106,134,.72)',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dotted,...rls}).setData(rsiBB.mid);
     rc.addLineSeries({color:'#3fb0a0',lineWidth:1.5,...rls}).setData(rsiBB.lo);
   }
-  rc.addLineSeries({color:'#f4a73c',lineWidth:2,...rls}).setData(sma9Data);
-  rc.addLineSeries({color:'#5b9bd5',lineWidth:2,...rls}).setData(sma20Data);
+  if(!FLOWON){
+    rc.addLineSeries({color:'#f4a73c',lineWidth:2,...rls}).setData(sma9Data);
+    rc.addLineSeries({color:'#5b9bd5',lineWidth:2,...rls}).setData(sma20Data);
+  }
   // ── RS 스캔 구간 오버레이 (모든 타임프레임에 표시) ──
   let pxScanRs = [];
   (function(){
@@ -5040,6 +5229,68 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   b2.subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r)return; lock=true; a.setVisibleLogicalRange(r); lock=false; });
 
   charts.push({chart:pc, el:priceEl}, {chart:rc, el:rsiEl});
+  if(FLOWON){
+    const N = visibleBars || (typeof IS_MOBILE!=='undefined' && IS_MOBILE ? 55 : 100);
+    loadFlowPanels({symbol, tf, bars, t, pc, rc, cvdLine, oiSeries, priceEl, rsiEl, N,
+      renderId: options.renderId, force: !!options.forceRefresh});
+  }
+}
+
+// OI 캔들 + CVD 선을 거래소 API에서 받아 채운다 (저장 없음)
+async function loadFlowPanels(o){
+  const {symbol, tf, bars, t, pc, rc, cvdLine, oiSeries, priceEl, rsiEl, N} = o;
+  const ex = exchange;
+  const alive = ()=> o.renderId===chartRenderSeq && rsiEl.isConnected;
+  const oiLab  = rsiEl.previousElementSibling && rsiEl.previousElementSibling.querySelector('.flowinfo');
+  const cvdLab = priceEl.previousElementSibling && priceEl.previousElementSibling.querySelector('.cvdinfo');
+  const setTxt = (el, s)=>{ if(el) el.textContent = s; };
+  const barStarts = bars.map(b=>b.t);
+  // 데이터를 채워도 보고 있던 구간(가시 봉 수·우측 여백)이 바뀌지 않게 고정
+  const keepRange = fn=>{
+    let r=null; try{ r = pc.timeScale().getVisibleLogicalRange(); }catch(e){}
+    fn();
+    try{ if(r){ pc.timeScale().setVisibleLogicalRange(r); rc.timeScale().setVisibleLogicalRange(r); } }catch(e){}
+  };
+  setTxt(oiLab, ' · 불러오는 중…');
+
+  const cvdJob = (async()=>{
+    try{
+      let delta = (ex==='binance') ? FLOW.deltaFromBars(bars) : null, note = '';
+      if(!delta){
+        const r = await FLOW.fetchDelta(symbol, tf, bars.length, o.force);
+        if(r.src){ delta = r.delta; note = ` (바이낸스 ${r.sym} 기준)`; }
+      }
+      if(!alive()) return;
+      if(!delta){ setTxt(cvdLab, ' 불가 (바이낸스 미상장)'); return; }
+      const cv = FLOW.cvdSeries(barStarts, delta);
+      keepRange(()=>cvdLine.setData(cv.map((v,i)=> v==null ? {time:t[i]} : {time:t[i], value:v})));
+      setTxt(cvdLab, note);
+    }catch(e){ if(alive()) setTxt(cvdLab, ' 로드 실패'); }
+  })();
+
+  const oiJob = (async()=>{
+    try{
+      const n = Math.min(bars.length, N + 20);
+      const period = FLOW.pickPeriod(tf, n);
+      const from = barStarts[bars.length - n] - period.ms;
+      const {snaps, clipped} = await FLOW.fetchOI(ex, symbol, period, from, o.force);
+      if(!alive()) return;
+      if(!snaps.length){ setTxt(oiLab, ' · 데이터 없음'); return; }
+      const oc = FLOW.oiCandles(barStarts, snaps);
+      keepRange(()=>oiSeries.setData(oc.map((c,i)=> c ? {time:t[i], open:c.o, high:c.h, low:c.l, close:c.c} : {time:t[i]})));
+      // 최근 N봉 OI 변화율 (%)
+      let fi = Math.max(0, oc.length - N); while(fi < oc.length && !oc[fi]) fi++;
+      const last = oc[oc.length-1];
+      let info = ` · ${period.k} 단위`;
+      if(fi < oc.length && last && oc[fi].o > 0){
+        const chg = (last.c / oc[fi].o - 1) * 100;
+        info += ` · 최근 ${oc.length - fi}봉 ${chg>=0?'+':''}${chg.toFixed(1)}%`;
+      }
+      if(clipped) info += ' · 30일 이전 없음(바이낸스 한계)';
+      setTxt(oiLab, info);
+    }catch(e){ if(alive()) setTxt(oiLab, ' · 로드 실패'); }
+  })();
+  await Promise.all([cvdJob, oiJob]);
 }
 
 function clearCharts(){
@@ -5047,6 +5298,7 @@ function clearCharts(){
   charts.forEach(({chart})=>{ try{chart.remove();}catch(e){} }); charts=[];
 }
 
+function lowLabel(){ return paneMode==='flow' ? '<span class="lcvd">CVD</span><span class="cvdinfo"></span>' : '<span class="lmd">MACD</span>'; }
 async function renderChartView({forceRefresh=false}={}){
   const renderId = ++chartRenderSeq;
   const body = $('chartBody');
@@ -5061,8 +5313,8 @@ async function renderChartView({forceRefresh=false}={}){
     body.className = 'modal-body';
     const tfb = IS_MOBILE ? `<span class="tfnow">${tfLabel(chartTF)}</span> ` : '';
     body.innerHTML = `
-      <div class="chart-pane"><div class="pane-label">${tfb}가격 · <span class="l5">5</span> <span class="l10">10</span> <span class="l20">20</span> <span class="l50">50</span> <span class="l120">120</span> <span class="l200">200</span> <span class="l300">300</span> · <span class="lb">BB</span> · <span class="lmd">MACD</span></div><div class="pchart"></div></div>
-      <div class="chart-pane"><div class="pane-label">${tfb}RSI 캔들 · <b>SMA9</b> / <i>SMA20</i> · <span class="lrb">BB(20,2)</span></div><div class="rchart"></div></div>`;
+      <div class="chart-pane"><div class="pane-label">${tfb}가격 · <span class="l5">5</span> <span class="l10">10</span> <span class="l20">20</span> <span class="l50">50</span> <span class="l120">120</span> <span class="l200">200</span> <span class="l300">300</span> · <span class="lb">BB</span> · ${lowLabel()}</div><div class="pchart"></div></div>
+      <div class="chart-pane"><div class="pane-label">${tfb}${paneMode==='flow' ? 'OI 캔들<span class="flowinfo"></span>' : 'RSI 캔들 · <b>SMA9</b> / <i>SMA20</i> · <span class="lrb">BB(20,2)</span>'}</div><div class="rchart"></div></div>`;
     let pH, rH;
     if(IS_MOBILE){
       // 뷰포트에서 헤더 영역(제목바·TF바·힌트·정보바)과 패딩을 빼서 남는 공간을 가격:RSI=58:42로 분배
@@ -5094,8 +5346,8 @@ async function renderChartView({forceRefresh=false}={}){
     body.innerHTML = tfs.map(tf=>`
       <div class="quad-cell">
         <div class="quad-label">${tf.toUpperCase()}</div>
-        <div class="pane-label">가격 · <span class="l5">5</span> <span class="l10">10</span> <span class="l20">20</span> <span class="l50">50</span> <span class="l120">120</span> <span class="l200">200</span> <span class="l300">300</span> · <span class="lb">BB</span> · <span class="lmd">MACD</span></div><div class="pchart"></div>
-        <div class="pane-label">RSI · <b>9</b>/<i>20</i> · <span class="lrb">BB</span></div><div class="rchart"></div>
+        <div class="pane-label">가격 · <span class="l5">5</span> <span class="l10">10</span> <span class="l20">20</span> <span class="l50">50</span> <span class="l120">120</span> <span class="l200">200</span> <span class="l300">300</span> · <span class="lb">BB</span> · ${lowLabel()}</div><div class="pchart"></div>
+        <div class="pane-label">${paneMode==='flow' ? 'OI 캔들<span class="flowinfo"></span>' : 'RSI · <b>9</b>/<i>20</i> · <span class="lrb">BB</span>'}</div><div class="rchart"></div>
       </div>`).join('');
     const cells = [...body.querySelectorAll('.quad-cell')];
     await Promise.all(tfs.map((tf,k)=>
@@ -5324,6 +5576,14 @@ $('quadmodeseg').addEventListener('click', e=>{
   [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); quadMode=b.dataset.qm;
   if(chartView==='quad' && currentChartSymbol) renderChartView({forceRefresh:false});
+});
+function syncPaneSeg(){ document.querySelectorAll('#paneseg button').forEach(b=>b.classList.toggle('on', b.dataset.pm===paneMode)); }
+syncPaneSeg();
+$('paneseg').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b || b.dataset.pm===paneMode) return;
+  paneMode = b.dataset.pm; syncPaneSeg();
+  try{ localStorage.setItem('scalpPaneMode', paneMode); }catch(err){}
+  if(currentChartSymbol) renderChartView();
 });
 $('viewseg').addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b) return;
