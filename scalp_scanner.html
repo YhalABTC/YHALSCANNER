@@ -5011,6 +5011,16 @@ function chartCommon(){
 }
 const CANDLE = {upColor:'#46cd8a',downColor:'#e0584f',wickUpColor:'#46cd8a',wickDownColor:'#e0584f',borderVisible:false};
 
+// 봉이 실제로 그려지는 폭 = 차트 요소 폭 − 우측 가격축 폭.
+// (요소 폭을 그대로 쓰면 가격축 폭만큼 minBarSpacing 이 커져 요청한 봉 수보다 적게 보이고,
+//  리사이즈마다 그 비율로 계속 확대된다 — 모바일 주소창 접힘·라벨 높이 변화 때마다 왼쪽 끝이 밀려 들어옴)
+function plotWidth(chart, el){
+  let w = 0, ps = 0; try{ w = chart.timeScale().width(); ps = chart.priceScale('right').width(); }catch(e){}
+  const ew = (el && el.clientWidth) || 0;
+  if(w > 0 && ps > 0 && (!ew || w <= ew)) return w;            // 레이아웃 끝난 뒤 = 실제 값
+  const minW = (chart.options && chart.options().rightPriceScale && chart.options().rightPriceScale.minimumWidth) || 0;
+  return Math.max(0, (ew || w) - Math.max(ps, minW, 56));       // 첫 그리기 전: 가격축 폭 추정치 빼기
+}
 // limit visible candles; both panels share the same range so candles line up
 function setBars(chart, n, total, lastTime, gridTimes, widthEl){
   const ts = chart.timeScale();
@@ -5020,13 +5030,15 @@ function setBars(chart, n, total, lastTime, gridTimes, widthEl){
   // 패널 폭이 좁으면 minBarSpacing에 걸려 요청한 봉 수가 안 들어가므로(예: 380px에 200봉),
   // 요청 봉 수에 맞춰 minBarSpacing을 먼저 낮춰준다.
   try{
-    const w = (widthEl && widthEl.clientWidth) || (chart.options && chart.options().width) || 0;
+    const w = plotWidth(chart, widthEl) || (chart.options && chart.options().width) || 0;
     if(w > 0){
       const need = Math.max(0.05, Math.min(6, w / (N + gap)));
       chart.applyOptions({ timeScale: { minBarSpacing: need } });
     }
   }catch(e){}
-  ts.setVisibleLogicalRange({ from: Math.max(0, total - N), to: total - 1 + gap });
+  const range = { from: Math.max(0, total - N), to: total - 1 + gap };
+  ts.setVisibleLogicalRange(range);
+  return range;
 }
 
 // build one price+RSI pair for a given timeframe
@@ -5181,6 +5193,7 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   const rPad = Math.max(1.5, (rMax-rMin)*0.06);
   const rsiAutoscale = (isFinite(rMin)&&isFinite(rMax)) ? () => ({priceRange:{minValue:rMin-rPad, maxValue:rMax+rPad}}) : undefined;
   let rcs, oiSeries = null;
+  let wantRange = null, syncScaleW = ()=>{};
   if(FLOWON){
     oiSeries = rc.addCandlestickSeries({...CANDLE, priceFormat:{type:'custom', formatter:fmtCompact, minMove:0.0001}});
     oiSeries.setData(t.map(x=>({time:x})));   // 시간축만 먼저 맞춤 → 가격 패널과 봉 위치 일치
@@ -5232,6 +5245,7 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     }
   }
   function drawRsiZones(){
+    try{ syncScaleW(); }catch(e){}
     if(!FLOWON){ try{ paintZones(rsiOverlay, rsiEl, rc, rcs, 'rsi'); }catch(e){} }
     try{ paintZones(priceOverlay, priceEl, pc, pcs, 'price'); }catch(e){}
   }
@@ -5529,7 +5543,7 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   // PC·모바일 동일 경로 — setBars가 패널 폭에 맞춰 minBarSpacing까지 조정
   {
     const N = visibleBars || (typeof IS_MOBILE!=='undefined' && IS_MOBILE ? 55 : 100);
-    setBars(pc, N, t.length, t[t.length-1], t, priceEl);
+    wantRange = setBars(pc, N, t.length, t[t.length-1], t, priceEl);
     setBars(rc, N, t.length, t[t.length-1], t, rsiEl);
   }
   let lock=false;
@@ -5537,14 +5551,37 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   // 그 값이 가격 차트로 역전파되면 맨 처음 봉 구간으로 튀므로(모바일 리사이즈 시), OI가 채워질 때까지는 하단→상단 동기화를 막는다.
   let rcReady = !FLOWON;
   const a=pc.timeScale(), b2=rc.timeScale();
-  a.subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r)return; lock=true; b2.setVisibleLogicalRange(r); lock=false; });
+  // wantRange = 지금 보여야 할 구간. setVisibleLogicalRange 는 다음 프레임에 반영되므로
+  // 그리기 전에 getVisibleLogicalRange() 를 읽으면 라이브러리 기본 구간(봉 간격 6·여백 10)이 나온다 → 그 값을 되쓰면 setBars 가 덮인다.
+  // 그래서 데이터 채운 뒤 복원(keepRange)은 실제로 적용된 가격 차트 구간만 따라가는 이 값을 쓴다.
+  a.subscribeVisibleLogicalRangeChange(r=>{ if(r) wantRange = {from:r.from, to:r.to}; if(lock||!r)return; lock=true; b2.setVisibleLogicalRange(r); lock=false; });
   b2.subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r||!rcReady)return; lock=true; a.setVisibleLogicalRange(r); lock=false; });
+  // 상·하단 가격축 폭을 같게 → 그리는 폭이 같아야 같은 구간에서 봉 x 위치가 정확히 겹친다
+  let scaleW = 0;
+  const fitTo = (r, pw)=>{ if(!r) return; const span = Math.max(1, r.to - r.from + 1);
+    [pc, rc].forEach(c=>{ try{ if(pw > 0) c.applyOptions({timeScale:{minBarSpacing: Math.max(0.05, Math.min(6, pw/span))}}); c.timeScale().setVisibleLogicalRange(r); }catch(e){} }); };
+  syncScaleW = ()=>{
+    let w = 0; try{ w = Math.max(pc.priceScale('right').width(), rc.priceScale('right').width()); }catch(e){ return; }
+    if(!(w > scaleW)) return;
+    scaleW = w;
+    try{ pc.applyOptions({rightPriceScale:{minimumWidth:w}}); rc.applyOptions({rightPriceScale:{minimumWidth:w}}); }catch(e){}
+    fitTo(wantRange, (priceEl.clientWidth||0) - w);
+  };
+  setTimeout(syncScaleW, 40);
 
-  charts.push({chart:pc, el:priceEl}, {chart:rc, el:rsiEl});
+  // 두 패널 모두 '가격 패널이 보여야 할 구간'을 따른다 — 하단 차트 자신의 구간(그리기 전 기본값·OI 오기 전 빈 시리즈 값)은 절대 기준으로 쓰지 않음
+  const want = ()=>wantRange;
+  charts.push({chart:pc, el:priceEl, want}, {chart:rc, el:rsiEl, want});
   if(FLOWON){
     const N = visibleBars || (typeof IS_MOBILE!=='undefined' && IS_MOBILE ? 55 : 100);
     loadFlowPanels({symbol, tf, bars, t, pc, rc, cvdLine, oiSeries, priceEl, rsiEl, N,
-      renderId: options.renderId, force: !!options.forceRefresh, onOiReady: ()=>{ rcReady = true; }});
+      getRange: ()=>wantRange, afterData: ()=>setTimeout(()=>{ try{ syncScaleW(); }catch(e){} }, 60),
+      renderId: options.renderId, force: !!options.forceRefresh, onOiReady: ()=>{
+        rcReady = true;
+        // OI 가 채워진 프레임이 처리된 뒤 하단을 가격 구간에 다시 맞춘다 (그 사이 다른 경로가 하단 기본 구간을 써넣었어도 복구)
+        const re = ()=>{ if(!rsiEl.isConnected || !wantRange) return; lock=true; try{ b2.setVisibleLogicalRange(wantRange); }catch(e){} lock=false; };
+        re(); requestAnimationFrame(()=>{ re(); requestAnimationFrame(re); });
+      }});
   }
 }
 
@@ -5557,11 +5594,14 @@ async function loadFlowPanels(o){
   const cvdLab = priceEl.previousElementSibling && priceEl.previousElementSibling.querySelector('.cvdinfo');
   const setTxt = (el, s)=>{ if(el) el.textContent = s; };
   const barStarts = bars.map(b=>b.t);
-  // 데이터를 채워도 보고 있던 구간(가시 봉 수·우측 여백)이 바뀌지 않게 고정
+  // 데이터를 채워도 보고 있던 구간(가시 봉 수·우측 여백)이 바뀌지 않게 고정.
+  // getVisibleLogicalRange() 는 첫 그리기 전(캐시 적중·바이낸스 CVD 동기 계산)엔 기본 구간을 돌려주므로 buildPair 가 추적하는 구간을 쓴다.
   const keepRange = fn=>{
-    let r=null; try{ r = pc.timeScale().getVisibleLogicalRange(); }catch(e){}
+    let r = o.getRange ? o.getRange() : null;
+    if(!r){ try{ r = pc.timeScale().getVisibleLogicalRange(); }catch(e){} }
     fn();
     try{ if(r){ pc.timeScale().setVisibleLogicalRange(r); rc.timeScale().setVisibleLogicalRange(r); } }catch(e){}
+    if(o.afterData) o.afterData();
   };
   setTxt(oiLab, ' · 불러오는 중…');
 
@@ -5669,12 +5709,15 @@ async function renderChartView({forceRefresh=false}={}){
     if(renderId!==chartRenderSeq) return;
   }
   if(renderId!==chartRenderSeq || !body.isConnected) return;
-  const ro = new ResizeObserver(()=>{ charts.forEach(({chart,el})=>{ try{
+  const ro = new ResizeObserver(()=>{ charts.forEach(({chart,el,want})=>{ try{
+    // 각 차트가 지금 '보여주는' 구간이 아니라 가격 패널 기준 목표 구간을 쓴다.
+    // (첫 그리기 전 getVisibleLogicalRange() = 라이브러리 기본값 → 그걸 되쓰면 하단만 엉뚱한 구간에 남음)
+    const r = (want && want()) || chart.timeScale().getVisibleLogicalRange();
     chart.applyOptions({width:el.clientWidth||320});
-    // 폭이 바뀌면 minBarSpacing 상한도 다시 계산해야 요청한 봉 수가 유지됨
-    const r = chart.timeScale().getVisibleLogicalRange();
-    if(r){ const span = Math.max(1, r.to - r.from);
-      chart.applyOptions({timeScale:{minBarSpacing: Math.max(0.05, Math.min(6, (el.clientWidth||320)/span))}});
+    // 폭이 바뀌면 minBarSpacing 상한도 다시 계산해야 요청한 봉 수가 유지됨 — 가격축 뺀 폭 기준 (높이만 바뀌면 그대로)
+    if(r){ const span = Math.max(1, r.to - r.from + 1);   // 봉 개수 = to−from+1 (라이브러리 계산과 같게 → 리사이즈마다 1봉씩 줄지 않음)
+      const pw = plotWidth(chart, el);
+      chart.applyOptions({timeScale:{minBarSpacing: Math.max(0.05, Math.min(6, pw/span))}});
       chart.timeScale().setVisibleLogicalRange(r); }
   }catch(e){} }); });
   ro.observe(body); chartObservers.push(ro);
