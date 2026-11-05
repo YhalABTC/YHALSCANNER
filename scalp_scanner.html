@@ -225,12 +225,19 @@
   .seg.modeswitch button[data-sm="maprox"].on{background:#5b9bd5;color:#0a0e16}
   .seg.modeswitch button[data-sm="rsscan"].on{background:#ff9d4d;color:#0a0e16}
   .seg.modeswitch button[data-sm="seq"].on{background:#9d7bd8;color:#0a0e16}
+  .seg.modeswitch button[data-sm="oidiv"].on{background:#e8a33c;color:#0a0e16}
+  .oidiv-hint{color:var(--dim);font-size:10.5px;font-family:var(--mono)}
+  .oidiv-rule{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.65;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;margin-top:9px}
+  .oidiv-rule b.dn{color:#e0584f} .oidiv-rule b.up{color:#46cd8a}
+  .oidivinfo{background:rgba(232,163,60,.09);border:1px solid rgba(232,163,60,.35);border-radius:9px;padding:8px 11px;margin-bottom:9px;font-family:var(--mono);font-size:11.5px;color:var(--text);line-height:1.6}
   .field.disabled{opacity:.4;pointer-events:none}
   /* 공통 동시조건: 특수 스캔 4종에서만 숨김 (인라인 스타일 대신 선언적으로) */
   body[data-scan="maprox"] #pxretfield,
   body[data-scan="volx"]   #pxretfield,
   body[data-scan="rsscan"] #pxretfield,
-  body[data-scan="seq"]    #pxretfield{display:none}
+  body[data-scan="seq"]    #pxretfield,
+  body[data-scan="oidiv"]  #pxretfield{display:none}
 
   .num{font-family:var(--mono);font-size:14px;color:var(--text);background:var(--surface-2);
     border:1px solid var(--border);border-radius:8px;padding:8px 11px;width:108px;outline:none}
@@ -591,6 +598,7 @@
           </div>
           <div class="seg modeswitch modeswitch-new">
             <button data-sm="macond">🎚️ 이평조건 스캔</button>
+            <button data-sm="oidiv" title="가격 종가는 내리고 OI 종가는 오른 종목 (가격·OI 다이버전스)">📉 가격↓·OI↑</button>
           </div>
         </div>
       </div>
@@ -888,6 +896,34 @@
           <button data-bbs="wick">꼬리(고·저)</button>
         </div>
       </div>
+    </div>
+    <div class="field" id="oidivfield" style="display:none;margin-bottom:10px">
+      <label>📉 가격 종가 ↓ · OI 종가 ↑ — <span style="color:var(--dim)">N봉 전 완성봉과 마지막 완성봉 비교 (진행봉 제외)</span></label>
+      <div class="mcrow" style="margin-top:2px">
+        <span class="mclab">타임프레임</span>
+        <div class="seg" id="oidivtfseg">
+          <button data-otf="5m">5M</button>
+          <button data-otf="15m">15M</button>
+          <button data-otf="1h" class="on">1H</button>
+          <button data-otf="4h">4H</button>
+          <button data-otf="1d">1D</button>
+        </div>
+      </div>
+      <div class="mcrow">
+        <span class="mclab">비교 봉 수 N</span>
+        <div class="seg sm" id="oidivnseg">
+          <button data-on="1">1</button>
+          <button data-on="2">2</button>
+          <button data-on="3" class="on">3</button>
+          <button data-on="5">5</button>
+          <button data-on="10">10</button>
+          <button data-on="20">20</button>
+        </div>
+        <span style="color:var(--muted);font-size:11px">직접</span>
+        <input type="number" id="oidivn" value="3" min="1" max="20" step="1" style="width:56px">
+        <span class="oidiv-hint" id="oidivspan">1H × 3봉 ≈ 3시간</span>
+      </div>
+      <div class="oidiv-rule" id="oidivrule"></div>
     </div>
     <div class="field" id="maproxfield" style="display:none;margin-bottom:10px">
       <label>이평 근접 (켠 TF 전부 SMA200 ±% 이내 · AND)</label>
@@ -1297,6 +1333,10 @@ let rsChartTf = '1h', rsRsiChart = null, rsMacdChart = null;
 let rsBandSeries = null, rsBandRsi = null, rsPriceLines = [];
 let seqDir = 'both', seqTf = '15m', seqLive = 'live';   // 3+1 반전 스캔
 let maniaSrc = 'close';   // 'close'=RSI 종가만 · 'wick'=RSI 고가(과매수)/저가(과매도) 터치도 인정
+// 📉 가격↓·OI↑ 스캔 — 이 모드 전용 TF와 비교 봉 수 (메모리만, 저장 안 함)
+let oidivTf = '1h', oidivN = 3;
+const OIDIV_N_MAX = 20;
+let lastOidivInfo = '';   // 결과 상단 안내 (가격 통과 · OI 확인 · 실패 집계)
 let maniaBack = 50, maniaCnt = 6, maniaLive = 'live', maniaMode = 'now';   // now=지금과매수 / count=과거N회 / both   // 광기: 룩백 구간·과매수 횟수·마지막봉
 const RS_VIEW_BARS = 50;   // 화면에 보이는 봉 수
 const CHART_TZ = 9*3600;   // 차트 표시용 KST 오프셋 (앱 전체 공통)
@@ -1316,7 +1356,15 @@ let lastFunding = {};   // 전 종목 펀딩 캐시(스캔 시 갱신) — 차�
 let sortKey = 'vol', sortDir = -1;
 
 // ---- timeframe segment ----
+let exLocked = false;   // 📉 가격↓·OI↑ 스캔 중에는 거래소 전환 잠금 (펀비·변동폭·라벨이 같은 거래소를 쓰도록)
+function setExLock(on){
+  exLocked = on;
+  const f = document.getElementById('exseg'); if(!f) return;
+  f.style.opacity = on ? '.45' : ''; f.style.pointerEvents = on ? 'none' : '';
+  f.title = on ? '스캔 중에는 거래소를 바꿀 수 없어요' : '';
+}
 document.getElementById('exseg').addEventListener('click', e=>{
+  if(exLocked) return;
   const b = e.target.closest('button'); if(!b) return;
   [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); exchange = b.dataset.ex;
@@ -1423,6 +1471,11 @@ function updateCondChips(){
       ${RS_ ? `<div class="chip" style="border-color:rgba(255,157,77,.5)"><b style="color:#ff9d4d">🔺 RS 기준</b> · 종목 ÷ ${refName} 비율로 판정 — 비율 캔들(RS 차트 ②) · RS 캔들(RS 차트 ③)과 같은 값</div>` : ''}
       <div class="chip"><span class="n">②</span>${L.length ? L.join(' <b>AND</b> ') : '<b style="color:#e0584f">조건 전부 꺼짐 → 결과 없음</b>'}</div>
       <div class="chip">값이 정확히 같으면 위도 아래도 아니므로 탈락 · 봉이 모자라 이평 계산이 안 되면 제외</div>`;
+  }else if(scanMode === 'oidiv'){
+    el.innerHTML = `
+      <div class="chip"><span class="n">①</span><b>가격 종가 ↓</b> · ${tfLabel(oidivTf)} 마지막 완성봉 종가 &lt; ${oidivN}봉 전 완성봉 종가</div>
+      <div class="chip"><span class="n">②</span><b>OI 종가 ↑</b> · 같은 두 봉의 OI 캔들 종가(봉 마감 시점 OI) 비교 — 차트 OI 패널과 같은 값</div>
+      <div class="chip">진행봉 제외 · 최소 변화율 없음(전부 표시) · 가격 먼저 거른 뒤 통과 종목만 OI 조회</div>`;
   }else if(scanMode === 'maprox'){
     const on = Object.keys(maproxTfs).filter(t=>maproxTfs[t]&&maproxTfs[t]!=='off').map(t=>t.toUpperCase());
     el.innerHTML = `
@@ -1436,7 +1489,7 @@ function updateCondChips(){
       <div class="chip">과매수 극단 → 숏 관점</div>`;
   }
   // 일반 스캔이면 공통 동시조건 칩을 뒤에 덧붙임 (특수 스캔은 gate를 안 타므로 제외)
-  if(!['maprox','volx','rsscan','seq'].includes(scanMode)) el.innerHTML += pxRetChip();
+  if(!['maprox','volx','rsscan','seq','oidiv'].includes(scanMode)) el.innerHTML += pxRetChip();
   // 이평근접이면 가격/RSI 이평 위 + 🎯 이평 리테 횟수 안내를 덧붙임
   if(scanMode==='maprox'){
     const PXL={a5:'5선',a20:'20선',a50:'50선',a200:'200선'};
@@ -1450,14 +1503,15 @@ document.getElementById('scanmodeseg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return;
   e.currentTarget.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); scanMode = b.dataset.sm;
-  const isVolx=(scanMode==='volx'), isMaprox=(scanMode==='maprox'), isRs=(scanMode==='rsscan'), isSeq=(scanMode==='seq'), isMania=(scanMode==='mania'||scanMode==='oversold'), isSpecial=isVolx||isMaprox||isRs||isSeq;
+  const isVolx=(scanMode==='volx'), isMaprox=(scanMode==='maprox'), isRs=(scanMode==='rsscan'), isSeq=(scanMode==='seq'), isMania=(scanMode==='mania'||scanMode==='oversold'), isOidiv=(scanMode==='oidiv'), isSpecial=isVolx||isMaprox||isRs||isSeq||isOidiv;
   document.getElementById('volxfield').style.display = isVolx ? '' : 'none';
   document.getElementById('maproxfield').style.display = isMaprox ? '' : 'none';
   document.getElementById('rsscanfield').style.display = isRs ? '' : 'none';
   document.getElementById('seqfield').style.display = isSeq ? '' : 'none';
   document.getElementById('maniafield').style.display = isMania ? '' : 'none';
   { const mf=document.getElementById('macondfield'); if(mf) mf.style.display = (scanMode==='macond') ? '' : 'none'; }
-  { const tf=document.getElementById('tffield'); if(tf) tf.style.display = (scanMode==='macond') ? 'none' : ''; }
+  { const of=document.getElementById('oidivfield'); if(of) of.style.display = isOidiv ? '' : 'none'; if(isOidiv) oidivSyncUI(); }
+  { const tf=document.getElementById('tffield'); if(tf) tf.style.display = (scanMode==='macond'||isOidiv) ? 'none' : ''; }
   if(isMania){ const cntRow=document.getElementById('maniacnt'); if(cntRow){ const dim=(maniaMode==='now'); cntRow.disabled=dim; cntRow.parentElement.style.opacity=dim?'.4':'1'; } applyManiaLabels(); }
   { const rb=document.getElementById('retestbarfield'); if(rb) rb.style.display = (isSpecial||scanMode==='macond') ? 'none' : ''; }
   document.body.dataset.scan = scanMode;   // #pxretfield 표시는 CSS가 담당
@@ -1584,6 +1638,34 @@ bindSingleSeg('mcbbsrc', 'bbs', v=>{ mcBBsrc=v; updateCondChips(); });
 bindSingleSeg('mcL9lv',  'lv', v=>{ mcL9Lv=+v;  updateCondChips(); });
 bindSingleSeg('mcL20lv', 'lv', v=>{ mcL20Lv=+v; updateCondChips(); });
 bindSingleSeg('mctfseg', 'mctf', v=>{ mcTf=v; updateCondChips(); });
+// ── 📉 가격↓·OI↑ 패널 ──
+function oidivSpanText(tf, n){
+  const MIN = {'5m':5,'15m':15,'1h':60,'4h':240,'1d':1440}[tf] || 60;
+  const m = MIN * n;
+  const span = m < 60 ? `${m}분` : m < 1440 ? `${+(m/60).toFixed(1)}시간` : `${+(m/1440).toFixed(1)}일`;
+  return `${tfLabel(tf)} × ${n}봉 ≈ ${span}`;
+}
+function oidivSyncUI(){
+  document.querySelectorAll('#oidivnseg button').forEach(b=>b.classList.toggle('on', +b.dataset.on===oidivN));
+  const i=document.getElementById('oidivn'); if(i && +i.value!==oidivN) i.value = oidivN;
+  const sp=document.getElementById('oidivspan'); if(sp) sp.textContent = oidivSpanText(oidivTf, oidivN);
+  const ru=document.getElementById('oidivrule');
+  if(ru) ru.innerHTML = `조건: <b class="dn">가격 종가[마지막 완성봉] &lt; 가격 종가[${oidivN}봉 전]</b> <b>AND</b> <b class="up">OI 종가[마지막 완성봉] &gt; OI 종가[${oidivN}봉 전]</b><br>`
+    + `결과에 ${oidivN}봉 동안 가격 변화율 · OI 변화율(%) 표시 · 카드를 누르면 ${tfLabel(oidivTf)} 차트 + OI·CVD 패널로 열림`
+    + (exchange==='binance' && oidivTf==='1d' ? `<br><span style="color:#f4c84b">바이낸스 OI 기록은 최근 30일까지만 제공 (1D는 N≤20이라 범위 안)</span>` : '');
+}
+bindSingleSeg('oidivtfseg', 'otf', v=>{ oidivTf=v; oidivSyncUI(); updateCondChips(); });
+bindSingleSeg('oidivnseg', 'on', v=>{ oidivN=Math.max(1, Math.min(OIDIV_N_MAX, +v||3)); oidivSyncUI(); updateCondChips(); });
+{
+  const i=document.getElementById('oidivn');
+  if(i) i.addEventListener('input', ()=>{
+    const v = Math.round(+i.value);
+    if(!(v>=1 && v<=OIDIV_N_MAX)) return;   // 입력 중 빈칸·범위 밖은 무시 (blur 때 정리)
+    oidivN = v; oidivSyncUI(); updateCondChips();
+  });
+  if(i) i.addEventListener('blur', ()=>{ i.value = oidivN; });
+}
+document.getElementById('exseg').addEventListener('click', ()=>{ if(scanMode==='oidiv') oidivSyncUI(); });
 // 가격 ↔ RS 기준 전환 시 행 라벨과 기준 입력칸을 바꿔준다
 function mcApplySrc(){
   const rs = (mcSrc === 'rs');
@@ -1979,7 +2061,8 @@ async function scanSymbol(s, cfg){
     // (신규 알트 월봉처럼 RSI는 못 내도 가격 SMA5 조건은 볼 수 있게) — SMA 기간 축소도 하지 않음:
     //  '가격 SMA20'을 고르면 정확히 SMA20으로 판정해야 하므로
     const isMC = (cfg.scanMode === 'macond');
-    if(room < 5 && !(isMC && n >= 2)) return null;   // 정말 너무 적음
+    const isOD = (cfg.scanMode === 'oidiv');       // 가격↓·OI↑ 는 N+2봉만 있으면 판정 가능 (신규 상장 1D 대응)
+    if(room < 5 && !(isMC && n >= 2) && !(isOD && n >= (cfg.oidivN||3) + 2)) return null;   // 정말 너무 적음
     if(effS > room && !isMC){
       effS = Math.max(5, room);
       if(effF >= effS) effF = Math.max(3, effS - 3);
@@ -2047,6 +2130,27 @@ async function scanSymbol(s, cfg){
     let hi=-Infinity, lo=Infinity;
     for(let k=start; k<=i0; k++){ if(highs[k]>hi) hi=highs[k]; if(lows[k]<lo) lo=lows[k]; }
     if(lo>0 && isFinite(hi)) volat = (hi-lo)/lo*100;
+  }
+
+  // ── 📉 가격↓·OI↑ (1단계: 가격만) ──
+  //    마지막 완성봉 종가 < N봉 전 완성봉 종가 인 종목만 후보로 넘긴다. OI 판정은 oidivConfirm(2단계)에서.
+  if(cfg.scanMode === 'oidiv'){
+    const N = Math.max(1, Math.min(OIDIV_N_MAX, cfg.oidivN||3));
+    const tfMs = FLOW.TFMS[cfg.tf];
+    const L = OIDIV.lastClosedIdx(bars.map(b=>b.t), tfMs, Date.now());
+    if(L < 0 || L - N < 0) return null;
+    const pxFrom = closes[L-N], pxTo = closes[L];
+    if(!OIDIV.priceOk(pxFrom, pxTo, cfg.oidivTh)) return null;
+    return {
+      symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
+      rO: rO[i0]||0, rH: rH[i0]||0, rL: rL[i0]||0, rC: rC[i0]!=null?rC[i0]:0, rsiNA: rC[i0]==null,
+      rPrev: [i0-4,i0-3,i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
+      sma9: smaAt(rC,cfg.smaF,i0), sma20: smaAt(rC,cfg.smaS,i0),
+      gap: 0, retestN: null, miniTf: cfg.tf,
+      oidiv: true, oidivPending: true, oidivTf: cfg.tf, oidivN: N,
+      oidivStarts: bars.slice(L-N, L+1).map(b=>b.t),   // 비교 구간 봉 시작 시각 (2단계 OI 캔들 정렬용)
+      pxFrom, pxTo, pxChg: OIDIV.pct(pxFrom, pxTo), smaInfo
+    };
   }
 
   // ── 🕯️ 3+1 반전: 3연속 같은색 + 반대색 1개 ──
@@ -2995,6 +3099,12 @@ function render(){
       const d = (Math.abs(a[sortKey]||0)-Math.abs(b[sortKey]||0))*sortDir;   // 변동폭 절대값
       return d!==0 ? d : (b.vol-a.vol);
     }
+    if(sortKey==='oiChg' || sortKey==='pxDrop'){   // 📉 가격↓·OI↑ — 값 없는 종목은 맨 아래
+      const va = (a[sortKey]!=null) ? a[sortKey] : null, vb = (b[sortKey]!=null) ? b[sortKey] : null;
+      if(va==null || vb==null) return (va==null) - (vb==null);
+      const d = (va - vb) * sortDir;
+      return d!==0 ? d : (b.vol-a.vol);
+    }
     if(sortKey==='maprox'){
       const da = (a.maproxHits && a.maproxHits.length) ? Math.abs(a.maproxHits[0].diff) : 9e9;
       const db = (b.maproxHits && b.maproxHits.length) ? Math.abs(b.maproxHits[0].diff) : 9e9;
@@ -3006,7 +3116,8 @@ function render(){
   const arrow = k => sortKey===k ? `<span class="ico">${sortDir<0?'▼':'▲'}</span>` : '';
   viewSymbols = rows.map(r=>r.symbol);   // 차트 ←/→ 네비게이션용 현재 표시 순서
   // 정렬 셀렉터 (테이블 헤더 대신)
-  const sortOpts = [['rsVal','RS'],['maprox','근접'],['vol','거래대금'],['funding','펀비'],['chg1h','1H변동'],['chg4h','4H변동'],['chg1d','1D변동'],['chg1w','1W변동'],['tagScore','신호']];
+  const hasOidiv = rows.some(r=>r.oidiv && r.oiChg!=null);
+  const sortOpts = [...(hasOidiv ? [['oiChg','OI↑%'],['pxDrop','가격↓%']] : []), ['rsVal','RS'],['maprox','근접'],['vol','거래대금'],['funding','펀비'],['chg1h','1H변동'],['chg4h','4H변동'],['chg1d','1D변동'],['chg1w','1W변동'],['tagScore','신호']];
   let html = `<div class="sortbar">${sortOpts.map(([k,lab])=>`<button class="sortbtn${(sortKey===k||(k==='tagScore'&&sortKey==='retestSum'))?' on':''}" data-sk="${k}">${lab}${(sortKey===k)?(sortDir<0?' ▼':' ▲'):''}</button>`).join('')}</div>`;
   if(lastRsInfo){
     let stale = '';
@@ -3016,6 +3127,7 @@ function render(){
     }
     html += `<div class="rsinfobar">${lastRsInfo}${stale}</div>`;
   }
+  if(lastOidivInfo && hasOidiv) html += `<div class="oidivinfo">${lastOidivInfo}</div>`;
   html += `<div class="cardgrid">`;
   for(const r of rows){
     const base = r.symbol.replace('USDT','');
@@ -3030,6 +3142,13 @@ function render(){
     const _rsHM = ms=>{ if(ms==null) return '?'; const d=new Date(ms); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
     const seqLine = r.seqScan?`<span class="reftag" style="color:#c9a0f0;background:rgba(157,123,216,.18);font-weight:700">${r.seqBars.map(x=>x.bull?'🟢':'🔴').join('')}</span><span class="reftag" style="color:${r.seqHit==='bull3'?'#e0584f':'#46cd8a'};background:var(--surface-2)">${r.seqHit==='bull3'?'상승후 반전음봉':'하락후 반전양봉'}</span>`:'';
     const rsScanLine = r.rsScan?`<span class="reftag" style="color:#ff9d4d;background:rgba(255,157,77,.18);font-weight:700">🔺 RS ${r.rsVal>=0?'+':''}${r.rsVal.toFixed(2)}%p</span><span class="reftag" style="color:${r.coinRet>=0?'#46cd8a':'#e0584f'};background:var(--surface-2)">종목 ${r.coinRet>=0?'+':''}${r.coinRet.toFixed(2)}%</span><span class="reftag" style="color:var(--muted);background:var(--surface-2)">${(r.rsRef||'BTC')} ${r.btcRet>=0?'+':''}${r.btcRet.toFixed(2)}%</span><span class="reftag" style="color:var(--dim);background:var(--surface-2)">${_rsHM(r.rsFromT)}→${_rsHM(r.rsToT)}${r.rsPxFrom!=null?` · ${r.rsPxFrom}→${r.rsPxTo}`:''}</span>`:'';
+    const _odT = ms=>{ if(ms==null) return '?'; const d=new Date(ms); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+    const _odF = v => v==null ? '–' : (v>=1e6 ? fmtCompact(v) : (Math.abs(v)<1 ? v.toPrecision(5) : (+v.toFixed(4)).toString()));
+    const oidivLine = (r.oidiv && r.oiChg!=null)
+      ? `<span class="reftag" style="color:#e0584f;background:rgba(224,88,79,.15);font-weight:700" title="가격 종가 ${_odF(r.pxFrom)} → ${_odF(r.pxTo)}">가격 ${r.pxChg>=0?'+':''}${r.pxChg.toFixed(2)}%</span>`
+        + `<span class="reftag" style="color:#46cd8a;background:rgba(70,205,138,.15);font-weight:700" title="OI 종가 ${_odF(r.oiFrom)} → ${_odF(r.oiTo)}">OI ${r.oiChg>=0?'+':''}${r.oiChg.toFixed(2)}%</span>`
+        + `<span class="reftag" style="color:var(--muted);background:var(--surface-2)" title="${_odT(r.oidivT0)}봉 종가 → ${_odT(r.oidivT1)}봉 종가">📉 ${tfLabel(r.oidivTf)} · ${r.oidivN}봉</span>`
+      : '';
     const volxLine = r.volxMode?`<span class="reftag" style="color:${r.volx>=0?'#46cd8a':'#e0584f'};background:${r.volx>=0?'rgba(70,205,138,.14)':'rgba(224,88,79,.14)'}">⚡ ${r.volx>=0?'+':''}${r.volx.toFixed(1)}%</span>`:'';
     // 4) 가격 태그 줄
     const pxLine = `${r.pullback?`<span class="reftag refpx">가격 ${r.pxCount}회</span>`:''}${r.ctPx?`<span class="reftag refpx">가격 BB하단</span>`:''}`;
@@ -3042,6 +3161,7 @@ function render(){
     // 8) 🎯 조건 스캔 결과 (TF별 B/P/S/C/X)
     const favcondLine = favCondTags(r.symbol) || '';
     const condTx=(()=>{const tx=n=>{const a=n-1; return a===0?'0봉(진행)':a+'봉전';};
+      if(r.oidiv && r.oiChg!=null) return `${_odT(r.oidivT0)} → ${_odT(r.oidivT1)}`;
       return r.resist ? tx(r.retestN)+' 관통' : (r.support ? tx(r.retestN)+' 지지' : (r.seq ? `R${tx(r.retestN2)}→P${tx(r.retestN)}` : (r.retestN2!=null ? tx(r.retestN)+'·'+tx(r.retestN2) : tx(r.retestN))));})();
     const fnd = r.funding!=null ? `<span style="color:${r.funding>0?'#e0584f':(r.funding<0?'#46cd8a':'var(--dim)')}">${r.funding>0?'+':''}${r.funding.toFixed(3)}%</span>` : '–';
     const maniaLine = (()=>{
@@ -3059,7 +3179,7 @@ function render(){
             : `<span class="reftag" style="color:var(--muted);background:var(--surface-2)">지금 RSI ${(r.maniaNowRsi||0).toFixed(0)}</span>`)
         + `<span class="reftag" style="color:${os?'#5b9bd5':'#e0584f'};background:var(--surface-2)">${EXT} ${(r.gap||0).toFixed(0)}</span>`;
     })();
-    const tagRows = [tfLine, seqLine, maniaLine, rsScanLine, maproxLine, volxLine, pxLine, rsiLine, condLine, favpxLine, favcondLine].filter(x=>x.trim()).map(x=>`<div class="rc-tagline">${x}</div>`).join('');
+    const tagRows = [tfLine, oidivLine, seqLine, maniaLine, rsScanLine, maproxLine, volxLine, pxLine, rsiLine, condLine, favpxLine, favcondLine].filter(x=>x.trim()).map(x=>`<div class="rc-tagline">${x}</div>`).join('');
     html += `<div class="rescard rowclick" data-symbol="${r.symbol}">
       <div class="rc-top">
         <span class="rc-sym"><span class="favstar${isFav(r.symbol)?' on':''}" data-favtoggle="${r.symbol}">★</span>${base}</span>
@@ -3100,7 +3220,12 @@ function render(){
     b.addEventListener('click', e=>{ e.stopPropagation(); openRsView(b.dataset.rsview, viewSymbols); });
   });
   el.querySelectorAll('.rescard[data-symbol]').forEach(c=>{
-    c.addEventListener('click', ()=> openChart(c.dataset.symbol, viewSymbols));
+    c.addEventListener('click', ()=>{
+      // 📉 가격↓·OI↑ 결과 → 스캔한 TF로 열고, 하단 패널을 이번 차트 동안만 OI·CVD로 (저장 안 함)
+      const rr = rows.find(x=>x.symbol===c.dataset.symbol);
+      // PC 기본 4분할에는 1D가 없으므로 단일 차트로, 스캔했던 거래소로 연다 (모두 이번 차트만)
+      openChart(c.dataset.symbol, viewSymbols, (rr && rr.oidiv && rr.oiChg!=null) ? {tf: rr.oidivTf, pane: 'flow', view: 'single', ex: rr.oidivEx} : undefined);
+    });
   });
   return;   // 카드형 — 아래 기존 테이블 렌더/핸들러 건너뜀
 }
@@ -3153,6 +3278,9 @@ function buildScanCfg(){
   if(scanMode==='volx') cfg.tf = volxTf;
   if(scanMode==='seq') cfg.tf = seqTf;
   if(scanMode==='macond') cfg.tf = mcTf;   // 이평조건 스캔은 패널의 TF를 따름
+  cfg.oidivN = oidivN;
+  cfg.oidivTh = {minPxDropPct:0, minOiRisePct:0};   // 최소 변화율 (아직 UI 없음 — 0 = 방향만 판정)
+  if(scanMode==='oidiv') cfg.tf = oidivTf;
   return cfg;
 }
 // 공통 옵션 row를 RS 모드에선 오른쪽 컬럼으로 이동
@@ -3363,6 +3491,11 @@ let filterChain = [];
 let lastRsInfo = '';   // RS 스캔 당시 구간 정보 (검증용 표시)
 let lastRsRange = null;   // {from,to,tf,btcRet} — 결과 차트 오버레이는 이 값을 사용
 async function runScan(){
+  const lock = (scanMode==='oidiv');
+  if(lock) setExLock(true);
+  try{ return await runScanMain(); } finally{ if(lock) setExLock(false); }
+}
+async function runScanMain(){
   const btn = $('scanbtn');
   const cfg = buildScanCfg();
   const minVol = (parseFloat($('minvol').value)||0) * 1e6;
@@ -3420,10 +3553,22 @@ async function runScan(){
   const scanConc = (scanMode==='maprox')
     ? Math.max(2, Math.min(cfg.conc, Math.ceil(12 / Math.max(1, Object.values(maproxTfs).filter(v=>v&&v!=='off').length))))
     : cfg.conc;
-  const found = await pool(universe, scanConc, s=>scanSymbol(s,cfg), (done,total,nf)=>{
+  let found = await pool(universe, scanConc, s=>scanSymbol(s,cfg), (done,total,nf)=>{
     $('barfill').style.width = (done/total*100)+'%';
-    $('statustxt').innerHTML = `대상 ${total}개 · 스캔 중 ${done}/${total} · 발견 <b>${nf}</b>`;
+    $('statustxt').innerHTML = `대상 ${total}개 · ${cfg.scanMode==='oidiv'?'1단계 가격 ':''}스캔 중 ${done}/${total} · ${cfg.scanMode==='oidiv'?'가격 통과':'발견'} <b>${nf}</b>`;
   });
+  let oidivSt = null;
+  if(cfg.scanMode==='oidiv'){
+    const n1 = found.length;
+    $('barfill').style.width = '0%';
+    $('statustxt').innerHTML = `2단계 OI 확인 0/${n1}`;
+    const r2 = await oidivConfirm(found, cfg, (done,total,nf)=>{
+      $('barfill').style.width = (done/total*100)+'%';
+      $('statustxt').innerHTML = `가격 통과 ${total}개 · 2단계 OI 확인 ${done}/${total} · 일치 <b>${nf}</b>`;
+    });
+    found = r2.rows; oidivSt = r2.st;
+    lastOidivInfo = oidivInfoHtml(cfg, oidivSt, universe.length);
+  } else lastOidivInfo = '';
   lastRows = found;
   if(cfg.scanMode==='rsscan' && cfg.rsFrom!=null){
     const f=new Date(cfg.rsFrom), t2=new Date(cfg.rsTo);
@@ -3433,10 +3578,10 @@ async function runScan(){
   } else { lastRsInfo = ''; lastRsRange = null; }
   filterChain = [{ label: scanModeLabel(cfg), cfg: JSON.parse(JSON.stringify(cfg)), minVol: (parseFloat($('minvol').value)||0), count: found.length }];
   // 미니캔들이 계산된 TF 기록 (변동성=volxTf, 그 외=스캔 TF). 이평근접은 주 TF 없음 → 표시 안 함
-  const miniTf = (scanMode==='volx') ? volxTf : (scanMode==='maprox' ? null : currentTF);
+  const miniTf = (scanMode==='volx') ? volxTf : (scanMode==='maprox' ? null : (scanMode==='oidiv' ? cfg.tf : currentTF));
   found.forEach(r=>{ r.miniTf = miniTf; });
   // 진행봉(0봉) 신호 태깅 — 진행봉 포함 모드에서 신호가 현재봉(retestN===1 = 0봉)이면 표시
-  found.forEach(r=>{ r.isLive = (r.retestN===1); });   // 신호봉=진행봉이면 0봉 배지
+  found.forEach(r=>{ r.isLive = (r.retestN===1); });   // 신호봉=진행봉이면 0봉 배지 (가격↓·OI↑ 는 retestN=null → 해당 없음)
 
   // MTF 태그 계산 (통과 종목만)
   if(found.length){
@@ -3472,12 +3617,13 @@ async function runScan(){
   }
 
   // 눌림목: 리테 합산(가격+RSI) 정렬 기본, 다른 모드는 태그점수
-  sortKey = (scanMode==='pullback') ? 'retestSum' : (scanMode==='maprox' ? 'maprox' : (scanMode==='volx' ? 'volx' : (scanMode==='rsscan' ? 'rsVal' : 'tagScore'))); sortDir=-1;
+  sortKey = (scanMode==='pullback') ? 'retestSum' : (scanMode==='maprox' ? 'maprox' : (scanMode==='volx' ? 'volx' : (scanMode==='rsscan' ? 'rsVal' : (scanMode==='oidiv' ? 'oiChg' : 'tagScore')))); sortDir=-1;
   $('barfill').style.width='100%';
   $('statustxt').innerHTML = (scopeInfo ? `📋 <b>${escH(scopeInfo.name)}</b> 리스트 ${scopeInfo.have}종목`+(scopeInfo.want>scopeInfo.have?` (${scopeInfo.want-scopeInfo.have}개는 이 거래소에 없음)`:'')+' · ' : '')
-    + `완료 · ${universe.length}개 중 조건 충족 <b>${found.length}</b>개`;
+    + `${oidivSt ? oidivDoneWord(oidivSt) : '완료'} · ${universe.length}개 중 조건 충족 <b>${found.length}</b>개`
+    + (oidivSt ? ` · ${oidivStatsText(oidivSt)}` : '');
   const now = new Date();
-  $('laststamp').textContent = `마지막 스캔 ${now.toLocaleTimeString('ko-KR',{hour12:false})} · ${EX[exchange].name} · ${tfLabel(currentTF)}`;
+  $('laststamp').textContent = `마지막 스캔 ${now.toLocaleTimeString('ko-KR',{hour12:false})} · ${EX[cfg.scanMode==='oidiv' ? cfg.exchange : exchange].name} · ${tfLabel(cfg.scanMode==='oidiv' ? cfg.tf : currentTF)}`;
   render();
   renderChainBar();
   btn.disabled=false; btn.textContent='스캔 실행';
@@ -3540,10 +3686,11 @@ document.getElementById('listsavebtn').addEventListener('click', ()=>{
   $('statustxt').innerHTML = `💾 <b>${escH(name)}</b> 리스트 저장 · ${savedLists[name].symbols.length}종목 — 칩을 누르면 다음 스캔을 그 안에서만`;
 });
 function scanModeLabel(cfg){
-  const M = {bull:'📈정배', pullback:'📉눌림목', support:'RSI50지지', bear:'📉역배', ctlong:'역추세롱', mania:'🔥과매수', oversold:'🧊과매도', macond:'🎚️이평조건', short:'숏', resist:'저항', volx:'⚡변동성', maprox:'📏이평근접', rsscan:'🔺RS스캔', seq:'🕯️3+1반전'};
+  const M = {bull:'📈정배', pullback:'📉눌림목', support:'RSI50지지', bear:'📉역배', ctlong:'역추세롱', mania:'🔥과매수', oversold:'🧊과매도', macond:'🎚️이평조건', oidiv:'📉가격↓·OI↑', short:'숏', resist:'저항', volx:'⚡변동성', maprox:'📏이평근접', rsscan:'🔺RS스캔', seq:'🕯️3+1반전'};
   let base = M[cfg.scanMode] || cfg.scanMode;
   if(cfg.scanMode==='volx') base += ` ${cfg.volxPct}%·${tfLabel(cfg.tf)}`;
   else if(cfg.scanMode==='rsscan') base += ` ${cfg.rsBarCount}봉·${(cfg.rsTf||'1h').toUpperCase()} ≥${cfg.rsScanPct}%p`;
+  else if(cfg.scanMode==='oidiv') base += ` ${cfg.oidivN||3}봉·${tfLabel(cfg.tf)}`;
   else if(cfg.scanMode==='seq'){ const dl={both:'양/음',bull3:'🟢🟢🟢🔴',bear3:'🔴🔴🔴🟢'}[cfg.seqDir]; base += ` ${dl}·${(cfg.seqTf||'15m').toUpperCase()}`; }
   else if(cfg.scanMode==='maprox'){
     const on = Object.keys(cfg.maproxTfs||{}).filter(t=>cfg.maproxTfs[t]&&cfg.maproxTfs[t]!=='off').map(t=>t.toUpperCase());
@@ -3581,6 +3728,11 @@ function scanModeLabel(cfg){
 }
 // 현재 결과 종목에 새 조건 재적용 (재스캔, 대상=lastRows 종목만)
 async function drillScan(){
+  const lock = (scanMode==='oidiv');
+  if(lock) setExLock(true);
+  try{ return await drillScanMain(); } finally{ if(lock) setExLock(false); }
+}
+async function drillScanMain(){
   if(!lastRows.length){ alert('먼저 스캔해서 결과가 있어야 추가 필터를 걸 수 있어요.'); return; }
   const btn = $('drillbtn'); const cfg = buildScanCfg();
   const prevSyms = lastRows.map(r=>({symbol:r.symbol, vol:r.vol}));   // 현재 결과를 universe로
@@ -3591,10 +3743,19 @@ async function drillScan(){
   const scanConc = (scanMode==='maprox')
     ? Math.max(2, Math.min(cfg.conc, Math.ceil(12 / Math.max(1, Object.values(maproxTfs).filter(v=>v&&v!=='off').length))))
     : cfg.conc;
-  const found = await pool(prevSyms, scanConc, s=>scanSymbol(s,cfg), (done,total,nf)=>{
+  let found = await pool(prevSyms, scanConc, s=>scanSymbol(s,cfg), (done,total,nf)=>{
     $('barfill').style.width=(done/total*100)+'%';
     $('statustxt').innerHTML = `추가 필터 ${done}/${total} · 남음 <b>${nf}</b>`;
   });
+  let oidivSt = null;
+  if(cfg.scanMode==='oidiv'){
+    const r2 = await oidivConfirm(found, cfg, (done,total,nf)=>{
+      $('barfill').style.width=(done/total*100)+'%';
+      $('statustxt').innerHTML = `추가 필터 · OI 확인 ${done}/${total} · 남음 <b>${nf}</b>`;
+    });
+    found = r2.rows; oidivSt = r2.st;
+    lastOidivInfo = oidivInfoHtml(cfg, oidivSt, prevSyms.length);
+  }
   // 이전 단계 태그 축적 — 새 결과에 이전 결과의 조건 태그를 병합 (단계별 누적 표시)
   const prevMap = {}; lastRows.forEach(r=>{ prevMap[r.symbol]=r; });
   found.forEach(nr=>{
@@ -3612,7 +3773,7 @@ async function drillScan(){
     nr.rsi50 = [...new Set([...(pr.rsi50||[]), ...(nr.rsi50||[])])];
     nr.maprox = pr.maprox || nr.maprox;
     // 다른 모드 태그(정배/변동성 등)도 이전 값 유지
-    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','maniaWick','pxRetHits','maproxBullHits','maproxPxHits','maproxRsiHits','macond','mcHits','mcBarN','mcSrc','mcRef'].forEach(k=>{
+    ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','maniaWick','pxRetHits','maproxBullHits','maproxPxHits','maproxRsiHits','macond','mcHits','mcBarN','mcSrc','mcRef','oidiv','oidivTf','oidivN','oidivT0','oidivT1','oidivEx','pxFrom','pxTo','pxChg','pxDrop','oiFrom','oiTo','oiChg'].forEach(k=>{
       if(nr[k]===undefined && pr[k]!==undefined) nr[k]=pr[k];
     });
   });
@@ -3633,7 +3794,7 @@ async function drillScan(){
   lastRows = found;
   filterChain.push({ label: scanModeLabel(cfg), cfg: JSON.parse(JSON.stringify(cfg)), minVol: (parseFloat($('minvol').value)||0), count: found.length });
   $('barfill').style.width='100%';
-  $('statustxt').innerHTML = `추가 필터 완료 · 남은 종목 <b>${found.length}</b>개`;
+  $('statustxt').innerHTML = `추가 필터 ${oidivSt && oidivSt.limited ? oidivDoneWord(oidivSt) : '완료'} · 남은 종목 <b>${found.length}</b>개` + (oidivSt ? ` · ${oidivStatsText(oidivSt)}` : '');
   render(); renderChainBar();
   btn.disabled=false; btn.textContent=ot;
 }
@@ -3685,7 +3846,11 @@ async function runPreset(name){
     if(si===0){ try{ uni = (await EX[cfg.exchange].universe(minVol)); }catch(e){ alert('유니버스 로드 실패'); btn.disabled=false; return; } }
     else uni = lastRows.map(r=>({symbol:r.symbol, vol:r.vol}));
     const conc = (cfg.scanMode==='maprox') ? Math.max(2, Math.min(cfg.conc||10, Math.ceil(12/Math.max(1,Object.values(cfg.maproxTfs||{}).filter(v=>v&&v!=='off').length)))) : (cfg.conc||10);
-    const found = await pool(uni, conc, s=>scanSymbol(s,cfg), (d,t,nf)=>{ $('barfill').style.width=(d/t*100)+'%'; });
+    let found = await pool(uni, conc, s=>scanSymbol(s,cfg), (d,t,nf)=>{ $('barfill').style.width=(d/t*100)+'%'; });
+    if(cfg.scanMode==='oidiv'){
+      const r2 = await oidivConfirm(found, cfg, (d,t)=>{ $('barfill').style.width=(d/t*100)+'%'; });
+      found = r2.rows; lastOidivInfo = oidivInfoHtml(cfg, r2.st, uni.length);
+    }
     const miniTf = (cfg.scanMode==='volx') ? cfg.tf : (cfg.scanMode==='maprox' ? null : cfg.tf);
     found.forEach(r=>{ if(r.miniTf==null) r.miniTf=miniTf; r.isLive=(r.retestN===1); });
     if(found.length){
@@ -4394,7 +4559,7 @@ let chartObservers = [];
 let currentChartSymbol = null;
 let chartView = 'quad';  // 'single' | 'quad'
 const IS_MOBILE = (window.matchMedia && window.matchMedia('(max-width:760px)').matches) || ('ontouchstart' in window && window.innerWidth < 820);
-if(IS_MOBILE){ document.body.classList.add('mobile'); chartView = 'single'; }
+if(IS_MOBILE){ document.body.classList.add('mobile'); chartView = 'single'; syncViewSeg(); }
 let viewSymbols = [];      // 스캔 결과 표시 순서 (네비게이션)
 let navList = [], navIdx = -1;   // 차트 ←/→ 네비게이션
 let markMode = false;            // 차트에서 봉 클릭 → 사후 매매표시 모드
@@ -4561,8 +4726,152 @@ const FLOW = (()=>{
     }
     return out;
   }
-  return {TFMS, pickPeriod, fetchOI, oiCandles, fetchDelta, deltaFromBars, cvdSeries};
+  // ── 스캔용 (📉 가격↓·OI↑) ──
+  // TF와 정확히 같은 OI 주기 (5m·15m·30m·1h·4h·1d) — 없으면 null
+  function periodOf(tf){ return OI_PERIODS.find(p=>p.k===tf) || null; }
+  // 바이낸스 /futures/data 는 IP당 5분 1000회 제한 → 최근 5분 호출 수를 세서 스캔이 스스로 멈추게
+  const bnDataHits = [];
+  function bnDataUsed(){ const cut = Date.now() - 300e3; while(bnDataHits.length && bnDataHits[0] < cut) bnDataHits.shift(); return bnDataHits.length; }
+  // 최근 5분 호출 수가 budget 아래로 내려가기까지 남은 ms (0 = 지금 가능)
+  function bnDataWaitMs(budget){ const n = bnDataUsed(); if(n < budget) return 0; return Math.max(0, bnDataHits[n-budget] + 300e3 - Date.now()); }
+  const rateErr = msg => { const e = new Error(msg); e.rateLimited = true; return e; };
+  // 최근 limit개 OI 스냅샷 1회 요청 (실시간 점 없음 = 마감된 봉 끝 스냅샷만). 반환 {snaps:[{ts,oi}]}
+  async function fetchOIRecent(ex, symbol, period, limit, force){
+    const key = `oir|${ex}|${symbol}|${period.k}|${limit}|${Math.floor(Date.now()/period.ms)}`;
+    const hit = cget(key, force); if(hit) return hit;
+    let out = [];
+    if(ex==='binance'){
+      bnDataHits.push(Date.now());
+      const r = await fetch(`https://fapi.binance.com/futures/data/openInterestHist?symbol=${symbol}&period=${period.bn}&limit=${Math.min(500, limit)}`);
+      if(r.status===429 || r.status===418) throw rateErr('binance rate limit');
+      const j = await r.json();
+      if(!Array.isArray(j)) throw new Error((j&&j.msg)||'binance OI error');
+      j.forEach(x=>out.push({ts:+x.timestamp, oi:+x.sumOpenInterest}));
+    }else{
+      const r = await fetch(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${symbol}&intervalTime=${period.bb}&limit=${Math.min(200, limit)}`);
+      if(r.status===429 || r.status===403) throw rateErr('bybit rate limit');
+      const j = await r.json();
+      if(j && j.retCode===10006) throw rateErr('bybit rate limit');
+      const list = j && j.result && j.result.list;
+      if(!Array.isArray(list)) throw new Error((j&&j.retMsg)||'bybit OI error');
+      list.forEach(x=>out.push({ts:+x.timestamp, oi:+x.openInterest}));
+    }
+    const seen = new Set();
+    out = out.filter(x=>isFinite(x.oi) && x.oi>0 && !seen.has(x.ts) && seen.add(x.ts)).sort((a,b)=>a.ts-b.ts);
+    const val = {snaps:out};
+    cset(key, val);
+    return val;
+  }
+  return {TFMS, pickPeriod, fetchOI, oiCandles, fetchDelta, deltaFromBars, cvdSeries, periodOf, fetchOIRecent, bnDataUsed, bnDataWaitMs};
 })();
+
+// ── 📉 가격↓·OI↑ 판정 (순수 함수 · DOM/네트워크 없음 — 단위 테스트 대상) ──
+// th = {minPxDropPct, minOiRisePct} : 최소 변화율(%) — 0이면 방향만 본다. 나중에 UI만 붙이면 됨.
+const OIDIV = (()=>{
+  // 마감된 마지막 봉 인덱스: 시작+TF ≤ now 인 가장 뒤 봉 (진행봉 제외). 없으면 -1
+  function lastClosedIdx(starts, tfMs, now){
+    for(let i=starts.length-1; i>=0; i--) if(starts[i] + tfMs <= now) return i;
+    return -1;
+  }
+  function pct(from, to){
+    if(!(from > 0) || !isFinite(to)) return null;
+    return (to/from - 1) * 100;
+  }
+  function priceOk(from, to, th){
+    if(!(from > 0) || !(to > 0) || !(to < from)) return false;
+    const m = (th && th.minPxDropPct) || 0;
+    return m <= 0 || -pct(from, to) >= m;
+  }
+  function oiOk(from, to, th){
+    if(!(from > 0) || !(to > 0) || !(to > from)) return false;
+    const m = (th && th.minOiRisePct) || 0;
+    return m <= 0 || pct(from, to) >= m;
+  }
+  // 값 4개로 최종 판정 + 표시용 % 반환
+  function evaluate(v, th){
+    const pxOk = priceOk(v.pxFrom, v.pxTo, th), oOk = oiOk(v.oiFrom, v.oiTo, th);
+    return { match: pxOk && oOk, pxOk, oiOk: oOk, pxChg: pct(v.pxFrom, v.pxTo), oiChg: pct(v.oiFrom, v.oiTo) };
+  }
+  // 비교 구간 봉 시작 배열(N+1개)과 OI 스냅샷 → {from, to} = OI 종가(N봉 전 · 마지막 완성봉)
+  // OI 종가 = 그 봉 끝 시각(시작+TF)에 찍힌 스냅샷 (= 차트 OI 캔들 종가). 두 봉 모두 '정확히 봉 끝' 스냅샷이 있어야 한다.
+  // 빠진 값을 직전 값으로 메우지 않는다 (차트가 더 촘촘한 주기로 다른 값을 보여줄 수 있으므로).
+  // 반환: {from, to} | {miss:'L'} (마지막 봉 끝 미반영) | {miss:'LN'} (N봉 전 봉 끝 누락)
+  function oiCloses(starts, snaps, tfMs){
+    const n = starts.length; if(n < 2) return {miss:'LN'};
+    const at = ts => { for(const x of snaps) if(x.ts === ts && !x.live) return x.oi; return null; };
+    const to = at(starts[n-1] + tfMs);
+    if(to == null) return {miss:'L'};
+    const from = at(starts[0] + tfMs);
+    if(from == null) return {miss:'LN'};
+    return {from, to};
+  }
+  return {lastClosedIdx, pct, priceOk, oiOk, evaluate, oiCloses};
+})();
+
+// 2단계: 가격 통과 종목만 OI 조회 → 최종 판정. 개별 실패는 건너뛰고 집계만, 스캔 전체는 멈추지 않는다.
+async function oidivConfirm(rows, cfg, onProgress){
+  const st = {cand: rows.length, match: 0, fail: 0, nodata: 0, gap: 0, limited: 0, budget: 0};
+  const period = FLOW.periodOf(cfg.tf);
+  const tfMs = FLOW.TFMS[cfg.tf];
+  if(!period){ st.fail = rows.length; return {rows: [], st}; }
+  const isBn = (cfg.exchange === 'binance');
+  const BN_BUDGET = 900;                       // 5분 1000회 한도에서 여유 100
+  let stop = false, streak = 0;                // streak = 연속 실패 (차단·CORS 거부 의심 → 중단)
+  if(rows.length){ const a = rows[0].oidivStarts; st.sample = [a[0], a[a.length-1]]; }
+  const out = await pool(rows, isBn ? 6 : 8, async r=>{
+    try{
+      if(isBn && !stop && FLOW.bnDataUsed() >= BN_BUDGET){ stop = true; st.budgetCut = true; }
+      if(stop){ st.limited++; if(st.budgetCut) st.budget++; return null; }
+      const N = r.oidivN;
+      const {snaps} = await FLOW.fetchOIRecent(cfg.exchange, r.symbol, period, N + 4);
+      streak = 0;
+      const cl = OIDIV.oiCloses(r.oidivStarts, snaps, tfMs);
+      if(cl.miss==='L'){ st.nodata++; return null; }
+      if(cl.miss){ st.gap++; return null; }
+      const ev = OIDIV.evaluate({pxFrom: r.pxFrom, pxTo: r.pxTo, oiFrom: cl.from, oiTo: cl.to}, cfg.oidivTh);
+      if(!ev.match) return null;
+      r.oiFrom = cl.from; r.oiTo = cl.to;
+      r.oiChg = ev.oiChg; r.pxChg = ev.pxChg; r.pxDrop = -ev.pxChg;
+      r.oidivT0 = r.oidivStarts[0]; r.oidivT1 = r.oidivStarts[r.oidivStarts.length-1];
+      r.oidivEx = cfg.exchange;                // 스캔한 거래소 (카드 클릭 차트·라벨용)
+      delete r.oidivPending; delete r.oidivStarts;
+      st.match++;
+      return r;
+    }catch(e){
+      if(e && e.rateLimited){ stop = true; st.limited++; }
+      else { st.fail++; if(++streak >= 12) stop = true; }
+      return null;
+    }
+  }, (d, total, nf)=>{ if(onProgress) onProgress(d, total, nf); });
+  return {rows: out, st};
+}
+function oidivStatsText(st){
+  if(!st) return '';
+  let t = `가격 통과 ${st.cand} → OI 확인 · 일치 <b>${st.match}</b>`;
+  if(st.nodata) t += ` · OI 미반영 ${st.nodata}`;
+  if(st.fail) t += ` · 실패 ${st.fail}`;
+  if(st.gap) t += ` · OI 누락 ${st.gap}`;
+  if(st.limited) t += ` · <span style="color:#f4c84b">${oidivCutText(st)}</span>`;
+  return t;
+}
+// OI 확인이 다 끝나지 못했을 때 문구 — '0개'가 진짜 0으로 읽히지 않게
+function oidivCutText(st){
+  if(!st || !st.limited) return '';
+  if(st.budget){
+    const m = Math.max(1, Math.ceil(FLOW.bnDataWaitMs(900)/60000));
+    return `요청 한도로 ${st.limited}개 미검사 — 약 ${m}분 후 재시도`;
+  }
+  return `거래소 요청 제한·연속 실패로 ${st.limited}개 미검사 — 잠시 후 재시도`;
+}
+// 상태줄 머리말: 미검사가 있으면 '완료' 대신 '⚠ 중단'
+function oidivDoneWord(st){ return (st && st.limited) ? '<b style="color:#f4c84b">⚠ 중단 (일부 미검사)</b>' : '완료'; }
+function oidivInfoHtml(cfg, st, total){
+  const fm = ms=>{ const d=new Date(ms); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+  const any = st && st.sample;
+  return `📉 <b>가격 종가 ↓ · OI 종가 ↑</b> · ${tfLabel(cfg.tf)} · ${cfg.oidivN}봉 비교`
+    + (any ? ` · <b>${fm(any[0])}</b>봉 → <b>${fm(any[1])}</b>봉 (각 봉 종가)` : '')
+    + `<br><span style="color:var(--muted)">${total!=null?`대상 ${total} · `:''}${oidivStatsText(st)}</span>`;
+}
 
 // OI 축 숫자 축약 (12.3M 등)
 function fmtCompact(v){
@@ -5224,15 +5533,18 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     setBars(rc, N, t.length, t[t.length-1], t, rsiEl);
   }
   let lock=false;
+  // OI·CVD 모드: OI 데이터가 오기 전 하단 차트는 빈 시리즈라 자기 범위가 엉뚱하게 잡힌다(-1..N).
+  // 그 값이 가격 차트로 역전파되면 맨 처음 봉 구간으로 튀므로(모바일 리사이즈 시), OI가 채워질 때까지는 하단→상단 동기화를 막는다.
+  let rcReady = !FLOWON;
   const a=pc.timeScale(), b2=rc.timeScale();
   a.subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r)return; lock=true; b2.setVisibleLogicalRange(r); lock=false; });
-  b2.subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r)return; lock=true; a.setVisibleLogicalRange(r); lock=false; });
+  b2.subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r||!rcReady)return; lock=true; a.setVisibleLogicalRange(r); lock=false; });
 
   charts.push({chart:pc, el:priceEl}, {chart:rc, el:rsiEl});
   if(FLOWON){
     const N = visibleBars || (typeof IS_MOBILE!=='undefined' && IS_MOBILE ? 55 : 100);
     loadFlowPanels({symbol, tf, bars, t, pc, rc, cvdLine, oiSeries, priceEl, rsiEl, N,
-      renderId: options.renderId, force: !!options.forceRefresh});
+      renderId: options.renderId, force: !!options.forceRefresh, onOiReady: ()=>{ rcReady = true; }});
   }
 }
 
@@ -5278,6 +5590,7 @@ async function loadFlowPanels(o){
       if(!snaps.length){ setTxt(oiLab, ' · 데이터 없음'); return; }
       const oc = FLOW.oiCandles(barStarts, snaps);
       keepRange(()=>oiSeries.setData(oc.map((c,i)=> c ? {time:t[i], open:c.o, high:c.h, low:c.l, close:c.c} : {time:t[i]})));
+      if(o.onOiReady) o.onOiReady();
       // 최근 N봉 OI 변화율 (%)
       let fi = Math.max(0, oc.length - N); while(fi < oc.length && !oc[fi]) fi++;
       const last = oc[oc.length-1];
@@ -5469,8 +5782,25 @@ async function renderChartMtfState(sym, forceRefresh=false){
   if(requestId===chartInfoSeq && el.dataset.sym === sym) el.innerHTML = h;
 }
 
-function openChart(symbol, list){
-  chartTF = '15m';  // 단일 차트는 항상 15분으로 시작
+let paneModeRestore = null;   // 결과 카드가 하단 패널을 임시로 바꿨을 때 닫으면 되돌릴 값
+let chartViewRestore = null;  // 〃 차트 배치(단일/4분할)
+let exchangeRestore = null;   // 〃 거래소 (스캔한 거래소로 차트를 열 때)
+function syncViewSeg(){ document.querySelectorAll('#viewseg button').forEach(b=>b.classList.toggle('on', b.dataset.v===chartView)); }
+function openChart(symbol, list, opts){
+  chartTF = (opts && opts.tf) || '15m';  // 단일 차트는 15분으로 시작 (📉 가격↓·OI↑ 결과는 스캔 TF)
+  // 임시 전환 (저장 안 함 · 닫으면 복원): 하단 패널 / 차트 배치 / 거래소
+  if(opts && opts.pane && opts.pane!==paneMode){
+    if(paneModeRestore==null) paneModeRestore = paneMode;
+    paneMode = opts.pane; syncPaneSeg();
+  }
+  if(opts && opts.view && opts.view!==chartView){
+    if(chartViewRestore==null) chartViewRestore = chartView;
+    chartView = opts.view; syncViewSeg();
+  }
+  if(opts && opts.ex && EX[opts.ex] && opts.ex!==exchange){
+    if(exchangeRestore==null) exchangeRestore = exchange;
+    exchange = opts.ex;
+  }
   if(Array.isArray(list) && list.length){ navList = list; navIdx = list.indexOf(symbol); }
   else { const i = navList.indexOf(symbol); navIdx = i; }   // 기존 목록에 있으면 위치 동기화
   currentChartSymbol = symbol;
@@ -5503,6 +5833,9 @@ function updateNavUI(){
 function closeChart(){
   chartRenderSeq++;
   chartInfoSeq++;
+  if(paneModeRestore!=null){ paneMode = paneModeRestore; paneModeRestore = null; syncPaneSeg(); }
+  if(chartViewRestore!=null){ chartView = chartViewRestore; chartViewRestore = null; syncViewSeg(); }
+  if(exchangeRestore!=null){ exchange = exchangeRestore; exchangeRestore = null; }
   $('chartModal').classList.remove('show');
   clearCharts();
   $('chartBody').innerHTML='';
@@ -5581,14 +5914,14 @@ function syncPaneSeg(){ document.querySelectorAll('#paneseg button').forEach(b=>
 syncPaneSeg();
 $('paneseg').addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b || b.dataset.pm===paneMode) return;
-  paneMode = b.dataset.pm; syncPaneSeg();
+  paneMode = b.dataset.pm; syncPaneSeg(); paneModeRestore = null;   // 직접 고르면 그 선택을 유지·저장
   try{ localStorage.setItem('scalpPaneMode', paneMode); }catch(err){}
   if(currentChartSymbol) renderChartView();
 });
 $('viewseg').addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b) return;
   [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); chartView=b.dataset.v;
+  b.classList.add('on'); chartView=b.dataset.v; chartViewRestore = null;   // 직접 고르면 그 배치를 유지
   if(currentChartSymbol){ updateChartTitle(); renderChartView(); }
 });
 
