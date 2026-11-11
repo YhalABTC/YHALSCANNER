@@ -221,10 +221,12 @@
   .mxgrid{display:flex;flex-direction:column;gap:5px;margin-top:6px;max-width:740px}
   .mxrow{display:grid;grid-template-columns:250px repeat(6,minmax(40px,1fr));gap:5px;align-items:center}
   .mxname{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
-  .mxlab{color:var(--muted);font-size:11px;font-weight:700;white-space:nowrap}
+  .mxlab{color:var(--muted);font-size:11px;font-weight:700;white-space:nowrap;flex:0 0 92px}   /* 고정 폭 → 행마다 옵션 칩 시작 x 같음 */
+  .mxname .seg.sm{padding:2px}
+  .mxname .seg.sm button{min-height:28px;padding:0 11px;display:inline-flex;align-items:center}
   .mxhead span{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--dim);text-align:center}
   .mxgrid .seg.mxcells{display:contents}
-  .mxgrid .seg.mxcells button{font-size:0;min-height:32px;padding:0;border:1px solid var(--border);background:var(--surface-2);border-radius:7px;width:100%}
+  .mxgrid .seg.mxcells button{font-size:0;min-height:34px;padding:0;border:1px solid var(--border);background:var(--surface-2);border-radius:7px;width:100%}
   .mxgrid .seg.mxcells button::before{content:'\25CB';font-size:13px;margin:0;opacity:.45;vertical-align:0}
   .mxgrid .seg.mxcells button.on{background:var(--amber);border-color:var(--amber)}
   .mxgrid .seg.mxcells button.on::before{content:'\2713';opacity:1;font-weight:800;color:#1a1205}
@@ -243,6 +245,9 @@
   body.mobile .mxhead .mxname{display:none}
   body.mobile .mxrow:not(.mxhead){margin-top:4px}
   body.mobile .mxhead{display:none}             /* 칸 안에 TF 글자가 있어 열 머리 불필요 */
+  body.mobile .mxname .seg.sm button{min-height:32px;padding:0 13px}
+  body.mobile .mxgrid .seg.mxcells button{min-height:32px}
+  body.mobile .mxlab{flex-basis:auto}
   /* 모바일: 열 머리가 멀어지므로 칸 안에도 TF 글자 표시 */
   body.mobile .mxgrid .seg.mxcells button{font-size:11px;color:var(--dim)}
   body.mobile .mxgrid .seg.mxcells button::before{font-size:10px;margin-right:3px}
@@ -258,7 +263,6 @@
   .scan-category-label{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;
     color:var(--dim);text-transform:uppercase;white-space:nowrap}
   .scan-category .seg{width:100%;display:flex;flex-wrap:wrap}
-  .scan-rows{display:flex;flex-direction:column;gap:6px;min-width:0}   /* 한 카테고리에 여러 줄 */
   .scan-category .seg button{flex:1 1 auto;min-width:110px}
   .seg.modeswitch{padding:4px}
   .seg.modeswitch button{padding:9px 22px;font-size:14px}
@@ -271,9 +275,6 @@
   .seg.modeswitch button[data-sm="mania"].on{background:#f0883c;color:#0a0e16}
   .seg.modeswitch button[data-sm="oversold"].on{background:#4aa8d8;color:#0a0e16}
   .seg.modeswitch button[data-sm="macond"].on{background:#46cd8a;color:#0a0e16}
-  .modeswitch-new button{background:transparent;box-shadow:inset 0 0 0 1px var(--border)}
-  .modeswitch-new button:hover{box-shadow:inset 0 0 0 1px var(--muted)}
-  .modeswitch-new button.on{box-shadow:none}
   #maproxtfseg button.above,#maproxrsi9 button.above{background:rgba(70,205,138,.22)!important;border-color:#46cd8a!important;color:#46cd8a!important}
   .seg.modeswitch button[data-sm="volx"].on{background:#f4c84b;color:#0a0e16}
   .seg.modeswitch button[data-sm="maprox"].on{background:#5b9bd5;color:#0a0e16}
@@ -281,6 +282,13 @@
   .seg.modeswitch button[data-sm="seq"].on{background:#9d7bd8;color:#0a0e16}
   .seg.modeswitch button[data-sm="oidiv"].on{background:#e8a33c;color:#0a0e16}
   .seg.modeswitch button[data-sm="ign"].on{background:#f05a28;color:#0a0e16}
+  .seg.modeswitch button[data-sm="bull"].on{background:var(--amber);color:#1a1205}
+  /* 스캔 모드 칩 — 모든 그룹 같은 모양 (테두리 칩 · 선택 = 기존 모드별 채움색) */
+  .mode-row .seg.modechips{display:flex;flex-wrap:wrap;gap:6px;width:100%;background:none;border:0;padding:0;border-radius:0;overflow:visible;max-width:none}
+  .mode-row .seg.modechips button{flex:0 0 auto;min-width:124px;padding:8px 16px;font-size:13px;border-radius:8px;
+    background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border);white-space:nowrap}
+  .mode-row .seg.modechips button:hover{box-shadow:inset 0 0 0 1px var(--muted)}
+  .mode-row .seg.modechips button.on{box-shadow:inset 0 0 0 1px rgba(0,0,0,.28), 0 1px 3px rgba(0,0,0,.35)}
   .ignnum{width:72px!important;padding:5px 8px!important;font-size:12.5px!important}
   .igninfo{background:rgba(240,90,40,.08);border-color:rgba(240,90,40,.38)}
   .oidivfund{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-2px 0 9px}
@@ -316,6 +324,16 @@
     transition:.14s;box-shadow:0 0 0 0 var(--amber-soft)}
   .scanbtn:hover:not(:disabled){box-shadow:0 4px 22px -6px var(--amber);transform:translateY(-1px)}
   .scanbtn:disabled{opacity:.5;cursor:not-allowed}
+  /* 버튼 위계: 스캔 실행 = 주 버튼(채움) · TOP5·RS 차트 = 보조(테두리형, 한 묶음) */
+  .runacts{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+  .runacts .scanbtn{margin-left:0}
+  .subacts{display:inline-flex}
+  .subbtn{font-family:var(--disp);font-weight:600;font-size:12.5px;color:var(--text);background:transparent;
+    border:1px solid var(--border);padding:8px 13px;cursor:pointer;white-space:nowrap;min-height:36px}
+  .subbtn:first-child{border-radius:8px 0 0 8px}
+  .subbtn:last-child{border-radius:0 8px 8px 0;margin-left:-1px}
+  .subbtn:hover:not(:disabled){border-color:var(--amber);color:var(--amber);position:relative}
+  .subbtn:disabled{opacity:.5;cursor:not-allowed}
 
   /* progress / status */
   .status{display:flex;align-items:center;gap:14px;margin-bottom:14px;min-height:22px}
@@ -350,18 +368,34 @@
   body.mobile .rs-right{width:100%}
   body.mobile .rs-grp{flex-direction:row;align-items:center;flex-wrap:wrap;gap:6px}
   body.mobile .rs-lab{min-width:64px}
-  .chainbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:10px}
-  .chain-lab{font-size:11px;color:var(--muted);font-weight:600}
+  /* 현재 조건 패널 — 대상 · 규칙 · 필터 체인 | 프리셋 ▾ · 초기화 · 리스트 저장 */
+  .condbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:12px;padding:8px 10px;
+    background:var(--surface);border:1px solid var(--border);border-radius:10px}
+  .cb-left{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;flex:1 1 auto;min-width:0}
+  .cb-right{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-left:auto}
+  .cb-right .favrefresh{padding:6px 11px;min-height:32px}
+  .cb-right .favrefresh:disabled{opacity:.4}
+  .cb-lab{font-size:11px;color:var(--muted);font-weight:600}
+  .cb-div{width:1px;align-self:stretch;background:var(--border);margin:2px 2px}
+  .cb-n{font-family:var(--mono);color:var(--amber);font-weight:700}
+  .cb-empty{font-size:11.5px;color:var(--dim)}
+  #scopelist{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px}
+  #scopelist .scope-chip{margin:0}
+  .cb-rule{background:transparent;border:1px dashed var(--border);color:var(--muted);border-radius:8px;padding:3px 9px;font-size:11.5px;cursor:pointer;font-family:inherit}
+  .cb-rule:hover,.cb-rule[aria-expanded="true"]{border-color:var(--blue);color:var(--text)}
+  .cb-filter{display:inline-flex;align-items:baseline;gap:8px;min-width:0;max-width:100%}   /* '필터' 라벨과 칩을 한 묶음으로 (줄 끝에 라벨만 남지 않게) */
+  .cb-filter .cb-lab{flex:none}
+  .chainbar{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+  .rulemenu{max-width:min(560px, calc(100vw - 16px))}
+  .rulemenu .conds{flex-direction:column;align-items:stretch;gap:6px;margin:0;padding:2px 6px 6px}
+  .rulemenu .chip{line-height:1.5;display:block}
+  .presetlistpop{display:flex;flex-wrap:wrap;gap:6px;padding:4px 8px 8px;max-width:340px}
+  .presetlistpop .preset-chip{padding:4px 6px 4px 10px;min-height:30px}
   .chain-chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface-2);border:1px solid var(--amber);border-radius:8px;padding:3px 8px;font-size:11.5px;color:var(--text)}
   .chain-n{font-family:var(--mono);font-size:10px;color:var(--green);font-weight:700}
   .chain-x{cursor:pointer;color:var(--dim);font-size:10px;padding-left:2px}
   .chain-x:hover{color:#e0584f}
   .chain-arrow{color:var(--dim);font-size:12px}
-  .chain-reset{margin-left:auto;background:var(--surface-2);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:5px 11px;font-size:12px;cursor:pointer}
-  .chain-reset:hover{border-color:#e0584f;color:#e0584f}
-  .chain-save{background:var(--amber);color:#0a0e16;border:0;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer}
-  .presetrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-  .preset-lab{font-size:11px;color:var(--muted);font-weight:600}
   .preset-empty{font-size:11px;color:var(--dim)}
   .preset-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:2px 4px 2px 8px;font-size:11.5px}
   .preset-run{cursor:pointer;color:var(--amber);font-weight:600}
@@ -373,9 +407,6 @@
   .scope-del{color:var(--dim);font-size:10px;padding:0 1px 0 3px;font-weight:400}
   .scope-chip.on .scope-del{color:#1a1205;opacity:.6}
   .scope-del:hover{color:#e0584f !important;opacity:1}
-  .scope-save{background:transparent;border:1px dashed var(--border);color:var(--muted);border-radius:8px;
-    padding:3px 9px;font-size:11.5px;cursor:pointer;margin-bottom:4px}
-  .scope-save:hover{border-color:var(--amber);color:var(--amber)}
   .preset-del:hover{color:#e0584f}
   .drillbtn{background:linear-gradient(135deg,#5b9bd5,#4576a8);color:#fff;border:0;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
   .drillbtn:disabled{opacity:.5}
@@ -510,7 +541,12 @@
     .scan-category-label{padding-left:2px;font-size:10px}
     .mode-row .seg{width:100%;}
     .mode-row .seg button{flex:1 1 calc(50% - 4px);min-width:0}
+    .mode-row .seg.modechips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+    .mode-row .seg.modechips button{min-width:0;padding:9px 8px;font-size:12.5px}
     .scanbtn{margin-left:0;width:100%;order:99;grid-column:1/-1;padding:13px 0;font-size:16px;border-radius:12px}
+    .runacts{grid-column:1/-1;order:99;margin-left:0;flex-direction:column-reverse;align-items:stretch;gap:10px}
+    .subacts{display:flex}
+    .subbtn{flex:1 1 0;min-height:40px}
     .seg button{padding:7px 12px}
   }
 
@@ -525,6 +561,26 @@
     border-bottom:1px solid var(--hair);font-family:var(--mono);font-weight:600;font-size:14px;color:var(--text)}
   .modal-head .sub{font-weight:400;font-size:11px;color:var(--dim)}
   .chart-ctrls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto}
+  /* 차트 헤더: 보기(배치·TF세트·하단지표) | 동작(즐찾·매매표시·점화·공유·갱신) | 닫기 — 높이 32px 통일 */
+  #chartModal .modal-head{flex-wrap:wrap;gap:8px;padding:10px 16px}
+  #chartModal #chartTitle{flex:0 1 140px;min-width:100px;line-height:1.35}   /* 긴 부제는 제목 칸 안에서 줄바꿈 → 버튼 줄은 한 줄 */
+  #chartModal .mh-group{display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
+  #chartModal .mh-view .chart-ctrls{margin-left:0;flex-wrap:nowrap;gap:6px}
+  #chartModal .mh-end{margin-left:auto;display:flex;align-items:center;gap:8px}
+  #chartModal .mh-acts{padding-left:10px;border-left:1px solid var(--border)}
+  #chartModal .modal-head .seg.sm{padding:2px;height:32px;align-items:stretch}
+  #chartModal .modal-head .seg.sm button{display:inline-flex;align-items:center;padding:0 9px}
+  #chartModal .mh-acts .modal-share{height:32px;padding:0 10px;display:inline-flex;align-items:center;gap:5px}
+  #chartModal #chartReload,#chartModal .modal-close,#chartModal .modal-nav{width:32px;height:32px}
+  #chartModal .modal-close{margin-left:2px}
+  #chartModal #chartIndToggle{flex:1 1 100%;order:20;padding-top:2px}
+  body.mobile #chartIndToggle{display:none}                 /* 모바일: 이평 토글 숨김 (기존과 동일) */
+  body.mobile #chartModal .mh-acts{padding-left:0;border-left:0}
+  body.mobile #chartModal .modal-head{flex-wrap:nowrap;gap:8px;padding:10px 14px}   /* 53px = 6d083b6 와 같은 높이 → 차트 칸 높이 배분 동일 */
+  body.mobile #chartModal #chartMark,body.mobile #chartModal #dirseg,body.mobile #chartModal #chartShare,body.mobile #chartModal #chartIgn{display:none}
+  body.mobile .ci-ign{position:relative}   /* 정보줄 높이는 그대로 두고 터치 영역만 위아래로 넓힘 */
+  body.mobile .ci-ign::after{content:'';position:absolute;left:-4px;right:-4px;top:-9px;bottom:-9px}
+  body.mobile #chartModal .modal-head .seg.sm button{padding:0 8px}
   /* RS 뷰 헤더 — 컨트롤은 접히되 X·네비는 오른쪽 위에 고정 */
   .mcrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
   .mclab{color:var(--muted);font-size:11px;min-width:168px}
@@ -611,7 +667,10 @@
   .modal-share{background:var(--surface-2);border:1px solid var(--border);color:var(--text);
     border-radius:8px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
   .modal-share:hover{border-color:#3fb0a0;color:#3fb0a0}
-  #chartFav.on{background:rgba(244,200,75,.16);border-color:#f4c84b;color:#f4c84b}
+  /* 즐찾 버튼: 켜짐 = 채운 앰버(★) · 꺼짐 = 기본(☆). 터치 기기의 '눌린 뒤 남는 hover'가 상태를 흐리지 않게 hover는 마우스 기기에서만 */
+  #chartFav.on,#chartFav.on:hover{background:#f4c84b;border-color:#f4c84b;color:#1a1205}
+  @media (hover:none){ #chartFav:not(.on):hover{border-color:var(--border);color:var(--text)} }
+  body.mobile #chartFav:not(.on):hover{border-color:var(--border);color:var(--text)}
   .modal-share:disabled{opacity:.5;cursor:default}
   .modal-close{background:var(--surface-2);border:1px solid var(--border);color:var(--muted);
     width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:13px;flex:none}
@@ -670,12 +729,17 @@
   body.mobile{padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px))}
   body.mobile.modalopen #mscanbar{display:none}
   body.mobile:has(.modal.show) #mscanbar{display:none}
+  body.mobile .mode-row .seg.modechips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  body.mobile .mode-row .seg.modechips button{min-width:0;padding:9px 8px;font-size:12.5px}
+  body.mobile .runacts{grid-column:1/-1;order:99;margin-left:0;flex-direction:column;align-items:stretch}
+  body.mobile .subacts{display:flex}
+  body.mobile .subbtn{flex:1 1 0;min-height:40px}
   body.mobile #toolpop{display:none}           /* CSV 도구 = PC 전용 (기존과 동일) */
   body.mobile .adv{display:none}          /* RSI길이·SMA단기/장기·동시요청 숨김 */
   body.mobile .sect-whale{display:none}   /* 물량장악 워치 숨김 */
   body.mobile .sect-journal{display:none} /* 매매 저널 숨김 */
   body.mobile header .brand p{display:none}   /* 영어 부제 숨김 */
-  body.mobile #condchips{display:none}        /* 정배스캔 조건 설명칩 숨김 */
+  body.mobile #rulepop,body.mobile .cb-div{display:none}   /* 모바일: 규칙 설명 숨김 (기존 condchips 숨김과 동일) */
   body.mobile .legend{display:none}           /* 범례 숨김 */
   body.mobile #chartJournal{display:none}
   .tfbar{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
@@ -730,38 +794,24 @@
     <div class="laststamp" id="laststamp">아직 스캔 안 함</div>
   </header>
 
-  <div class="conds" id="condchips">
-    <div class="chip"><span class="n">①</span><b>정배열</b> · RSI SMA9 &gt; SMA20</div>
-    <div class="chip"><span class="n">②</span><b>리테스트</b> · RSI시가&gt;SMA9 · RSI저가&lt;SMA9 · RSI종가&gt;SMA9</div>
-    <div class="chip">평가 대상 = 마감된 직전 봉</div>
-  </div>
-
   <div class="panel" id="cfgpanel">
     <button type="button" class="cfgsum" id="cfgsum" aria-expanded="true" title="스캔 설정 접기/펼치기"><span id="cfgsumtxt">⚙ 설정</span><span class="cfgarrow" aria-hidden="true">▴</span></button>
     <div class="mode-row" id="scanmodeseg">
       <div class="scan-category">
         <div class="scan-category-label">특수 스캔</div>
-        <div class="scan-rows">
-          <div class="seg modeswitch modeswitch-new">
-            <button data-sm="maprox" class="on">📏 이평근접</button>
-            <button data-sm="rsscan">🔺 RS 스캔</button>
-          </div>
-          <div class="seg modeswitch modeswitch-new">
-            <button data-sm="mania">🔥 과매수</button>
-            <button data-sm="oversold">🧊 과매도</button>
-          </div>
-          <div class="seg modeswitch modeswitch-new">
-            <button data-sm="macond">🎚️ 이평조건 스캔</button>
-            <button data-sm="oidiv" title="가격 종가는 내리고 OI 종가는 오른 종목 (가격·OI 다이버전스)">📉 가격↓·OI↑</button>
-          </div>
-          <div class="seg modeswitch modeswitch-new">
-            <button data-sm="ign" title="점화 스캔 — 거래량 폭발 양봉 + 가격 급등 + OI 증가 봉 찾기 (RSI 과매수 스캔 🔥 과매수와 다름)">🧨 점화</button>
-          </div>
+        <div class="seg modeswitch modechips">
+          <button data-sm="maprox" class="on">📏 이평근접</button>
+          <button data-sm="rsscan">🔺 RS 스캔</button>
+          <button data-sm="mania">🔥 과매수</button>
+          <button data-sm="oversold">🧊 과매도</button>
+          <button data-sm="macond">🎚️ 이평조건 스캔</button>
+          <button data-sm="oidiv" title="가격 종가는 내리고 OI 종가는 오른 종목 (가격·OI 다이버전스)">📉 가격↓·OI↑</button>
+          <button data-sm="ign" title="점화 스캔 — 거래량 폭발 양봉 + 가격 급등 + OI 증가 봉 찾기 (RSI 과매수 스캔 🔥 과매수와 다름)">🧨 점화</button>
         </div>
       </div>
       <div class="scan-category">
         <div class="scan-category-label">롱 스캔</div>
-        <div class="seg modeswitch">
+        <div class="seg modeswitch modechips">
           <button data-sm="bull">정배 스캔</button>
           <button data-sm="pullback">눌림목</button>
           <button data-sm="support">RSI50 지지</button>
@@ -771,14 +821,14 @@
       </div>
       <div class="scan-category">
         <div class="scan-category-label">숏 스캔</div>
-        <div class="seg modeswitch">
+        <div class="seg modeswitch modechips">
           <button data-sm="short" class="shortbtn">숏</button>
           <button data-sm="resist" class="shortbtn">50/70 저항</button>
         </div>
       </div>
       <div class="scan-category">
         <div class="scan-category-label">기타</div>
-        <div class="seg modeswitch modeswitch-new">
+        <div class="seg modeswitch modechips">
           <button data-sm="volx">⚡ 변동성</button>
           <button data-sm="seq">🕯️ 3+1 반전</button>
         </div>
@@ -1312,9 +1362,13 @@
         </div>
       </div>
       <input type="hidden" id="rsilen" value="14"><input type="hidden" id="smaf" value="9"><input type="hidden" id="smas" value="20"><input type="hidden" id="conc" value="10">
-      <button class="scanbtn" id="scanbtn">스캔 실행</button>
-      <button class="scanbtn" id="gainbtn" title="24h 상승률 TOP5" style="background:linear-gradient(135deg,#e0584f,#f0883c)">🚀 24h 상승 TOP5</button>
-      <button class="scanbtn" id="rsviewbtn" title="종목 ÷ 기준(BTC) 상대강도 전용 차트" style="background:linear-gradient(135deg,#ff9d4d,#d9762c)">🔺 RS 차트</button>
+      <div class="runacts">
+        <div class="subacts" role="group" aria-label="보조 도구">
+          <button class="subbtn" id="gainbtn" title="24h 상승률 TOP5">🚀 24h 상승 TOP5</button>
+          <button class="subbtn" id="rsviewbtn" title="종목 ÷ 기준(BTC) 상대강도 전용 차트">🔺 RS 차트</button>
+        </div>
+        <button class="scanbtn" id="scanbtn">스캔 실행</button>
+      </div>
       <div class="searchbox">
         <input id="coinsearch" type="text" placeholder="코인 검색 (예: BTC, PEPE) → 차트 바로 보기" autocomplete="off" spellcheck="false">
         <button id="searchbtn" type="button">차트</button>
@@ -1340,15 +1394,42 @@
     <div class="stxt" id="statustxt">대기 중</div>
   </div>
 
-  <div class="chainbar" id="chainbar" style="display:none"></div>
-  <div class="presetrow">
-    <span class="preset-lab">프리셋:</span>
-    <span id="presetlist"><span class="preset-empty">저장된 프리셋 없음</span></span>
-  </div>
-  <div class="presetrow" id="scoperow">
-    <span class="preset-lab">스캔 대상:</span>
-    <span id="scopelist"></span>
-    <button class="scope-save" id="listsavebtn" title="지금 스캔 결과 종목들을 이름 붙여 저장 → 다음 스캔을 그 안에서만">💾 결과를 리스트로 저장</button>
+  <div class="condbar" id="condbar">
+    <div class="cb-left">
+      <span class="cb-lab">대상</span>
+      <span id="scopelist"></span>
+      <span class="cb-div" aria-hidden="true"></span>
+      <span class="pophost" id="rulepop" data-align="left">
+        <button type="button" class="poptrig cb-rule" id="ruletrig" aria-haspopup="true" aria-expanded="false" title="지금 설정된 스캔 모드의 판정 규칙 (다음 스캔에 적용)">ⓘ <span id="rulemode">이평근접</span> 규칙</button>
+        <div class="popmenu rulemenu" role="dialog" aria-label="스캔 조건 규칙" hidden>
+          <div class="pophead">스캔 조건 — 다음 스캔에 적용</div>
+        <div class="conds" id="condchips">
+          <div class="chip"><span class="n">①</span><b>정배열</b> · RSI SMA9 &gt; SMA20</div>
+          <div class="chip"><span class="n">②</span><b>리테스트</b> · RSI시가&gt;SMA9 · RSI저가&lt;SMA9 · RSI종가&gt;SMA9</div>
+          <div class="chip">평가 대상 = 마감된 직전 봉</div>
+        </div>
+        </div>
+      </span>
+      <span class="cb-filter"><span class="cb-lab">필터</span>
+      <span class="chainbar" id="chainbar"><span class="cb-empty">적용된 필터 없음 · 스캔하면 단계가 여기 쌓여요</span></span></span>
+    </div>
+    <div class="cb-right">
+      <span class="pophost" id="presetpop">
+        <button type="button" class="favrefresh poptrig" id="presettrig" aria-haspopup="true" aria-expanded="false" title="저장된 프리셋 불러오기 · 현재 조건 저장">프리셋<span class="cb-n" id="presetcnt"></span> ▾</button>
+        <div class="popmenu" role="dialog" aria-label="프리셋" hidden>
+          <div class="pophead">저장된 프리셋 — ▶ 누르면 단계대로 실행</div>
+          <div class="presetlistpop" id="presetlist"><span class="preset-empty">저장된 프리셋 없음</span></div>
+          <div class="popsect">
+            <div class="popitem">
+              <button class="popbtn" id="chainsave" title="지금 필터 체인(스캔 → 다시 스캔 단계)을 프리셋으로 저장">💾 현재 조건 저장</button>
+              <div class="popdesc">지금 필터 체인(스캔 → 이 결과에 다시 스캔 단계)을 이름 붙여 저장</div>
+            </div>
+          </div>
+        </div>
+      </span>
+      <button type="button" class="favrefresh" id="chainreset" title="필터 체인과 결과 비우기" disabled>↺ 초기화</button>
+      <button type="button" class="favrefresh" id="listsavebtn" title="지금 스캔 결과 종목들을 이름 붙여 저장 → 다음 스캔을 그 안에서만">💾 리스트 저장</button>
+    </div>
   </div>
   <div class="resulthead">
     <h2>스캔 결과</h2>
@@ -1446,34 +1527,40 @@
     <div class="modal-head">
       <span id="chartTitle">차트</span>
       <span id="chartHeadInfo"></span>
-      <div class="chart-ctrls">
-        <div class="seg sm" id="viewseg" title="PC 차트 배치">
-          <button data-v="single">단일</button>
-          <button data-v="quad" class="on">4분할</button>
-        </div>
-        <div class="seg sm" id="quadmodeseg" title="4분할 타임프레임 세트">
-          <button data-qm="scalp" class="on">단타</button>
-          <button data-qm="swing">스윙</button>
-        </div>
-        <div class="chart-indicators" id="chartIndToggle" title="클릭해서 이평선 켜고 끄기">
-          <span class="l5" data-ind="5">5</span><span class="l10" data-ind="10">10</span><span class="l20" data-ind="20">20</span>
-          <span class="l50" data-ind="50">50</span><span class="l120" data-ind="120">120</span><span class="l200" data-ind="200">200</span><span class="l300" data-ind="300">300</span>
-          <span class="lb" data-ind="bb">가격 BB</span><span class="lrb" data-ind="rbb">RSI BB</span><span class="lbb120" data-ind="bb120" style="border-color:#e9b64f;color:#e9b64f">BB 120·1</span>
-        </div>
-      </div>
       <button class="modal-nav" id="chartPrev" title="이전 종목 (←)">‹</button>
       <span class="modal-navpos" id="chartNavPos"></span>
       <button class="modal-nav" id="chartNext" title="다음 종목 (→)">›</button>
-      <div class="seg sm" id="paneseg" title="하단 지표 전환: RSI·MACD ↔ OI·CVD">
-        <button data-pm="rsi">RSI<span class="pm-long">·MACD</span></button><button data-pm="flow">OI<span class="pm-long">·CVD</span></button>
+      <div class="mh-group mh-view" role="group" aria-label="보기">
+        <div class="chart-ctrls">
+          <div class="seg sm" id="viewseg" title="PC 차트 배치">
+            <button data-v="single">단일</button>
+            <button data-v="quad" class="on">4분할</button>
+          </div>
+          <div class="seg sm" id="quadmodeseg" title="4분할 타임프레임 세트">
+            <button data-qm="scalp" class="on">단타</button>
+            <button data-qm="swing">스윙</button>
+          </div>
+        </div>
+        <div class="seg sm" id="paneseg" title="하단 지표 전환: RSI·MACD ↔ OI·CVD">
+          <button data-pm="rsi">RSI<span class="pm-long">·MACD</span></button><button data-pm="flow">OI<span class="pm-long">·CVD</span></button>
+        </div>
       </div>
-      <button class="modal-share" id="chartFav" title="즐겨찾기 추가/제거">☆ 즐찾</button>
-      <button class="modal-share" id="chartMark" title="봉 클릭으로 사후표시 (진입→청산 자동 번갈기)">📍 매매표시</button>
-      <button class="modal-share ignpickbtn" id="chartIgn" title="봉을 클릭해 점화 봉으로 지정 (4H·1D 차트) — 즐겨찾기 점화 추적에 사용">🧨 점화 지정</button>
-      <div class="seg sm" id="dirseg" style="display:none"><button data-dir="long" class="on">롱</button><button data-dir="short">숏</button></div>
-      <button class="modal-share" id="chartShare" title="차트 이미지로 공유 / 에어드랍">📷 공유</button>
-      <button class="modal-nav" id="chartReload" title="최신 데이터로 갱신">↻</button>
+      <div class="mh-end">
+      <div class="mh-group mh-acts" role="group" aria-label="동작">
+        <button class="modal-share" id="chartFav" title="즐겨찾기 추가/제거">☆ 즐찾</button>
+        <button class="modal-share" id="chartMark" title="봉 클릭으로 사후표시 (진입→청산 자동 번갈기)">📍 매매표시</button>
+        <button class="modal-share ignpickbtn" id="chartIgn" title="봉을 클릭해 점화 봉으로 지정 (4H·1D 차트) — 즐겨찾기 점화 추적에 사용">🧨 점화 지정</button>
+        <div class="seg sm" id="dirseg" style="display:none"><button data-dir="long" class="on">롱</button><button data-dir="short">숏</button></div>
+        <button class="modal-share" id="chartShare" title="차트 이미지로 공유 / 에어드랍">📷 공유</button>
+        <button class="modal-nav" id="chartReload" title="최신 데이터로 갱신">↻</button>
+      </div>
       <button class="modal-close" id="chartClose">✕</button>
+      </div>
+      <div class="chart-indicators" id="chartIndToggle" title="클릭해서 이평선 켜고 끄기">
+        <span class="l5" data-ind="5">5</span><span class="l10" data-ind="10">10</span><span class="l20" data-ind="20">20</span>
+        <span class="l50" data-ind="50">50</span><span class="l120" data-ind="120">120</span><span class="l200" data-ind="200">200</span><span class="l300" data-ind="300">300</span>
+        <span class="lb" data-ind="bb">가격 BB</span><span class="lrb" data-ind="rbb">RSI BB</span><span class="lbb120" data-ind="bb120" style="border-color:#e9b64f;color:#e9b64f">BB 120·1</span>
+      </div>
     </div>
     <div class="tfbar" id="tfbar">
       <span class="tfdot" data-tf="1m">1M</span>
@@ -1765,6 +1852,8 @@ function updateCondChips(){
       <div class="chip">라벨 <span style="color:#e0584f">TF 90</span> = 해당 TF RSI 90 초과 · <span style="color:#bf95f0">TF BB</span> = 진행봉 고가 BB상단 돌파</div>
       <div class="chip">과매수 극단 → 숏 관점</div>`;
   }
+  { const rm = document.getElementById('rulemode'), ob = document.querySelector('#scanmodeseg button.on');
+    if(rm && ob) rm.textContent = ob.textContent.trim().replace(/^[^\p{L}\p{N}]+/u, ''); }
   // 일반 스캔이면 공통 동시조건 칩을 뒤에 덧붙임 (특수 스캔은 gate를 안 타므로 제외)
   if(!['maprox','volx','rsscan','seq','oidiv','ign'].includes(scanMode)) el.innerHTML += pxRetChip();
   // 이평근접이면 가격/RSI 이평 위 + 🎯 이평 리테 횟수 안내를 덧붙임
@@ -4220,11 +4309,11 @@ function resetChain(){
 }
 function renderChainBar(){
   const bar = $('chainbar'); if(!bar) return;
-  if(!filterChain.length){ bar.innerHTML=''; bar.style.display='none'; return; }
-  bar.style.display='flex';
-  bar.innerHTML = `<span class="chain-lab">필터:</span>` + filterChain.map((f,i)=>
-    `<span class="chain-chip">${f.label}<span class="chain-n">${f.count}</span>${i>0?`<span class="chain-x" data-ci="${i}">✕</span>`:''}</span>${i<filterChain.length-1?'<span class="chain-arrow">→</span>':''}`
-  ).join('') + `<button class="chain-reset" id="chainreset">↺ 초기화</button><button class="chain-save" id="chainsave">💾 프리셋 저장</button>`;
+  const rs = $('chainreset'); if(rs) rs.disabled = !filterChain.length;
+  if(!filterChain.length){ bar.innerHTML='<span class="cb-empty">적용된 필터 없음 · 스캔하면 단계가 여기 쌓여요</span>'; return; }
+  bar.innerHTML = filterChain.map((f,i)=>
+    `<span class="chain-chip">${f.label}<span class="chain-n">${f.count}</span>${i>0?`<span class="chain-x" data-ci="${i}" title="이 단계부터 빼고 다시 실행">✕</span>`:''}</span>${i<filterChain.length-1?'<span class="chain-arrow">→</span>':''}`
+  ).join('');
 }
 
 // ── 프리셋 저장/불러오기 ──
@@ -4242,6 +4331,7 @@ function saveCurrentPreset(){
 function renderPresetList(){
   const el = $('presetlist'); if(!el) return;
   const names = Object.keys(presets);
+  const cnt = $('presetcnt'); if(cnt) cnt.textContent = names.length ? ' '+names.length : '';
   if(!names.length){ el.innerHTML = '<span class="preset-empty">저장된 프리셋 없음</span>'; return; }
   el.innerHTML = names.map(n=>`<span class="preset-chip"><span class="preset-run" data-pn="${n}">▶ ${n}</span><span class="preset-del" data-pd="${n}">✕</span></span>`).join('');
 }
@@ -4776,6 +4866,7 @@ function buildCfg(){
   };
 }
 function renderFavs(){
+  try{ updateChartFavBtn(); }catch(e){}   // (첫 로드 땐 차트 변수가 아직 선언 전 → 무시) 즐찾이 어디서 바뀌든(카드 ★·목록 ✕·검색 ★·점화 지정) 열린 차트의 즐찾 버튼도 같이 맞춤
   $('favcount').textContent = favs.length ? `(${favs.length})` : '';
   syncFavIgnBar();
   const wrap = $('favlist');
@@ -5033,18 +5124,23 @@ const Pop = (function(){
   document.addEventListener('click', e=>{
     const t = e.target.closest('.poptrig');
     if(t){ const h = t.closest('.pophost'); if(cur === h) close(); else open(h); return; }
-    if(cur && !cur.querySelector('.popmenu').contains(e.target)) close();
+    // composedPath = 클릭 시점의 경로 → 핸들러가 항목을 다시 그려 e.target이 DOM에서 빠져도 '메뉴 안 클릭'으로 판정
+    if(cur && !e.composedPath().includes(cur.querySelector('.popmenu'))) close();
   });
   document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && cur){ const t = cur.querySelector('.poptrig'); close(); try{ t.focus(); }catch(err){} } });
   window.addEventListener('resize', ()=>{ if(cur) place(cur); });
   window.addEventListener('scroll', ()=>{ if(cur) place(cur); }, true);
   // 항목(기존 버튼·기존 핸들러 그대로)을 누르면 메뉴 닫기 → 진행 중엔 트리거에 '계산 중…' 표시
   document.querySelectorAll('.pophost').forEach(host=>{
-    const trig = host.querySelector('.poptrig'), label = trig.textContent;
+    const trig = host.querySelector('.poptrig');
     const btns = [...host.querySelectorAll('.popbtn')];
     btns.forEach(b=>b.addEventListener('click', ()=>setTimeout(close, 0)));
     if(!btns.length) return;
-    const sync = ()=>{ const busy = btns.some(b=>b.disabled); trig.classList.toggle('busy', busy); trig.textContent = busy ? '⏳ 계산 중…' : label; };
+    // 원래 자식 노드(예: #presetcnt span)를 그대로 보관했다가 되돌림 → id 요소가 사라지지 않음
+    let saved = null;
+    const sync = ()=>{ const busy = btns.some(b=>b.disabled); trig.classList.toggle('busy', busy);
+      if(busy && !saved){ saved = [...trig.childNodes]; trig.textContent = '⏳ 계산 중…'; }
+      else if(!busy && saved){ trig.replaceChildren(...saved); saved = null; } };
     const mo = new MutationObserver(sync);
     btns.forEach(b=>mo.observe(b, {attributes:true, attributeFilter:['disabled']}));
   });
@@ -5069,13 +5165,13 @@ $('favignonly').addEventListener('click', ()=>{
 loadFavs(); loadFavIgn(); renderFavs();
 // 필터 체인 / 프리셋 핸들러
 $('drillbtn').addEventListener('click', drillScan);
-$('chainbar').addEventListener('click', e=>{
+$('condbar').addEventListener('click', e=>{
   const x = e.target.closest('.chain-x'); if(x){ const ci=+x.dataset.ci; rollbackChain(ci); return; }
   const sv = e.target.closest('#chainsave'); if(sv){ saveCurrentPreset(); return; }
   const rs = e.target.closest('#chainreset'); if(rs){ resetChain(); return; }
 });
 $('presetlist').addEventListener('click', e=>{
-  const run = e.target.closest('[data-pn]'); if(run){ runPreset(run.dataset.pn); return; }
+  const run = e.target.closest('[data-pn]'); if(run){ Pop.close(); runPreset(run.dataset.pn); return; }
   const del = e.target.closest('[data-pd]'); if(del){ if(confirm(`"${del.dataset.pd}" 삭제?`)){ delete presets[del.dataset.pd]; savePresets(); renderPresetList(); } return; }
 });
 // 체인 특정 단계로 되돌리기 (그 단계 결과를 다시 계산하는 대신, 프리셋처럼 재실행)
@@ -6751,13 +6847,18 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   // both panels share the identical time grid (t) and last time -> candles align
   // PC·모바일 동일 경로 — setBars가 패널 폭에 맞춰 minBarSpacing까지 조정
   {
-    const N = visibleBars || (typeof IS_MOBILE!=='undefined' && IS_MOBILE ? 55 : 100);
+    // 자동 갱신(keepView): 사용자가 보던 봉 폭(span)·오른쪽 여백(off)을 그대로 — 봉수 설정으로 되돌리지 않는다
+    const kv = options.keepView && options.keepView[tf];
+    const N = kv ? Math.max(2, Math.round(kv.span - 10)) : (visibleBars || (typeof IS_MOBILE!=='undefined' && IS_MOBILE ? 55 : 100));
+    priceEl._chartMeta = {tf, klim, lastT: bars[bars.length-1].t, len: t.length};
     wantRange = setBars(pc, N, t.length, t[t.length-1], t, priceEl);
     setBars(rc, N, t.length, t[t.length-1], t, rsiEl);
     if(fc) setBars(fc, N, t.length, t[t.length-1], t, fundEl);
     if(dc) setBars(dc, N, t.length, t[t.length-1], t, dirEl);
     if(mc) setBars(mc, N, t.length, t[t.length-1], t, macdEl);
     if(cc) setBars(cc, N, t.length, t[t.length-1], t, cvdEl);
+    if(kv){ const r = {from: t.length - 1 + kv.off - kv.span, to: t.length - 1 + kv.off};
+      [pc, rc, fc, dc, mc, cc].forEach(c=>{ if(c) try{ c.timeScale().setVisibleLogicalRange(r); }catch(e){} }); wantRange = r; }
   }
   let lock=false;
   // OI·CVD 모드: OI 데이터가 오기 전 하단 차트는 빈 시리즈라 자기 범위가 엉뚱하게 잡힌다(-1..N).
@@ -6772,11 +6873,26 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   // 그리기 전에 getVisibleLogicalRange() 를 읽으면 라이브러리 기본 구간(봉 간격 6·여백 10)이 나온다 → 그 값을 되쓰면 setBars 가 덮인다.
   // 그래서 데이터 채운 뒤 복원(keepRange)은 실제로 적용된 가격 차트 구간만 따라가는 이 값을 쓴다.
   a.subscribeVisibleLogicalRangeChange(r=>{ if(r) wantRange = {from:r.from, to:r.to}; if(lock||!r)return; lock=true; b2.setVisibleLogicalRange(r); if(b3) b3.setVisibleLogicalRange(r); if(b4) b4.setVisibleLogicalRange(r); if(b5) b5.setVisibleLogicalRange(r); if(b6) b6.setVisibleLogicalRange(r); lock=false; });
-  b2.subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r||!rcReady)return; lock=true; a.setVisibleLogicalRange(r); if(b3) b3.setVisibleLogicalRange(r); if(b4) b4.setVisibleLogicalRange(r); if(b5) b5.setVisibleLogicalRange(r); if(b6) b6.setVisibleLogicalRange(r); lock=false; });
-  if(b5) b5.subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r)return; lock=true; a.setVisibleLogicalRange(r); b2.setVisibleLogicalRange(r); lock=false; });
-  if(b3) b3.subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r||!fcReady)return; lock=true; a.setVisibleLogicalRange(r); b2.setVisibleLogicalRange(r); if(b4) b4.setVisibleLogicalRange(r); if(b6) b6.setVisibleLogicalRange(r); lock=false; });
-  if(b4) b4.subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r||!dcReady)return; lock=true; a.setVisibleLogicalRange(r); b2.setVisibleLogicalRange(r); if(b3) b3.setVisibleLogicalRange(r); if(b6) b6.setVisibleLogicalRange(r); lock=false; });
-  if(b6) b6.subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r||!ccReady)return; lock=true; a.setVisibleLogicalRange(r); b2.setVisibleLogicalRange(r); if(b3) b3.setVisibleLogicalRange(r); if(b4) b4.setVisibleLogicalRange(r); lock=false; });
+  // 하단 칸 → 가격(과 나머지 칸) 역동기화는 사용자가 차트를 직접 끌거나 휠·핀치할 때만 한다.
+  // 그 밖의 변화 = 데이터 채움·리사이즈 뒤 라이브러리가 그 칸에 스스로 잡는 구간(마지막 봉이 오른쪽 끝에 붙거나 첫 봉 쪽으로 감)
+  // → 다른 칸에 퍼뜨리지 않고 그 칸을 가격 구간(wantRange)으로 되돌린다. (전엔 이 값이 가격 차트로 역전파돼 과거·여백 없는 구간으로 밀림)
+  const fromPane = (src, ready)=> r=>{
+    if(lock || !r || !ready()) return;
+    if(!chartUserActive()){
+      if(wantRange && (Math.abs(r.from - wantRange.from) > 0.5 || Math.abs(r.to - wantRange.to) > 0.5)){ lock=true; try{ src.setVisibleLogicalRange(wantRange); }catch(e){} lock=false; }
+      return;
+    }
+    lock=true; [a, b2, b3, b4, b5, b6].forEach(x=>{ if(x && x!==src){ try{ x.setVisibleLogicalRange(r); }catch(e){} } }); lock=false;
+  };
+  b2.subscribeVisibleLogicalRangeChange(fromPane(b2, ()=>rcReady));
+  if(b5) b5.subscribeVisibleLogicalRangeChange(fromPane(b5, ()=>true));
+  if(b3) b3.subscribeVisibleLogicalRangeChange(fromPane(b3, ()=>fcReady));
+  if(b4) b4.subscribeVisibleLogicalRangeChange(fromPane(b4, ()=>dcReady));
+  if(b6) b6.subscribeVisibleLogicalRangeChange(fromPane(b6, ()=>ccReady));
+  // 데이터가 없는 칸용: 보이지 않는 선(별도 숨김 축)을 가격과 같은 시간 격자에 깔아 둔다 → 구간 지정·동기화가 먹음
+  const pinGrid = c=>{ if(!c || c._gridPinned) return; c._gridPinned = true;
+    try{ c.addLineSeries({color:'rgba(0,0,0,0)', lineWidth:1, priceScaleId:'gridpin', lastValueVisible:false, priceLineVisible:false, crosshairMarkerVisible:false})
+      .setData(t.map(x=>({time:x, value:0}))); }catch(e){} };
   // 상·하단 가격축 폭을 같게 → 그리는 폭이 같아야 같은 구간에서 봉 x 위치가 정확히 겹친다
   const allC = [pc, mc, cc, rc, fc, dc].filter(Boolean);
   let scaleW = 0;
@@ -6790,6 +6906,16 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     fitTo(wantRange, (priceEl.clientWidth||0) - w);
   };
   setTimeout(syncScaleW, 40);
+  // 데이터 채움 직후 같은 프레임에 라이브러리가 그 칸 기본 구간을 다시 잡으면 우리 구간 지정이 묻히고, 값이 그대로라 변경 알림도 안 온다(fromPane 이 못 봄)
+  // → 몇 프레임 뒤 실제로 적용된 구간을 읽어 가격 구간과 다르면 맞춘다. 사용자가 조작 중이면 건드리지 않음.
+  let verifyT = [];
+  const verifyRange = ()=>{ verifyT.forEach(clearTimeout); verifyT = [50, 160, 450].map(ms=>setTimeout(()=>{
+    if(!priceEl.isConnected || !wantRange || chartUserActive()) return;
+    const ok = [[b2, rcReady], [b3, fcReady], [b4, dcReady], [b5, true], [b6, ccReady]];
+    lock=true; ok.forEach(([x, ready])=>{ if(!x || !ready) return; try{ const r = x.getVisibleLogicalRange();
+      if(!r || Math.abs(r.from - wantRange.from) > 0.5 || Math.abs(r.to - wantRange.to) > 0.5) x.setVisibleLogicalRange(wantRange); }catch(e){} }); lock=false;
+  }, ms)); };
+  verifyRange();
 
   // 두 패널 모두 '가격 패널이 보여야 할 구간'을 따른다 — 하단 차트 자신의 구간(그리기 전 기본값·OI 오기 전 빈 시리즈 값)은 절대 기준으로 쓰지 않음
   const want = ()=>wantRange;
@@ -6895,23 +7021,34 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     loadFlowPanels({symbol, tf, bars, t, pc, rc, fc, dc, cc, cvdEl, cvdLine, oiSeries, fundSeries, dirSeries, dirMarkS, dirEl, fundEl, flowVals, priceEl, rsiEl, N,
       // 📍 매매표시: 글자 없이, 모두 막대 위쪽(낮은 칸이라 아래쪽 마커는 잘림)
       fundMarks: posMarks.map(m=>({time:m.time, position:'aboveBar', color:m.color, shape:m.shape})),
-      getRange: ()=>wantRange, afterData: ()=>setTimeout(()=>{ try{ syncScaleW(); }catch(e){} }, 60),
+      getRange: ()=>wantRange, afterData: ()=>{ setTimeout(()=>{ try{ syncScaleW(); }catch(e){} }, 60); verifyRange(); },
       renderId: options.renderId, force: !!options.forceRefresh, onOiReady: ()=>{
         rcReady = true; if(b4) dcReady = true;
         // OI 가 채워진 프레임이 처리된 뒤 하단(OI·방향 줄)을 가격 구간에 다시 맞춘다 (그 사이 다른 경로가 하단 기본 구간을 써넣었어도 복구)
         const re = ()=>{ if(!rsiEl.isConnected || !wantRange) return; lock=true; try{ b2.setVisibleLogicalRange(wantRange); if(b4) b4.setVisibleLogicalRange(wantRange); }catch(e){} lock=false; };
-        re(); requestAnimationFrame(()=>{ re(); requestAnimationFrame(re); });
+        re(); requestAnimationFrame(()=>{ re(); requestAnimationFrame(re); }); verifyRange();
       }, onCvdReady: ()=>{
         if(!b6) return;
         ccReady = true;
         // CVD 가 채워진 뒤 CVD 칸을 가격 구간에 다시 맞춘다 (2프레임 재적용 — OI 와 같은 방식)
         const re = ()=>{ if(!cvdEl.isConnected || !wantRange) return; lock=true; try{ b6.setVisibleLogicalRange(wantRange); }catch(e){} lock=false; };
-        re(); requestAnimationFrame(()=>{ re(); requestAnimationFrame(re); });
+        re(); requestAnimationFrame(()=>{ re(); requestAnimationFrame(re); }); verifyRange();
       }, onFundReady: ()=>{
         if(!b3) return;
         fcReady = true;
         const re = ()=>{ if(!fundEl.isConnected || !wantRange) return; lock=true; try{ b3.setVisibleLogicalRange(wantRange); }catch(e){} lock=false; };
-        re(); requestAnimationFrame(()=>{ re(); requestAnimationFrame(re); });
+        re(); requestAnimationFrame(()=>{ re(); requestAnimationFrame(re); }); verifyRange();
+      }, onOiIdle: ()=>{
+        // OI 실패·없음: 빈칸(공백 점만 있는 시리즈)은 라이브러리가 구간 지정을 무시해 첫 봉 쪽(과거)에 머문다
+        // → 보이지 않는 0 선을 시간 격자 전체에 깔아 구간이 먹게 한 뒤, OI·방향 칸을 가격 구간에 맞춘다 (역동기화는 계속 막음)
+        pinGrid(rc); rcReady = true; if(b4) dcReady = true;   // 이제 격자가 있으니 라이브러리가 스스로 바꾼 구간은 fromPane 이 가격 구간으로 되돌림
+        const re = ()=>{ if(!rsiEl.isConnected || !wantRange) return; lock=true; try{ b2.setVisibleLogicalRange(wantRange); if(b4) b4.setVisibleLogicalRange(wantRange); }catch(e){} lock=false; };
+        re(); requestAnimationFrame(()=>{ re(); requestAnimationFrame(re); }); verifyRange();
+      }, onFundIdle: ()=>{
+        if(!b3) return;
+        pinGrid(fc); fcReady = true;
+        const re = ()=>{ if(!fundEl.isConnected || !wantRange) return; lock=true; try{ b3.setVisibleLogicalRange(wantRange); }catch(e){} lock=false; };
+        re(); requestAnimationFrame(()=>{ re(); requestAnimationFrame(re); }); verifyRange();
       }});
   }
 }
@@ -6971,6 +7108,9 @@ async function loadFlowPanels(o){
     }catch(e){ if(alive()) cvdNone(' 로드 실패'); }
   })();
 
+  // 데이터가 끝내 안 오는 칸(실패·없음·호출 제한)도 가격 구간에 맞춘다 — 안 그러면 빈 칸이 첫 그리기 기본 구간(맨 처음 봉 쪽)에
+  // 남아, 그 칸의 시간축이 과거 날짜를 보여 준다 (하단→가격 역동기화는 계속 막아 둠: onOiIdle/onFundIdle 은 정렬만)
+  let oiOk = false, fundOk = false;
   const oiJob = (async()=>{
     try{
       const n = Math.min(bars.length, N + 20);
@@ -6991,6 +7131,7 @@ async function loadFlowPanels(o){
           if(o.fundMarks && o.fundMarks.length && dirMarkS) dirMarkS.setMarkers(o.fundMarks.filter(m=>m.time>=t[0]).map(m=>({time:m.time, position:'inBar', color:'#ffffff', shape:m.shape, size:0.6})).sort((a,b)=>a.time-b.time));
         }
       });
+      oiOk = true;
       if(o.onOiReady) o.onOiReady();
       // 최근 N봉 OI 변화율 (%)
       let fi = Math.max(0, oc.length - N); while(fi < oc.length && !oc[fi]) fi++;
@@ -7003,6 +7144,7 @@ async function loadFlowPanels(o){
       if(clipped) info += ' · 30일 이전 없음(바이낸스 한계)';
       setTxt(oiLab, info);
     }catch(e){ if(alive()) setTxt(oiLab, ' · 로드 실패'); }
+    finally{ if(!oiOk && alive() && o.onOiIdle) o.onOiIdle(); }
   })();
 
   // 펀딩비: 차트 범위(OI 와 같은 최근 N+20봉) 시작 직전 정산 1개까지 받아 계단식으로 매핑
@@ -7025,12 +7167,14 @@ async function loadFlowPanels(o){
         fundSeries.setData(vals.map((v,i)=> v==null ? {time:t[i]} : {time:t[i], value:v, color:fundColor(v)}));
         if(o.fundMarks && o.fundMarks.length) fundSeries.setMarkers(o.fundMarks.filter(m=>m.time>=t[0]).sort((a,b)=>a.time-b.time));
       });
+      fundOk = true;
       if(o.onFundReady) o.onFundReady();
       setTxt(fivEl, ivTxt + (r.clipped ? ' · 이전 기록 생략' : ''));
       const last = vals[vals.length-1];
       flowVals.idle = last!=null ? ` · ${r.cur!=null ? '예상' : '최근'} ${fmtFundPct(last, true)}` : '';
       setTxt(freadEl, flowVals.idle);
     }catch(e){ if(alive()) setTxt(fivEl, ' · 로드 실패'); }
+    finally{ if(!fundOk && alive() && o.onFundIdle) o.onFundIdle(); }
   })();
   await Promise.all([cvdJob, oiJob, fundJob]);
 }
@@ -7041,6 +7185,27 @@ function macdLabel(){
 function fundLabel(){
   return `<span class="lfund">펀딩비</span><span class="fundiv"></span><span class="fundread"></span>`;
 }
+// 사용자가 차트를 직접 조작 중인지 — 하단 칸 → 가격 역동기화 허용·자동 정렬 보류 판단용
+// 차트 캔버스에서 시작해 실제로 움직인 끌기·스와이프와 휠만 친다 (+ 관성 스크롤 여유 1.5초). 탭·클릭(봉수·TF·↻·라벨·매매표시)은 조작이 아님.
+let chartUserDown = false, chartUserT = -1e9;
+function chartUserActive(){ return chartUserDown || performance.now() - chartUserT < 1500; }
+function chartUserReset(){ chartUserDown = false; chartUserT = -1e9; }   // 새로 그릴 때: 이전 제스처는 새 차트와 무관
+(function(){
+  const body = document.getElementById('chartBody'); if(!body) return;
+  const onCanvas = e=>e.target && e.target.tagName === 'CANVAS';
+  let start = null;   // 캔버스에서 시작한 누름/터치의 시작점
+  const mark = ()=>{ chartUserT = performance.now(); };
+  const moved = (x, y)=>{ if(!start) return; if(chartUserDown || Math.abs(x - start.x) + Math.abs(y - start.y) > 6){ chartUserDown = true; mark(); } };
+  body.addEventListener('pointerdown', e=>{ start = onCanvas(e) ? {x:e.clientX, y:e.clientY} : null; }, true);
+  body.addEventListener('pointermove', e=>moved(e.clientX, e.clientY), true);
+  body.addEventListener('touchstart', e=>{ const p = e.touches[0]; start = (onCanvas(e) && p) ? {x:p.clientX, y:p.clientY} : null; if(start && e.touches.length > 1){ chartUserDown = true; mark(); } }, {passive:true, capture:true});   // 두 손가락 = 핀치
+  body.addEventListener('touchmove', e=>{ const p = e.touches[0]; if(p) moved(p.clientX, p.clientY); }, {passive:true, capture:true});
+  body.addEventListener('wheel', e=>{ if(onCanvas(e)) mark(); }, {passive:true, capture:true});
+  const up = ()=>{ if(chartUserDown){ chartUserDown = false; mark(); } start = null; };
+  window.addEventListener('pointerup', up, true); window.addEventListener('pointercancel', up, true);
+  window.addEventListener('touchend', e=>{ if(!e.touches || !e.touches.length) up(); }, {passive:true, capture:true});
+  window.addEventListener('touchcancel', up, {passive:true, capture:true});
+})();
 function clearCharts(){
   chartObservers.forEach(o=>{ try{o.disconnect();}catch(e){} }); chartObservers=[];
   charts.forEach(({chart})=>{ try{chart.remove();}catch(e){} }); charts=[];
@@ -7063,8 +7228,9 @@ $('chartBody').addEventListener('click', e=>{
   try{ localStorage.setItem('scalpCvdSrc', cvdSrc); }catch(err){}
   if(currentChartSymbol) renderChartView();
 });
-async function renderChartView({forceRefresh=false}={}){
+async function renderChartView({forceRefresh=false, keepView=null}={}){
   const renderId = ++chartRenderSeq;
+  chartUserReset();
   const body = $('chartBody');
   clearCharts();
   if(typeof LightweightCharts === 'undefined'){
@@ -7121,7 +7287,7 @@ async function renderChartView({forceRefresh=false}={}){
     } else if(FLOWP){ pH = 140; cH = 64; rH = 100; fH = 42; dH = 14; }   // PC OI·CVD: 예전 204/114/46/14 와 같은 전체 높이 안에서 CVD 칸(64 + 제목)을 떼어 냄. 가격 캔들 140×0.89 ≥ 예전 204 칸의 113.9px   // PC: 방향 줄(14px + 제목·여백)을 같은 예산에서 떼어 냄 → 전체 높이 = 이전 flow 와 같음   // PC: 기존 248+200 예산에서 펀딩 칸(라벨·여백 포함)을 떼어 전체 높이 ≤ RSI 모드 (펀딩 50 < CVD 영역 ≈58)
     else { pH = 184; mH = 72; rH = 186; }   // PC RSI·MACD: 예전 248+200 에서 MACD 칸(72 + 제목)을 떼어 냄. 가격 캔들 영역 184×0.89 ≥ 예전 248×0.64
     await buildPair(body.querySelector('.pchart'), body.querySelector('.rchart'), currentChartSymbol, chartTF, pH, rH, chartBars, !IS_MOBILE, body.querySelector('.rchart').previousElementSibling,
-      {renderId, forceRefresh, fundEl: body.querySelector('.fchart'), fundH: fH, dirEl: body.querySelector('.dchart'), dirH: dH,
+      {renderId, forceRefresh, keepView, fundEl: body.querySelector('.fchart'), fundH: fH, dirEl: body.querySelector('.dchart'), dirH: dH,
        macdEl: body.querySelector('.mchart'), macdH: mH, cvdEl: body.querySelector('.cchart'), cvdH: cH});
     if(renderId!==chartRenderSeq) return;
     syncTfBar();
@@ -7190,7 +7356,7 @@ async function renderChartView({forceRefresh=false}={}){
       // RSI·MACD 모드: 가격 110 · MACD 50 · RSI 108 (예전 가격 150 · RSI 120 에서 MACD 칸 자리를 떼어 냄)
       // OI·CVD 모드: 가격 90 · CVD 44 · OI 74 · 방향 8 · 펀딩 36 (예전 칸 전체 높이 안에서 CVD 칸 자리를 떼어 냄, 가격 캔들 90×0.89 ≥ 예전 79.4px)
       buildPair(cells[k].querySelector('.pchart'), cells[k].querySelector('.rchart'), currentChartSymbol, tf, paneMode==='flow' ? 90 : 110, paneMode==='flow' ? 74 : 108, 50, tf==='1h', null,
-        {renderId, forceRefresh, fundEl: cells[k].querySelector('.fchart'), fundH: 36, fundCompact: true, dirEl: cells[k].querySelector('.dchart'), dirH: 8,
+        {renderId, forceRefresh, keepView, fundEl: cells[k].querySelector('.fchart'), fundH: 36, fundCompact: true, dirEl: cells[k].querySelector('.dchart'), dirH: 8,
          macdEl: cells[k].querySelector('.mchart'), macdH: 50, cvdEl: cells[k].querySelector('.cchart'), cvdH: 44})
     ));
     if(renderId!==chartRenderSeq) return;
@@ -7399,12 +7565,14 @@ function openChart(symbol, list, opts){
   updateChartTitle();
   updateNavUI();
   renderChartView();
+  chartAutoStart();
 }
 function navChart(dir){
   if(navList.length < 2 || navIdx < 0) return;
   let i = (navIdx + dir + navList.length) % navList.length;   // 순환
   navIdx = i;
   currentChartSymbol = navList[i];
+  updateChartFavBtn();   // ‹ › 로 종목이 바뀌면 즐찾 상태도 그 종목 기준으로
   if(ignPick) renderIgnHint();
   const body = $('chartBody'); if(body) body.scrollTop = 0;   // 스크롤 맨 위로 (헤더 잘림 방지)
   updateChartTitle();
@@ -7424,6 +7592,7 @@ function closeChart(){
   if(chartViewRestore!=null){ chartView = chartViewRestore; chartViewRestore = null; syncViewSeg(); }
   if(exchangeRestore!=null){ exchange = exchangeRestore; exchangeRestore = null; }
   $('chartModal').classList.remove('show');
+  chartAutoStop();
   setIgnPick(false);
   clearCharts();
   $('chartBody').innerHTML='';
@@ -7519,21 +7688,80 @@ function updateChartFavBtn(){
   const on = isFav(currentChartSymbol);
   b.textContent = on ? '★ 즐찾' : '☆ 즐찾';
   b.classList.toggle('on', on);
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  b.title = on ? '즐겨찾기에서 빼기' : '즐겨찾기에 추가';
 }
 $('chartFav').addEventListener('click', ()=>{
   if(!currentChartSymbol) return;
   toggleFav(currentChartSymbol);
   updateChartFavBtn();
 });
-$('chartReload').addEventListener('click', async ()=>{
-  const b = $('chartReload'); b.disabled = true; b.textContent = '⟳';
+// ↻ (그리고 오래 떠났다 돌아왔을 때): 최신 봉을 다시 받아 그린다. keepView 를 주면 보던 봉 폭을 유지
+async function chartReloadData({keepView=null}={}){
+  const b = $('chartReload'); if(!b || b.disabled) return;
+  b.disabled = true; b.textContent = '⟳';
   try{
     invalidateChartCache(exchange, currentChartSymbol);
-    await renderChartView({forceRefresh:true});
+    await renderChartView({forceRefresh:true, keepView});
     await renderChartMtfState(currentChartSymbol, false);
   }catch(e){}
   b.textContent = '↻'; b.disabled = false;
-});
+}
+$('chartReload').addEventListener('click', ()=>chartReloadData());
+// 지금 보이는 가격 칸들의 봉 폭(span)·오른쪽 여백(off)을 TF별로. 최신 봉이 안 보이게 과거로 옮겨 둔 칸이 있으면 away=true
+function chartViewNow(){
+  const kv = {}; let away = false, n = 0;
+  charts.forEach(({chart, el})=>{
+    if(!el || !el.isConnected || !el.classList.contains('pchart') || !el._chartMeta) return;
+    let r = null; try{ r = chart.timeScale().getVisibleLogicalRange(); }catch(e){}
+    if(!r) return;
+    const m = el._chartMeta, last = m.len - 1, atEdge = r.to >= last - 0.5 && r.from <= last;
+    if(!atEdge) away = true;
+    kv[m.tf] = {span: r.to - r.from, off: atEdge ? r.to - last : 10}; n++;
+  });
+  return {kv: n ? kv : null, away};
+}
+// 차트를 켜 둔 채 보고 있을 때: 약 30초마다, 보이는 TF 에 새 봉이 생겼어야 하면 제자리에서 다시 받는다.
+// 최신 봉을 보고 있고(과거로 옮기지 않음) 최근 몇 초 사이 끌기·휠이 없을 때만 — 봉 폭·오른쪽 여백은 그대로 유지(확대 상태 안 바뀜).
+// 과거 구간을 보고 있거나 매매표시·점화 지정 중이면 건너뛴다. 창을 닫으면 타이머도 멈춘다.
+let chartAutoT = null;
+function chartAutoStop(){ if(chartAutoT){ clearInterval(chartAutoT); chartAutoT = null; } }
+function chartAutoStart(){ chartAutoStop(); chartAutoT = setInterval(chartAutoTick, 30e3); }
+function chartAutoIdle(){ return !chartUserDown && performance.now() - chartUserT > 4000 && !markMode && !ignPick; }
+async function chartAutoTick(){
+  const modal = $('chartModal');
+  if(!modal || !modal.classList.contains('show') || !currentChartSymbol){ chartAutoStop(); return; }
+  if(document.visibilityState !== 'visible' || !chartAutoIdle()) return;
+  const b = $('chartReload'); if(!b || b.disabled) return;
+  const metas = charts.filter(c=>c.el && c.el.isConnected && c.el.classList.contains('pchart') && c.el._chartMeta).map(c=>c.el._chartMeta);
+  const now = Date.now();
+  if(!metas.length || !metas.some(m=>FLOW.TFMS[m.tf] && now >= m.lastT + FLOW.TFMS[m.tf])) return;   // 새 봉이 아직 없음
+  if(chartViewNow().away) return;
+  const sym = currentChartSymbol, ex = exchange, seq = chartRenderSeq;
+  b.disabled = true;   // ↻ 와 겹치지 않게 (모양은 그대로)
+  try{
+    // 먼저 봉만 새로 받아 둔 뒤(그동안 화면 유지) 캐시에서 바로 다시 그린다 → 빈 화면 깜빡임 없음
+    await Promise.all(metas.map(m=>loadChartBars(sym, m.tf, m.klim, {force:true}).catch(()=>null)));
+    if(seq !== chartRenderSeq || sym !== currentChartSymbol || ex !== exchange || !modal.classList.contains('show')) return;
+    if(!chartAutoIdle()) return;
+    const v = chartViewNow(); if(v.away || !v.kv) return;   // 받는 사이 사용자가 과거로 옮겼으면 그대로 둔다
+    await renderChartView({forceRefresh:false, keepView:v.kv});
+  }catch(e){}
+  finally{ b.disabled = false; }
+}
+// 차트를 열어 둔 채 앱/탭을 떠났다가(폰 백그라운드·다른 탭·다른 창) 1분 이상 지나 돌아오면 ↻ 와 같은 경로로 최신 봉을 다시 받는다
+// (안 하면 차트가 떠날 때 시점에서 끝나 '과거에 멈춘' 화면이 됨 — 자동 갱신 경로가 없었음)
+let chartAwayAt = 0;
+function chartAway(){ if(!chartAwayAt) chartAwayAt = Date.now(); }
+function chartBack(){
+  const away = chartAwayAt ? Date.now() - chartAwayAt : 0; chartAwayAt = 0;
+  if(away < 60e3 || !currentChartSymbol || !$('chartModal').classList.contains('show')) return;
+  chartReloadData({keepView: chartViewNow().kv});   // 최신 봉으로 가되 보던 봉 폭은 유지
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') chartAway(); else chartBack(); });
+window.addEventListener('blur', chartAway);
+window.addEventListener('focus', chartBack);
+window.addEventListener('pageshow', e=>{ if(e.persisted){ if(!chartAwayAt) chartAwayAt = 1; chartBack(); } });   // bfcache 복귀 = 오래 떠나 있던 것으로 간주
 $('chartMark').addEventListener('click', ()=>{
   markMode = !markMode;
   if(markMode && ignPick) setIgnPick(false);
