@@ -1112,9 +1112,9 @@
         <div class="seg" id="oidivtfseg">
           <button data-otf="5m">5M</button>
           <button data-otf="15m">15M</button>
-          <button data-otf="1h" class="on">1H</button>
+          <button data-otf="1h">1H</button>
           <button data-otf="4h">4H</button>
-          <button data-otf="1d">1D</button>
+          <button data-otf="1d" class="on">1D</button>
         </div>
       </div>
       <div class="mcrow">
@@ -1122,22 +1122,22 @@
         <div class="seg sm" id="oidivnseg">
           <button data-on="1">1</button>
           <button data-on="2">2</button>
-          <button data-on="3" class="on">3</button>
+          <button data-on="3">3</button>
           <button data-on="5">5</button>
           <button data-on="10">10</button>
-          <button data-on="20">20</button>
+          <button data-on="20" class="on">20</button>
         </div>
         <span style="color:var(--muted);font-size:11px">직접</span>
-        <input type="number" id="oidivn" value="3" min="1" max="20" step="1" style="width:56px">
-        <span class="oidiv-hint" id="oidivspan">1H × 3봉 ≈ 3시간</span>
+        <input type="number" id="oidivn" value="20" min="1" max="20" step="1" style="width:56px">
+        <span class="oidiv-hint" id="oidivspan">1D × 20봉 ≈ 20일</span>
       </div>
       <div class="mcrow">
         <span class="mclab">최소 변화율 <span style="color:var(--dim)">(0 = 방향만)</span></span>
         <span style="color:var(--muted);font-size:11px">가격 최소 −</span>
-        <input type="number" class="num ignnum" id="oidivthpx" value="0" min="0" step="0.5" title="N봉 동안 가격이 최소 이만큼(%) 내린 종목만">
+        <input type="number" class="num ignnum" id="oidivthpx" value="30" min="0" step="0.5" title="N봉 동안 가격이 최소 이만큼(%) 내린 종목만">
         <span style="color:var(--muted);font-size:11px">%</span>
         <span style="color:var(--muted);font-size:11px;margin-left:6px">OI 최소 +</span>
-        <input type="number" class="num ignnum" id="oidivthoi" value="0" min="0" step="0.5" title="N봉 동안 OI가 최소 이만큼(%) 늘어난 종목만">
+        <input type="number" class="num ignnum" id="oidivthoi" value="50" min="0" step="0.5" title="N봉 동안 OI가 최소 이만큼(%) 늘어난 종목만">
         <span style="color:var(--muted);font-size:11px">%</span>
       </div>
       <div class="oidiv-rule" id="oidivrule"></div>
@@ -1149,6 +1149,14 @@
         <div class="seg" id="igntfseg">
           <button data-itf="4h" class="on">4H</button>
           <button data-itf="1d">1D</button>
+        </div>
+      </div>
+      <div class="mcrow">
+        <span class="mclab">방향</span>
+        <div class="seg" id="igndirseg">
+          <button data-idir="long" class="on">롱</button>
+          <button data-idir="short">숏</button>
+          <button data-idir="both">둘 다</button>
         </div>
       </div>
       <div class="mcrow">
@@ -1166,7 +1174,7 @@
         <span style="color:var(--muted);font-size:11px">배</span>
       </div>
       <div class="mcrow">
-        <span class="mclab">가격 상승률 ≥</span>
+        <span class="mclab" id="ignpxlab">가격 상승률 ≥</span>
         <input type="number" class="num ignnum" id="ignpx" value="30" min="0" step="5">
         <span style="color:var(--muted);font-size:11px">%</span>
       </div>
@@ -1513,7 +1521,7 @@
       <button data-fs="fund" title="현재 펀비 높은 순">펀비</button>
       <button data-fs="oipk" title="OI 고점대비 % 낮은 순">OI 고점대비</button>
       <button data-fs="oipre" title="OI 점화전대비 % 낮은 순 (현재 OI ÷ 점화 직전 봉 마감 OI − 1)">OI 점화전대비</button>
-      <button data-fs="pxpk" title="가격 고점대비 % 낮은 순">고점대비 가격</button>
+      <button data-fs="pxpk" title="가격 고점대비 % 낮은 순 · 숏 점화는 저점대비 % 높은 순 (둘 다 되돌림 큰 순)">고점대비 가격</button>
     </div>
     <button class="favrefresh" id="favignonly" title="점화 정보가 있는 종목만 보기">🧨 점화 추적만</button>
   </div>
@@ -1685,16 +1693,37 @@ let rsBandSeries = null, rsBandRsi = null, rsPriceLines = [];
 let seqDir = 'both', seqTf = '15m', seqLive = 'live';   // 3+1 반전 스캔
 let maniaSrc = 'close';   // 'close'=RSI 종가만 · 'wick'=RSI 고가(과매수)/저가(과매도) 터치도 인정
 // 📉 가격↓·OI↑ 스캔 — 이 모드 전용 TF와 비교 봉 수 (메모리만, 저장 안 함)
-let oidivTf = '1h', oidivN = 3;
+// 기본 1D × 20봉, 최소 변화율 가격 −30% · OI +50%. TF·N·최소 변화율은 저장 (펀딩 필터는 메모리만)
+const OIDIV_TFS = ['5m','15m','1h','4h','1d'];
+const OIDIV_DEF = {tf:'1d', n:20, th:{px:30, oi:50}};
+let oidivTf = OIDIV_DEF.tf, oidivN = OIDIV_DEF.n;
 const OIDIV_N_MAX = 20;
 let lastOidivInfo = '';   // 결과 상단 안내 (가격 통과 · OI 확인 · 실패 집계)
 // 최소 변화율 (%) — 0 = 방향만. localStorage 'oidivTh' 에 저장
-let oidivTh = {px:0, oi:0};
-try{ const v = JSON.parse(localStorage.getItem('oidivTh')||'null'); if(v && typeof v==='object') oidivTh = {px: Math.max(0, +v.px||0), oi: Math.max(0, +v.oi||0)}; }catch(e){}
+let oidivTh = {...OIDIV_DEF.th};
+{
+  // 기본값 변경 1회 이전: 'oidivDefVer' 가 '2' 가 아니면 새 기본값으로 덮어쓰고 표시를 남김
+  let migrated = false;
+  try{
+    if(localStorage.getItem('oidivDefVer') !== '2'){
+      migrated = true;
+      localStorage.setItem('oidivTh', JSON.stringify(oidivTh));
+      localStorage.removeItem('oidivTf'); localStorage.removeItem('oidivN');
+      localStorage.setItem('oidivDefVer', '2');
+    }
+  }catch(e){}
+  if(!migrated){
+    try{ const v = JSON.parse(localStorage.getItem('oidivTh')||'null'); if(v && typeof v==='object') oidivTh = {px: Math.max(0, +v.px||0), oi: Math.max(0, +v.oi||0)}; }catch(e){}
+    try{ const v = localStorage.getItem('oidivTf'); if(OIDIV_TFS.includes(v)) oidivTf = v; }catch(e){}
+    try{ const v = Math.round(+localStorage.getItem('oidivN')); if(v>=1 && v<=OIDIV_N_MAX) oidivN = v; }catch(e){}
+  }
+}
 // 결과 펀비 부호 필터 (재스캔 없이 전환, 메모리만): 'all' | 'pos' | 'neg'
 let oidivFund = 'all';
 // 🧨 점화 스캔 — 이 모드 전용 TF·범위 (메모리만)
 let ignTf = '4h', ignDays = 7;
+let ignDir = 'long';   // 🧨 방향 'long' | 'short' | 'both' (메모리만 — TF·범위와 같이 새로고침하면 롱)
+const IGN_DIR_LAB = {long:'롱', short:'숏', both:'롱·숏'};
 let lastIgnInfo = '';
 let maniaBack = 50, maniaCnt = 6, maniaLive = 'live', maniaMode = 'now';   // now=지금과매수 / count=과거N회 / both   // 광기: 룩백 구간·과매수 횟수·마지막봉
 const RS_VIEW_BARS = 50;   // 화면에 보이는 봉 수
@@ -1838,10 +1867,10 @@ function updateCondChips(){
   }else if(scanMode === 'ign'){
     const v = ignInputs(), W = IGN.WIN[ignTf];
     el.innerHTML = `
-      <div class="chip"><span class="n">①</span><b>거래량</b> · ${tfLabel(ignTf)} 완성 양봉 거래량 ≥ 직전 20봉 평균 × ${v.vol}</div>
-      <div class="chip"><span class="n">②</span><b>가격</b> · 점화 봉 포함 ${W}봉 종가 최고 ÷ 점화 봉 시가 − 1 ≥ ${v.px}%</div>
+      <div class="chip"><span class="n">①</span><b>거래량</b> · ${IGN_DIR_LAB[ignDir]} · ${tfLabel(ignTf)} 완성 ${{long:'양봉',short:'음봉',both:'양봉(롱)/음봉(숏)'}[ignDir]} 거래량 ≥ 직전 20봉 평균 × ${v.vol}</div>
+      <div class="chip"><span class="n">②</span><b>가격</b> · 점화 봉 포함 ${W}봉 ${{long:`종가 최고 ÷ 점화 봉 시가 − 1 ≥ ${v.px}%`, short:`종가 최저 ÷ 점화 봉 시가 − 1 ≤ −${v.px}%`, both:`종가 최고 ÷ 시가 − 1 ≥ ${v.px}% (롱) / 종가 최저 ÷ 시가 − 1 ≤ −${v.px}% (숏)`}[ignDir]}</div>
       <div class="chip"><span class="n">③</span><b>OI</b> · ${W}봉 OI 마감 최고 ÷ 직전 7일 OI 중앙값 ≥ ${v.oi}배 — OI 못 받으면 '확인 불가'로 포함</div>
-      <div class="chip">점화 봉 시작 = 최근 ${ignDays}일 안 · 연속 봉은 한 덩어리(첫 봉) · 여러 덩어리면 거래량 배수 큰 쪽</div>`;
+      <div class="chip">점화 봉 시작 = 최근 ${ignDays}일 안 · 연속 봉은 한 덩어리(첫 봉) · 여러 덩어리면 거래량 배수 큰 쪽${ignDir==='both'?' (롱·숏 합쳐서)':''}</div>`;
   }else if(scanMode === 'maprox'){
     const on = Object.keys(maproxTfs).filter(t=>maproxTfs[t]&&maproxTfs[t]!=='off').map(t=>t.toUpperCase());
     el.innerHTML = `
@@ -2015,16 +2044,17 @@ function oidivSpanText(tf, n){
   return `${tfLabel(tf)} × ${n}봉 ≈ ${span}`;
 }
 function oidivSyncUI(){
+  document.querySelectorAll('#oidivtfseg button').forEach(b=>b.classList.toggle('on', b.dataset.otf===oidivTf));
   document.querySelectorAll('#oidivnseg button').forEach(b=>b.classList.toggle('on', +b.dataset.on===oidivN));
   const i=document.getElementById('oidivn'); if(i && +i.value!==oidivN) i.value = oidivN;
   const sp=document.getElementById('oidivspan'); if(sp) sp.textContent = oidivSpanText(oidivTf, oidivN);
   const ru=document.getElementById('oidivrule');
   if(ru) ru.innerHTML = `조건: <b class="dn">가격 종가[마지막 완성봉] &lt; 가격 종가[${oidivN}봉 전]</b> <b>AND</b> <b class="up">OI 종가[마지막 완성봉] &gt; OI 종가[${oidivN}봉 전]</b><br>`
     + ((oidivTh.px>0 || oidivTh.oi>0) ? `최소 변화율: 가격 ≤ −${oidivTh.px}% · OI ≥ +${oidivTh.oi}%<br>` : '')
-    + `결과에 ${oidivN}봉 동안 가격 변화율 · OI 변화율(%) 표시 · 카드를 누르면 ${tfLabel(oidivTf)} 차트 + OI·CVD 패널로 열림`
+    + `결과에 ${oidivN}봉 동안 가격 변화율 · OI 변화율(%) 표시 · 카드를 누르면 ${tfLabel(oidivTf)} 차트로 열림`
     + (exchange==='binance' && oidivTf==='1d' ? `<br><span style="color:#f4c84b">바이낸스 OI 기록은 최근 30일까지만 제공 (1D는 N≤20이라 범위 안)</span>` : '');
 }
-bindSingleSeg('oidivtfseg', 'otf', v=>{ oidivTf=v; oidivSyncUI(); updateCondChips(); });
+bindSingleSeg('oidivtfseg', 'otf', v=>{ if(OIDIV_TFS.includes(v)){ oidivTf=v; try{ localStorage.setItem('oidivTf', v); }catch(e){} } oidivSyncUI(); updateCondChips(); });
 // 최소 변화율 입력 (저장)
 [['oidivthpx','px'],['oidivthoi','oi']].forEach(([id,k])=>{
   const i = document.getElementById(id); if(!i) return;
@@ -2037,16 +2067,17 @@ bindSingleSeg('oidivtfseg', 'otf', v=>{ oidivTf=v; oidivSyncUI(); updateCondChip
   });
   i.addEventListener('blur', ()=>{ i.value = oidivTh[k]; });
 });
-bindSingleSeg('oidivnseg', 'on', v=>{ oidivN=Math.max(1, Math.min(OIDIV_N_MAX, +v||3)); oidivSyncUI(); updateCondChips(); });
+bindSingleSeg('oidivnseg', 'on', v=>{ oidivN=Math.max(1, Math.min(OIDIV_N_MAX, +v||OIDIV_DEF.n)); try{ localStorage.setItem('oidivN', String(oidivN)); }catch(e){} oidivSyncUI(); updateCondChips(); });
 {
   const i=document.getElementById('oidivn');
   if(i) i.addEventListener('input', ()=>{
     const v = Math.round(+i.value);
     if(!(v>=1 && v<=OIDIV_N_MAX)) return;   // 입력 중 빈칸·범위 밖은 무시 (blur 때 정리)
-    oidivN = v; oidivSyncUI(); updateCondChips();
+    oidivN = v; try{ localStorage.setItem('oidivN', String(oidivN)); }catch(e){} oidivSyncUI(); updateCondChips();
   });
   if(i) i.addEventListener('blur', ()=>{ i.value = oidivN; });
 }
+oidivSyncUI();   // 저장된 TF·N 을 버튼·입력칸에 반영
 document.getElementById('exseg').addEventListener('click', ()=>{ if(scanMode==='oidiv') oidivSyncUI(); if(scanMode==='ign') ignSyncUI(); });
 // ── 🧨 점화 패널 ──
 function ignInputs(){
@@ -2056,13 +2087,17 @@ function ignInputs(){
 function ignSyncUI(){
   const ru = document.getElementById('ignrule'); if(!ru) return;
   const v = ignInputs(), W = IGN.WIN[ignTf];
-  ru.innerHTML = `점화 후보 봉: 최근 ${ignDays}일 안에서 시작 · 완성 양봉 · 거래량 ≥ 직전 20봉 평균 × ${v.vol}<br>`
-    + `점화 창 ${W}봉(${tfLabel(ignTf)}): 종가 최고 ÷ 점화 봉 시가 − 1 ≥ ${v.px}% · OI 마감 최고 ÷ 직전 7일 OI 중앙값 ≥ ${v.oi}배<br>`
+  const pl = document.getElementById('ignpxlab'); if(pl) pl.textContent = {long:'가격 상승률 ≥', short:'가격 하락률 ≥', both:'가격 변화율 ≥'}[ignDir];
+  const L = ignDir!=='short', S = ignDir!=='long';
+  ru.innerHTML = `방향: <b>${IGN_DIR_LAB[ignDir]}</b>${ignDir==='both'?' (한 종목에 둘 다 있으면 거래량 배수 큰 쪽)':''}<br>`
+    + `점화 후보 봉: 최근 ${ignDays}일 안에서 시작 · 완성 ${L&&S?'양봉(롱)/음봉(숏)':L?'양봉':'음봉'} · 거래량 ≥ 직전 20봉 평균 × ${v.vol}<br>`
+    + `점화 창 ${W}봉(${tfLabel(ignTf)}): ${L?`종가 최고 ÷ 점화 봉 시가 − 1 ≥ ${v.px}%`:''}${L&&S?' (롱) / ':''}${S?`종가 최저 ÷ 점화 봉 시가 − 1 ≤ −${v.px}%`:''}${L&&S?' (숏)':''} · OI 마감 최고 ÷ 직전 7일 OI 중앙값 ≥ ${v.oi}배<br>`
     + `1단계 봉으로 거래량·가격 → 2단계 후보만 OI 조회 · 결과에 점화 시각(KST) · OI 배수 · 가격% · 거래량 배수 · 점화 구간 현물 CVD · 펀비 표시`
     + (exchange==='binance' ? `<br><span style="color:#f4c84b">바이낸스 OI 기록은 최근 30일까지만 제공</span>` : `<br><span style="color:var(--dim)">바이빗 OI는 요청당 200개까지</span>`);
 }
 bindSingleSeg('igntfseg', 'itf', v=>{ ignTf = v; ignSyncUI(); updateCondChips(); });
 bindSingleSeg('igndaysseg', 'idays', v=>{ ignDays = +v || 7; ignSyncUI(); updateCondChips(); });
+bindSingleSeg('igndirseg', 'idir', v=>{ if(IGN_DIR_LAB[v]) ignDir = v; ignSyncUI(); updateCondChips(); });
 ['ignoi','ignpx','ignvol'].forEach(id=>{ const i = document.getElementById(id); if(i) i.addEventListener('input', ()=>{ ignSyncUI(); updateCondChips(); }); });
 // 가격 ↔ RS 기준 전환 시 행 라벨과 기준 입력칸을 바꿔준다
 function mcApplySrc(){
@@ -2560,7 +2595,7 @@ async function scanSymbol(s, cfg){
   // ── 🧨 점화 (1단계: 봉으로 거래량·가격만 — OI는 ignConfirm 2단계) ──
   if(cfg.scanMode === 'ign'){
     const all = cfg.includeLive ? bars : bars.concat([liveBar]);   // 진행봉 = 가격 창에 종가만 사용
-    const p = {tf: cfg.tf, rangeDays: cfg.ignDays, volMult: cfg.ignVol, pxPct: cfg.ignPx, oiMult: cfg.ignOi, now: Date.now()};
+    const p = {tf: cfg.tf, rangeDays: cfg.ignDays, volMult: cfg.ignVol, pxPct: cfg.ignPx, oiMult: cfg.ignOi, now: Date.now(), dir: cfg.ignDir || 'long'};
     const res = IGN.detect(all, null, p);
     if(!res) return null;
     return {
@@ -3541,7 +3576,8 @@ function render(){
       return d!==0 ? d : (b.vol-a.vol);
     }
     if(sortKey==='oiChg' || sortKey==='pxDrop' || sortKey==='ignT' || sortKey==='ignOi' || sortKey==='ignPx' || sortKey==='ignVol'){   // 📉·🧨 — 값 없는 종목은 맨 아래
-      const va = (a[sortKey]!=null) ? a[sortKey] : null, vb = (b[sortKey]!=null) ? b[sortKey] : null;
+      const mag = (sortKey==='ignPx') ? Math.abs : (x=>x);   // 🧨 가격% = 크기 (숏은 음수) — 롱만이면 기존과 같음
+      const va = (a[sortKey]!=null) ? mag(a[sortKey]) : null, vb = (b[sortKey]!=null) ? mag(b[sortKey]) : null;
       if(va==null || vb==null) return (va==null) - (vb==null);
       const d = (va - vb) * sortDir;
       return d!==0 ? d : (b.vol-a.vol);
@@ -3604,11 +3640,11 @@ function render(){
         + `<span class="reftag" style="color:var(--muted);background:var(--surface-2)" title="${_odT(r.oidivT0)}봉 종가 → ${_odT(r.oidivT1)}봉 종가">📉 ${tfLabel(r.oidivTf)} · ${r.oidivN}봉</span>`
       : '';
     const ignLine = (r.ign && r.ignT!=null)
-      ? `<span class="reftag" style="color:#f05a28;background:rgba(240,90,40,.15);font-weight:700" title="점화 봉 시작 시각 (KST) · ${tfLabel(r.ignTf)}${r.ignLen>1?` · 연속 ${r.ignLen}봉 덩어리의 첫 봉`:''}">🧨 ${ignKST(r.ignT)}</span>`
+      ? `<span class="reftag" style="color:#f05a28;background:rgba(240,90,40,.15);font-weight:700" title="점화 봉 시작 시각 (KST) · ${r.ignDir==='short'?'숏 (음봉)':'롱 (양봉)'} · ${tfLabel(r.ignTf)}${r.ignLen>1?` · 연속 ${r.ignLen}봉 덩어리의 첫 봉`:''}">🧨 ${r.ignDir==='short'?'▼':'▲'} ${ignKST(r.ignT)}</span>`
         + (r.ignOi!=null
             ? `<span class="reftag" style="color:var(--text);background:var(--surface-2)" title="점화 창 OI 마감 최고 ÷ 직전 7일 OI 중앙값">OI ×${r.ignOi.toFixed(1)}</span>`
             : `<span class="reftag" style="color:var(--dim);background:var(--surface-2)" title="${{fetch:'OI 조회 실패', limit:'요청 한도로 OI 미조회', short:'점화 전 OI 기록 부족'}[r.ignOiWhy]||'OI 없음'}">OI 확인 불가</span>`)
-        + `<span class="reftag" style="color:var(--text);background:var(--surface-2)" title="점화 창 종가 최고 ÷ 점화 봉 시가 − 1">가격 ${ignSgn(r.ignPx,0,'%')}</span>`
+        + `<span class="reftag" style="color:var(--text);background:var(--surface-2)" title="${r.ignDir==='short'?'점화 창 종가 최저':'점화 창 종가 최고'} ÷ 점화 봉 시가 − 1">가격 ${ignSgn(r.ignPx,0,'%')}</span>`
         + `<span class="reftag" style="color:var(--text);background:var(--surface-2)" title="점화 봉 거래량 ÷ 직전 20봉 평균">거래량 ×${r.ignVol.toFixed(1)}</span>`
         + `<span class="reftag" style="color:${r.ignCvd==null?'var(--dim)':(r.ignCvd>=0?'#46cd8a':'#e0584f')};background:var(--surface-2)" title="점화 봉~${IGN.WIN[r.ignTf]||6}봉 바이낸스 현물 CVD 변화 (달러)">점화구간 현물CVD ${ignUsd(r.ignCvd)}</span>`
       : '';
@@ -3685,7 +3721,7 @@ function render(){
       const sym = st.dataset.favtoggle, rr = rows.find(x=>x.symbol===sym);
       // 🧨 점화 결과의 ★ = 즐찾 추가 + 점화 정보 저장 (스캔 TF·거래소)
       if(rr && rr.ign && rr.ignT!=null && !favIgn[sym]){
-        setFavIgn(sym, {t: rr.ignT, tf: rr.ignTf, ex: rr.ignEx, oi0: rr.ignOi0, px0: rr.ignPx0, src:'scan'});
+        setFavIgn(sym, {t: rr.ignT, tf: rr.ignTf, ex: rr.ignEx, oi0: rr.ignOi0, px0: rr.ignPx0, src:'scan', ...(rr.ignDir==='short' ? {dir:'short'} : {})});   // dir 없음 = 롱
         if(isFav(sym)){ renderFavs(); render(); return; }   // 이미 즐찾(점화 정보 없음) → 해제하지 않고 점화 정보만 붙임
       }
       toggleFav(sym); render();
@@ -3696,11 +3732,11 @@ function render(){
   });
   el.querySelectorAll('.rescard[data-symbol]').forEach(c=>{
     c.addEventListener('click', ()=>{
-      // 📉 가격↓·OI↑ 결과 → 스캔한 TF로 열고, 하단 패널을 이번 차트 동안만 OI·CVD로 (저장 안 함)
+      // 📉 가격↓·OI↑ / 🧨 결과 → 스캔한 TF·거래소로 열기. 하단 패널은 사용자 설정 그대로 (기본 RSI·MACD)
       const rr = rows.find(x=>x.symbol===c.dataset.symbol);
       // PC 기본 4분할에는 1D가 없으므로 단일 차트로, 스캔했던 거래소로 연다 (모두 이번 차트만)
-      const o = (rr && rr.oidiv && rr.oiChg!=null) ? {tf: rr.oidivTf, pane: 'flow', view: 'single', ex: rr.oidivEx}
-              : (rr && rr.ign && rr.ignT!=null) ? {tf: rr.ignTf, pane: 'flow', view: 'single', ex: rr.ignEx} : undefined;
+      const o = (rr && rr.oidiv && rr.oiChg!=null) ? {tf: rr.oidivTf, view: 'single', ex: rr.oidivEx}
+              : (rr && rr.ign && rr.ignT!=null) ? {tf: rr.ignTf, view: 'single', ex: rr.ignEx} : undefined;
       openChart(c.dataset.symbol, viewSymbols, o);
     });
   });
@@ -3758,7 +3794,7 @@ function buildScanCfg(){
   cfg.oidivN = oidivN;
   cfg.oidivTh = {minPxDropPct: oidivTh.px, minOiRisePct: oidivTh.oi};   // 최소 변화율 (0 = 방향만 판정)
   if(scanMode==='oidiv') cfg.tf = oidivTf;
-  { const v = ignInputs(); cfg.ignDays = ignDays; cfg.ignOi = v.oi; cfg.ignPx = v.px; cfg.ignVol = v.vol; }
+  { const v = ignInputs(); cfg.ignDays = ignDays; cfg.ignOi = v.oi; cfg.ignPx = v.px; cfg.ignVol = v.vol; cfg.ignDir = ignDir; }
   if(scanMode==='ign') cfg.tf = ignTf;
   return cfg;
 }
@@ -4184,7 +4220,7 @@ function scanModeLabel(cfg){
   if(cfg.scanMode==='volx') base += ` ${cfg.volxPct}%·${tfLabel(cfg.tf)}`;
   else if(cfg.scanMode==='rsscan') base += ` ${cfg.rsBarCount}봉·${(cfg.rsTf||'1h').toUpperCase()} ≥${cfg.rsScanPct}%p`;
   else if(cfg.scanMode==='oidiv'){ const th = cfg.oidivTh||{}; base += ` ${cfg.oidivN||3}봉·${tfLabel(cfg.tf)}` + ((th.minPxDropPct>0||th.minOiRisePct>0) ? ` −${th.minPxDropPct||0}%/+${th.minOiRisePct||0}%` : ''); }
-  else if(cfg.scanMode==='ign') base += ` ${tfLabel(cfg.tf)}·${cfg.ignDays||7}일 OI×${cfg.ignOi} +${cfg.ignPx}% V×${cfg.ignVol}`;
+  else if(cfg.scanMode==='ign'){ const d = cfg.ignDir || 'long'; base += ` ${IGN_DIR_LAB[d]} ${tfLabel(cfg.tf)}·${cfg.ignDays||7}일 OI×${cfg.ignOi} ${{long:'+',short:'−',both:'±'}[d]}${cfg.ignPx}% V×${cfg.ignVol}`; }
   else if(cfg.scanMode==='seq'){ const dl={both:'양/음',bull3:'🟢🟢🟢🔴',bear3:'🔴🔴🔴🟢'}[cfg.seqDir]; base += ` ${dl}·${(cfg.seqTf||'15m').toUpperCase()}`; }
   else if(cfg.scanMode==='maprox'){
     const on = Object.keys(cfg.maproxTfs||{}).filter(t=>cfg.maproxTfs[t]&&cfg.maproxTfs[t]!=='off').map(t=>t.toUpperCase());
@@ -4277,7 +4313,7 @@ async function drillScanMain(){
     nr.maprox = pr.maprox || nr.maprox;
     // 다른 모드 태그(정배/변동성 등)도 이전 값 유지
     ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','maniaWick','pxRetHits','maproxBullHits','maproxPxHits','maproxRsiHits','macond','mcHits','mcBarN','mcSrc','mcRef','oidiv','oidivTf','oidivN','oidivT0','oidivT1','oidivEx','pxFrom','pxTo','pxChg','pxDrop','oiFrom','oiTo','oiChg',
-     'ign','ignTf','ignT','ignOi','ignPx','ignVol','ignOi0','ignPx0','ignLen','ignOiWhy','ignEx','ignCvd'].forEach(k=>{
+     'ign','ignTf','ignT','ignOi','ignPx','ignVol','ignOi0','ignPx0','ignLen','ignOiWhy','ignEx','ignCvd','ignDir'].forEach(k=>{
       if(nr[k]===undefined && pr[k]!==undefined) nr[k]=pr[k];
     });
   });
@@ -4598,7 +4634,7 @@ let favs = [];          // 심볼 배열
 // ── 즐겨찾기 점화 추적 — 점화 메타데이터만 저장 (고점·현재값 같은 수치는 저장 안 함, 리프레시 때 계산) ──
 const FAV_IGN_KEY = 'rsiScannerFavIgn';
 const IGN_DEF = {oiMult:1.5, pxPct:30, volMult:5};   // 자동 탐지 = 점화 스캔 기본값
-let favIgn = {};                 // {SYMBOL: {t, tf, ex, oi0, px0, src}}
+let favIgn = {};                 // {SYMBOL: {t, tf, ex, oi0, px0, src, dir?}} — dir 'short' 만 저장, 없으면 롱
 let favIgnStat = {};             // {SYMBOL: IGN.track 결과 + fund} — 메모리만
 const favIgnBusy = new Set();    // 자동 탐지 중
 const favIgnMiss = new Set();    // 자동 탐지 실패 (이번 세션)
@@ -4704,13 +4740,15 @@ function favIgnLine(sym){
     return '';
   }
   const SRC = {auto:'자동 탐지', manual:'차트 지정', scan:'점화 스캔'}[g.src] || g.src;
-  const head = `<span class="ig" title="점화 봉 ${ignKST(g.t)} KST · ${escH(tfLabel(g.tf))} · ${escH((EX[g.ex]||{}).name||g.ex)} · ${escH(SRC)}">🧨 ${ignKST(g.t)} · ${((Date.now()-g.t)/86400e3).toFixed(1)}일</span>`;
+  const sh = g.dir === 'short';
+  const head = `<span class="ig" title="점화 봉 ${ignKST(g.t)} KST · ${sh?'숏 · ':''}${escH(tfLabel(g.tf))} · ${escH((EX[g.ex]||{}).name||g.ex)} · ${escH(SRC)}">🧨 ${sh?'▼ ':''}${ignKST(g.t)} · ${((Date.now()-g.t)/86400e3).toFixed(1)}일</span>`;
   const st = favIgnStat[sym];
   if(!st) return `<div class="ignline">${head}<span class="ig pend">↻ 새로고침하면 수치 표시</span></div>`;
   const v = (x, txt)=> `<b class="${ignCol(x)}">${txt}</b>`;
   const fund = st.fund==null ? '—' : `${st.fund<0?'−':''}${Math.abs(st.fund).toFixed(3)}%`;
   return `<div class="ignline">${head}`
-    + `<span class="ig">고점대비 ${v(st.pxFromHigh, ignSgn(st.pxFromHigh,1,'%'))}</span>`
+    + (sh ? `<span class="ig pxlow" title="현재가 ÷ 점화 봉부터의 최저 저가 − 1">저점대비 ${v(st.pxFromLow, ignSgn(st.pxFromLow,1,'%'))}</span>`
+          : `<span class="ig">고점대비 ${v(st.pxFromHigh, ignSgn(st.pxFromHigh,1,'%'))}</span>`)
     + `<span class="ig">OI 고점대비 ${v(st.oiFromPeak, ignSgn(st.oiFromPeak,1,'%'))} · 24h ${v(st.oi24, ignSgn(st.oi24,1,'%'))}</span>`
     + `<span class="ig oipre" title="${escH(oiPreTip(st))}">OI 점화전대비 ${v(st.oiFromPre, ignSgn(st.oiFromPre,1,'%'))}</span>`
     + `<span class="ig">펀비 <b>${fund}</b></span>`
@@ -4913,7 +4951,10 @@ function renderFavs(){
   if(favIgnOnly) list = list.filter(s=>favIgn[s]);
   if(favIgnSort!=='def'){   // 점화 수치 정렬 — 값 없는 종목은 맨 뒤 (나머지는 기본 순서 유지)
     const [k, dir] = {fund:['fund',-1], oipk:['oiFromPeak',1], oipre:['oiFromPre',1], pxpk:['pxFromHigh',1]}[favIgnSort];
-    const val = s=>{ const st = favIgnStat[s], x = st ? st[k] : null; return (x==null || !isFinite(x)) ? null : x; };
+    // 'pxpk' 숏 점화 = 저점대비를 부호 뒤집어 씀 → 롱·숏 모두 '극값에서 많이 되돌린 순' (롱만이면 기존과 같음)
+    const val = s=>{ const st = favIgnStat[s];
+      const x = !st ? null : (k==='pxFromHigh' && favIgn[s] && favIgn[s].dir==='short') ? (st.pxFromLow==null ? null : -st.pxFromLow) : st[k];
+      return (x==null || !isFinite(x)) ? null : x; };
     list.sort((a,b)=>{ const va=val(a), vb=val(b); if(va==null || vb==null) return (va==null)-(vb==null); return (va-vb)*dir; });
   }
   const navList = (favIgnSort==='def' && !favIgnOnly) ? favs.slice() : list.slice();
@@ -5289,7 +5330,7 @@ if(IS_MOBILE){ document.body.classList.add('mobile'); chartView = 'single'; sync
     let tf = '';
     const tff = document.getElementById('tffield');
     if(tff && tff.style.display !== 'none') tf = on('#tfseg button.on');
-    else if(scanMode === 'ign' && typeof ignTf !== 'undefined') tf = tfLabel(ignTf);
+    else if(scanMode === 'ign' && typeof ignTf !== 'undefined') tf = tfLabel(ignTf) + ' ' + IGN_DIR_LAB[ignDir];
     else if(scanMode === 'oidiv' && typeof oidivTf !== 'undefined') tf = tfLabel(oidivTf);
     return ['⚙ 설정', mode, tf, on('#exseg button.on'), on('#minvolseg button.on')].filter(Boolean).join(' · ');
   };
@@ -5364,6 +5405,13 @@ const CHART_CACHE_MAX = 40;
 // 데이터는 저장하지 않는다. 거래소 API에서 그때그때 받아 메모리 캐시(짧은 TTL)에만 둔다.
 // 화면 모드(토글 상태)만 기억한다.
 let paneMode = 'rsi';
+try{
+  // 기본 패널 1회 이전: 예전에 저장된 'flow' 를 한 번만 'rsi' 로 되돌림. 이후 사용자가 고른 값은 그대로 기억
+  if(localStorage.getItem('scalpPaneDefVer') !== '1'){
+    if(localStorage.getItem('scalpPaneMode')==='flow') localStorage.setItem('scalpPaneMode', 'rsi');
+    localStorage.setItem('scalpPaneDefVer', '1');
+  }
+}catch(e){}
 try{ if(localStorage.getItem('scalpPaneMode')==='flow') paneMode='flow'; }catch(e){}
 // OI·CVD 패널의 CVD 출처: 'fut' = 선물(코인 수량) / 'spot' = 바이낸스 현물(달러)
 let cvdSrc = 'fut';
@@ -5888,10 +5936,21 @@ const IGN = (()=>{
   }
   // bars: [{t,o,h,l,c,v}] 오름차순 (마지막 봉이 진행 중이어도 됨)
   // oiSnaps: [{ts,oi}] | null  (null 또는 해당 구간 데이터 부족 → oiMult=null, OI 조건 보류)
-  // p: {tf, rangeDays, volMult, pxPct, oiMult, now, W?}
-  // 반환: {t, i, volMult, pxPct, oiMult, oi0, px0, clusterLen, clusterVolMax} | null
+  // p: {tf, rangeDays, volMult, pxPct, oiMult, now, W?, dir?}
+  //  dir: 없음·'long' = 양봉 · 창 종가 최고 ÷ 시가 − 1 ≥ px%
+  //       'short' = 음봉 · 창 종가 최저 ÷ 시가 − 1 ≤ −px% (pxPct 는 음수로 반환). 거래량·OI(고점 ≥ 중앙값×배수)·덩어리 규칙은 같음
+  //       'both'  = 둘 다 판정 → 둘 다 있으면 덩어리 거래량 배수(clusterVolMax) 큰 쪽, 같으면 더 최근 점화
+  //  p.dir 를 주면 반환에 dir 포함 (안 주면 예전과 완전히 같은 객체)
+  // 반환: {t, i, volMult, pxPct, oiMult, oi0, px0, clusterLen, clusterVolMax[, dir]} | null
   function detect(bars, oiSnaps, p){
     p = p || {};
+    if(p.dir === 'both'){
+      const a = detect(bars, oiSnaps, {...p, dir:'long'}), b = detect(bars, oiSnaps, {...p, dir:'short'});
+      if(!a || !b) return a || b;
+      if(b.clusterVolMax !== a.clusterVolMax) return b.clusterVolMax > a.clusterVolMax ? b : a;
+      return b.t > a.t ? b : a;
+    }
+    const short = (p.dir === 'short');
     if(!Array.isArray(bars) || bars.length < 21) return null;
     const tf = p.tf || '4h', tfMs = p.tfMs || TFMS[tf] || 14400e3;
     const W = Math.max(1, p.W || WIN[tf] || 6);
@@ -5903,15 +5962,23 @@ const IGN = (()=>{
     for(let i=20; i<bars.length; i++){
       const b = bars[i];
       if(!b || !(b.t + tfMs <= now)) continue;                 // 완성봉만
-      if(!(b.o > 0) || !(b.c > b.o)) continue;                 // 양봉
+      if(!(b.o > 0) || !(short ? b.c < b.o : b.c > b.o)) continue;   // 롱 = 양봉 · 숏 = 음봉
       let s = 0, ok = true;
       for(let k=i-20; k<i; k++){ const v = bars[k] && bars[k].v; if(!finite(v) || v < 0){ ok=false; break; } s += v; }
       const sma = s / 20;
       if(!ok || !(sma > 0) || !finite(b.v) || !(b.v >= vTh * sma)) continue;
-      let mx = -Infinity;
-      for(let k=i; k<Math.min(bars.length, i+W); k++) if(finite(bars[k].c) && bars[k].c > mx) mx = bars[k].c;   // 진행봉은 종가만
-      const pxPct = (mx / b.o - 1) * 100;
-      if(!(pxPct >= pxTh)) continue;
+      let pxPct;
+      if(!short){
+        let mx = -Infinity;
+        for(let k=i; k<Math.min(bars.length, i+W); k++) if(finite(bars[k].c) && bars[k].c > mx) mx = bars[k].c;   // 진행봉은 종가만
+        pxPct = (mx / b.o - 1) * 100;
+        if(!(pxPct >= pxTh)) continue;
+      }else{
+        let mn = Infinity;
+        for(let k=i; k<Math.min(bars.length, i+W); k++) if(finite(bars[k].c) && bars[k].c < mn) mn = bars[k].c;   // 진행봉은 종가만
+        pxPct = (mn / b.o - 1) * 100;
+        if(!(pxPct <= -pxTh)) continue;
+      }
       const oi = snaps ? oiAt(snaps, b.t, tfMs, W, now) : {mult:null, oi0:null};
       if(oi.mult != null && !(oi.mult >= oiTh)) continue;      // OI 있으면 판정, 없으면 보류
       cand[i] = {t: b.t, i, volMult: b.v / sma, pxPct, oiMult: oi.mult, oi0: oi.oi0, px0: b.o};
@@ -5927,7 +5994,9 @@ const IGN = (()=>{
     }
     close();
     if(!best) return null;
-    return {...best.first, clusterLen: best.len, clusterVolMax: best.vmax};
+    const r = {...best.first, clusterLen: best.len, clusterVolMax: best.vmax};
+    if(p.dir) r.dir = short ? 'short' : 'long';
+    return r;
   }
   // 즐겨찾기 점화 추적 수치 (순수). 값 없으면 null → 화면 "—"
   //  bars: 점화 TF 봉 · oiSnaps: [{ts,oi}] · oiPerMs: 스냅샷 주기 · spot: Map(봉시작→델타$)|null
@@ -5942,7 +6011,16 @@ const IGN = (()=>{
   function track(bars, oiSnaps, oiPerMs, spot, ign, now){
     const out = {elapsedDays: (now - ign.t) / DAY, pxFromHigh:null, oiFromPeak:null, oi24:null, oiFromPre:null, oi0Src:null, cvdSince:null, cvdFromPeak:null};
     const tfMs = TFMS[ign.tf] || 14400e3;
-    if(Array.isArray(bars) && bars.length && bars[0].t <= ign.t){
+    if(ign.dir === 'short'){
+      // 숏 점화: 저점대비 = 현재가 ÷ 점화 봉부터의 최저 저가 − 1 (롱 고점대비 = 최고 고가의 거울). pxFromHigh 는 null
+      out.pxFromLow = null;
+      if(Array.isArray(bars) && bars.length && bars[0].t <= ign.t){
+        let lo = Infinity;
+        for(const b of bars) if(b.t >= ign.t && finite(b.l) && b.l > 0 && b.l < lo) lo = b.l;
+        const last = bars[bars.length-1].c;
+        if(isFinite(lo) && lo > 0 && finite(last)) out.pxFromLow = (last / lo - 1) * 100;
+      }
+    }else if(Array.isArray(bars) && bars.length && bars[0].t <= ign.t){
       let hi = -Infinity;
       for(const b of bars) if(b.t >= ign.t && finite(b.h) && b.h > hi) hi = b.h;
       const last = bars[bars.length-1].c;
@@ -6059,11 +6137,11 @@ async function ignConfirm(rows, cfg, onProgress){
   const isBn = (cfg.exchange === 'binance');
   const BN_BUDGET = 900;
   const limit = Math.min(isBn ? 500 : 200, Math.ceil(((cfg.ignDays||7) + 7) * 86400e3 / tfMs) + W + 4);
-  const p = {tf: cfg.tf, rangeDays: cfg.ignDays, volMult: cfg.ignVol, pxPct: cfg.ignPx, oiMult: cfg.ignOi};
+  const p = {tf: cfg.tf, rangeDays: cfg.ignDays, volMult: cfg.ignVol, pxPct: cfg.ignPx, oiMult: cfg.ignOi, dir: cfg.ignDir || 'long'};
   let stop = false, streak = 0;
   const finish = (r, res, why)=>{
     r.ignT = res.t; r.ignOi = res.oiMult; r.ignPx = res.pxPct; r.ignVol = res.volMult;
-    r.ignOi0 = res.oi0; r.ignPx0 = res.px0; r.ignLen = res.clusterLen;
+    r.ignOi0 = res.oi0; r.ignPx0 = res.px0; r.ignLen = res.clusterLen; r.ignDir = res.dir || 'long';
     r.ignOiWhy = (res.oiMult==null) ? (why || 'short') : null;   // 'fetch' 실패 · 'limit' 요청한도 · 'short' 기록 부족
     r.ignEx = cfg.exchange;
     delete r.ignPending; delete r.ignBars; delete r.ignRes;
@@ -6112,7 +6190,8 @@ function ignStatsText(st){
   return t;
 }
 function ignInfoHtml(cfg, st, total){
-  return `🧨 <b>점화</b> · ${tfLabel(cfg.tf)} · 최근 ${cfg.ignDays}일 · 거래량 ×${cfg.ignVol}↑ · 가격 +${cfg.ignPx}%↑ · OI ×${cfg.ignOi}↑ · 점화 창 ${IGN.WIN[cfg.tf]}봉`
+  const d = cfg.ignDir || 'long';
+  return `🧨 <b>점화</b> · ${IGN_DIR_LAB[d]} · ${tfLabel(cfg.tf)} · 최근 ${cfg.ignDays}일 · 거래량 ×${cfg.ignVol}↑ · 가격 ${{long:`+${cfg.ignPx}%↑`, short:`−${cfg.ignPx}%↓`, both:`+${cfg.ignPx}%↑ / −${cfg.ignPx}%↓`}[d]} · OI ×${cfg.ignOi}↑ · 점화 창 ${IGN.WIN[cfg.tf]}봉`
     + `<br><span style="color:var(--muted)">${total!=null?`대상 ${total} · `:''}${ignStatsText(st)}</span>`;
 }
 
@@ -6880,7 +6959,9 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   const ignMarks = [];
   { const g = (typeof favIgn!=='undefined') && favIgn[symbol];
     const tfMs = FLOW.TFMS[tf];
-    if(g && tfMs){ for(let k=bars.length-1; k>=0; k--){ if(bars[k].t <= g.t){ if(g.t < bars[k].t + tfMs) ignMarks.push({time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:'🧨 점화'}); break; } } } }
+    if(g && tfMs){ for(let k=bars.length-1; k>=0; k--){ if(bars[k].t <= g.t){ if(g.t < bars[k].t + tfMs) ignMarks.push(g.dir==='short'
+          ? {time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:'🧨▼ 점화'}    // 숏: 큰 음봉 위 (하락 시작점)
+          : {time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:'🧨 점화'}); break; } } } }
   pcs.setMarkers([...pxScan, ...pxScanRs, ...posMarks, ...ignMarks].sort((a,b)=>a.time-b.time));
   // 📍 매매표시: MACD 칸에도 같은 봉에 글자 없는 마커 (낮은 칸이라 모두 막대 위쪽) — GC/DC 와 합쳐 한 번에
   if(mc && posMarks.length){
