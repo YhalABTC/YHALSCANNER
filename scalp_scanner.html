@@ -90,6 +90,7 @@
   .favignbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
   .favignbar .lab{font-family:var(--mono);font-size:11px;color:var(--dim)}
   .favignbar .seg button{font-size:11.5px;padding:4px 9px}
+  .favignbar .seg{flex-wrap:wrap;max-width:100%}   /* 버튼 5개 — 좁은 화면에선 칸 안에서 줄바꿈 (가로 스크롤로 숨지 않게) */
   #favignonly.on{background:rgba(240,136,60,.16);border-color:#f0883c;color:#f0883c}
   #chartIgn.on,.ci-ign.on{background:rgba(240,136,60,.18);border-color:#f0883c;color:#f0883c}
   .ignhint{display:none;font-family:var(--mono);font-size:11.5px;color:var(--text);text-align:center;
@@ -1511,6 +1512,7 @@
       <button data-fs="def" title="기존 정렬 (MTF 태그 점수)">기본</button>
       <button data-fs="fund" title="현재 펀비 높은 순">펀비</button>
       <button data-fs="oipk" title="OI 고점대비 % 낮은 순">OI 고점대비</button>
+      <button data-fs="oipre" title="OI 점화전대비 % 낮은 순 (현재 OI ÷ 점화 직전 봉 마감 OI − 1)">OI 점화전대비</button>
       <button data-fs="pxpk" title="가격 고점대비 % 낮은 순">고점대비 가격</button>
     </div>
     <button class="favrefresh" id="favignonly" title="점화 정보가 있는 종목만 보기">🧨 점화 추적만</button>
@@ -4601,7 +4603,7 @@ let favIgnStat = {};             // {SYMBOL: IGN.track 결과 + fund} — 메모
 const favIgnBusy = new Set();    // 자동 탐지 중
 const favIgnMiss = new Set();    // 자동 탐지 실패 (이번 세션)
 let favIgnSort = 'def', favIgnOnly = false;
-try{ const v = localStorage.getItem('favIgnSort'); if(['def','fund','oipk','pxpk'].includes(v)) favIgnSort = v; }catch(e){}
+try{ const v = localStorage.getItem('favIgnSort'); if(['def','fund','oipk','pxpk','oipre'].includes(v)) favIgnSort = v; }catch(e){}
 try{ favIgnOnly = localStorage.getItem('favIgnOnly')==='1'; }catch(e){}
 function loadFavIgn(){
   try{ const v = JSON.parse(localStorage.getItem(FAV_IGN_KEY)||'{}'); favIgn = (v && typeof v==='object' && !Array.isArray(v)) ? v : {}; }
@@ -4641,6 +4643,24 @@ function ignOiPlan(ex, age){
   }
   return {period: FLOW.periodOf('1d'), limit: cap};   // 점화 시점까지 못 닿음 → OI 고점대비 '—', 24h만
 }
+// 점화 직전 봉 마감 OI(oi0) 가 비어 있으면 채운다 (차트 지정 직후 · ↻ 때마다 재시도). 같은 레코드에 값만 채움 — 스키마 그대로.
+//  1) 이미 받은 OI 기록(snaps)이 TF 주기 이하로 촘촘하고 (t − TF, t] 점이 있으면 그 값 2) 없으면 그 창만 따로 요청
+//  반환: 'ok' | 'old'(바이낸스 30일 밖) | 'busy'(바이낸스 호출 한도 근접) | 'none'(기록 없음) | 'fail'(요청 실패)
+async function ignFillOi0(sym, g, snaps, perMs){
+  if(!g || (g.oi0!=null && isFinite(g.oi0) && g.oi0 > 0)) return 'ok';
+  const tfMs = FLOW.TFMS[g.tf] || 14400e3;
+  // 받은 기록의 주기가 TF 의 OI 주기보다 굵으면(예: 15m 점화에 1h 기록) 직전 값이 최대 한 주기 앞이라 쓰지 않고 정밀 요청
+  const fine = perMs && perMs <= FLOW.oiPeriodFor(tfMs).ms;
+  let v = (fine && Array.isArray(snaps) && snaps.length && snaps[0].ts <= g.t) ? IGN.preOi(snaps, g.t, tfMs, perMs) : null, why = 'none';
+  if(v == null){
+    if(g.ex==='binance' && FLOW.bnDataUsed() >= 900) return 'busy';
+    try{ const r = await FLOW.fetchOIAt(g.ex, sym, g.t, tfMs); if(r.old) return 'old'; const x = r.snaps[r.snaps.length-1]; if(x) v = x.oi; }
+    catch(e){ return 'fail'; }
+  }
+  if(v == null || !(v > 0)) return why;
+  if(favIgn[sym] === g){ g.oi0 = v; saveFavIgn(); }
+  return 'ok';
+}
 // 점화 봉 ~ 현재 데이터로 수치 계산 (리프레시마다)
 async function refreshFavIgn(){
   const syms = favs.filter(s=>favIgn[s] && EX[favIgn[s].ex]);
@@ -4650,21 +4670,31 @@ async function refreshFavIgn(){
   await pool(syms, 4, async sym=>{
     const g = favIgn[sym]; if(!g) return null;
     const now = Date.now(), tfMs = FLOW.TFMS[g.tf] || 14400e3;
-    let bars = null, snaps = null, perMs = null, spot = null;
+    let bars = null, snaps = null, perMs = null, spot = null, oiFail = false;
     try{ bars = await EX[g.ex].klines(sym, g.tf, Math.min(1000, Math.ceil((now - g.t)/tfMs) + 3)); }catch(e){}
     try{
       const plan = ignOiPlan(g.ex, now - g.t);
       if(!(g.ex==='binance' && FLOW.bnDataUsed() >= 900)){      // /futures/data 예산 (5분 1000회) 통과
         snaps = (await FLOW.fetchOIRecent(g.ex, sym, plan.period, plan.limit)).snaps; perMs = plan.period.ms;
-      }
-    }catch(e){}
+      } else oiFail = true;
+    }catch(e){ oiFail = true; }
     try{ const r = await FLOW.fetchSpotDelta(sym, g.tf, g.t); if(r.src) spot = r.delta; }catch(e){}
+    let fill = 'ok'; try{ fill = await ignFillOi0(sym, g, snaps, perMs); }catch(e){ fill = 'fail'; }   // 비어 있던 oi0 (차트 지정 등) 채우기
     const st = IGN.track(bars, snaps, perMs, spot, g, Date.now());
     const f = fund[g.ex] && fund[g.ex][sym];
     st.fund = (f!=null && isFinite(f)) ? f : null;
+    // OI 점화전대비 '—' 사유 (툴팁용)
+    if(st.oiFromPre == null) st.oiPreWhy = oiFail ? 'fail' : (g.ex==='binance' && now - g.t > 30*86400e3) ? 'old' : (fill==='fail' || fill==='busy') ? 'fail' : 'none';
     if(favIgn[sym] === g) favIgnStat[sym] = st;
     return null;
   }, ()=>{});
+}
+// OI 점화전대비 칸 툴팁: 정의 + 값이 없으면 그 사유
+function oiPreTip(st){
+  const def = '현재 OI ÷ 점화 직전 봉 마감 OI − 1 (점화 스캔의 7일 중앙값 기준과 다름)';
+  if(st.oiFromPre != null) return def + (st.oi0Src==='snap' ? ' · 직전 OI는 OI 기록에서 찾음' : '');
+  const why = {fail:'OI 불러오기 실패 (호출 한도·네트워크) — ↻ 로 다시 시도', old:'바이낸스 OI는 최근 30일만 제공 — 점화가 그보다 오래됨', none:'점화 직전 OI 기록 없음'}[st.oiPreWhy] || '점화 직전 OI 기록 없음';
+  return '— ' + why + ' · ' + def;
 }
 function favIgnLine(sym){
   const g = favIgn[sym];
@@ -4682,6 +4712,7 @@ function favIgnLine(sym){
   return `<div class="ignline">${head}`
     + `<span class="ig">고점대비 ${v(st.pxFromHigh, ignSgn(st.pxFromHigh,1,'%'))}</span>`
     + `<span class="ig">OI 고점대비 ${v(st.oiFromPeak, ignSgn(st.oiFromPeak,1,'%'))} · 24h ${v(st.oi24, ignSgn(st.oi24,1,'%'))}</span>`
+    + `<span class="ig oipre" title="${escH(oiPreTip(st))}">OI 점화전대비 ${v(st.oiFromPre, ignSgn(st.oiFromPre,1,'%'))}</span>`
     + `<span class="ig">펀비 <b>${fund}</b></span>`
     + `<span class="ig">현물CVD 점화전대비 ${v(st.cvdSince, ignUsd(st.cvdSince))} · 고점대비 ${v(st.cvdFromPeak, ignUsd(st.cvdFromPeak))}</span>`
     + `</div>`;
@@ -4881,7 +4912,7 @@ function renderFavs(){
   });
   if(favIgnOnly) list = list.filter(s=>favIgn[s]);
   if(favIgnSort!=='def'){   // 점화 수치 정렬 — 값 없는 종목은 맨 뒤 (나머지는 기본 순서 유지)
-    const [k, dir] = {fund:['fund',-1], oipk:['oiFromPeak',1], pxpk:['pxFromHigh',1]}[favIgnSort];
+    const [k, dir] = {fund:['fund',-1], oipk:['oiFromPeak',1], oipre:['oiFromPre',1], pxpk:['pxFromHigh',1]}[favIgnSort];
     const val = s=>{ const st = favIgnStat[s], x = st ? st[k] : null; return (x==null || !isFinite(x)) ? null : x; };
     list.sort((a,b)=>{ const va=val(a), vb=val(b); if(va==null || vb==null) return (va==null)-(vb==null); return (va-vb)*dir; });
   }
@@ -5591,6 +5622,34 @@ const FLOW = (()=>{
     return val;
   }
 
+  // 시각 t 직전 창 (t − win, t] 의 OI 스냅샷만 1회 요청 (startTime/endTime) — 경과 시간과 무관하게 점화 직전 OI(oi0)를 찾는 용도
+  //  period: 점화 TF 이하에서 가장 굵은 OI 주기 (1m·3m → 5m, 1w·1M → 1d). 바이낸스는 최근 30일만 제공 → 그보다 오래면 {snaps:[], old:true}
+  function oiPeriodFor(tfMs){ let p = OI_PERIODS[0]; for(const x of OI_PERIODS) if(x.ms <= tfMs) p = x; return p; }
+  async function fetchOIAt(ex, symbol, t, tfMs){
+    const period = oiPeriodFor(tfMs), win = Math.max(tfMs, period.ms);
+    const s = Math.floor(t - win + 1), e = Math.floor(t);
+    let out = [];
+    if(ex==='binance'){
+      if(t < Date.now() - 30*86400e3 + period.ms) return {snaps:[], old:true, period};
+      bnDataHits.push(Date.now());
+      const r = await fetch(`https://fapi.binance.com/futures/data/openInterestHist?symbol=${symbol}&period=${period.bn}&startTime=${s}&endTime=${e}&limit=30`);
+      if(r.status===429 || r.status===418) throw rateErr('binance rate limit');
+      const j = await r.json();
+      if(!Array.isArray(j)) throw new Error((j&&j.msg)||'binance OI error');
+      j.forEach(x=>out.push({ts:+x.timestamp, oi:+x.sumOpenInterest}));
+    }else{
+      const r = await fetch(`https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${symbol}&intervalTime=${period.bb}&startTime=${s}&endTime=${e}&limit=50`);
+      if(r.status===429 || r.status===403) throw rateErr('bybit rate limit');
+      const j = await r.json();
+      if(j && j.retCode===10006) throw rateErr('bybit rate limit');
+      const list = j && j.result && j.result.list;
+      if(!Array.isArray(list)) throw new Error((j&&j.retMsg)||'bybit OI error');
+      list.forEach(x=>out.push({ts:+x.timestamp, oi:+x.openInterest}));
+    }
+    out = out.filter(x=>isFinite(x.oi) && x.oi>0 && x.ts > t - win && x.ts <= t).sort((a,b)=>a.ts-b.ts);
+    return {snaps:out, old:false, period};
+  }
+
   // ── 펀딩비 (차트 flow 모드 하단 칸) ──
   // 저장 없음: 기록·현재값·정산 주기를 그때그때 받아 메모리에만 둔다.
   // 바이낸스 fundingRate·fundingInfo 는 IP당 5분 500회 공유 한도 → 최근 5분 호출 수를 세서 450회에서 스스로 멈춤.
@@ -5753,7 +5812,7 @@ const FLOW = (()=>{
     if(n && cur!=null && isFinite(cur)) out[n-1] = cur;
     return out;
   }
-  return {TFMS, pickPeriod, fetchOI, oiCandles, fetchDelta, fetchSpotDelta, spotAlias, deltaFromBars, cvdSeries, periodOf, fetchOIRecent, bnDataUsed, bnDataWaitMs,
+  return {TFMS, pickPeriod, fetchOI, oiCandles, fetchDelta, fetchSpotDelta, spotAlias, deltaFromBars, cvdSeries, periodOf, fetchOIRecent, fetchOIAt, oiPeriodFor, bnDataUsed, bnDataWaitMs,
     fetchFunding, fundingSteps, bnFundUsed};
 })();
 
@@ -5872,8 +5931,16 @@ const IGN = (()=>{
   }
   // 즐겨찾기 점화 추적 수치 (순수). 값 없으면 null → 화면 "—"
   //  bars: 점화 TF 봉 · oiSnaps: [{ts,oi}] · oiPerMs: 스냅샷 주기 · spot: Map(봉시작→델타$)|null
+  //  oiFromPre = (현재 OI ÷ oi0 − 1)×100 — oi0 = 점화 직전 봉 마감 OI. ign.oi0 가 있으면 그것, 없으면 스냅샷 중 ts ∈ (t − max(TF, 주기), t] 의 마지막 값
+  //             (스냅샷 주기가 TF보다 굵으면 TF 창 안에 점이 없을 수 있어 한 주기까지 넓힘). 고점대비와 같은 조건(점화 시점까지 기록이 닿음)에서만 계산
+  //  oi0Src: 'rec'(저장값) | 'snap'(스냅샷에서) | null
+  function preOi(snaps, t, tfMs, oiPerMs){
+    const win = Math.max(tfMs, oiPerMs || 0); let v = null;
+    for(const x of snaps){ if(x.ts > t - win && x.ts <= t) v = x.oi; else if(x.ts > t) break; }
+    return v;
+  }
   function track(bars, oiSnaps, oiPerMs, spot, ign, now){
-    const out = {elapsedDays: (now - ign.t) / DAY, pxFromHigh:null, oiFromPeak:null, oi24:null, cvdSince:null, cvdFromPeak:null};
+    const out = {elapsedDays: (now - ign.t) / DAY, pxFromHigh:null, oiFromPeak:null, oi24:null, oiFromPre:null, oi0Src:null, cvdSince:null, cvdFromPeak:null};
     const tfMs = TFMS[ign.tf] || 14400e3;
     if(Array.isArray(bars) && bars.length && bars[0].t <= ign.t){
       let hi = -Infinity;
@@ -5887,6 +5954,9 @@ const IGN = (()=>{
       if(s[0].ts <= ign.t + (oiPerMs || tfMs)){              // 점화 시점부터 기록이 있어야 고점 판단
         let pk = null; for(const x of s) if(x.ts > ign.t) pk = (pk==null) ? x.oi : Math.max(pk, x.oi);
         if(pk > 0) out.oiFromPeak = (cur.oi / pk - 1) * 100;
+        let o0 = (finite(ign.oi0) && ign.oi0 > 0) ? ign.oi0 : null, src = o0 != null ? 'rec' : null;
+        if(o0 == null){ o0 = preOi(s, ign.t, tfMs, oiPerMs); if(o0 != null) src = 'snap'; }
+        if(o0 > 0 && cur.ts > ign.t){ out.oiFromPre = (cur.oi / o0 - 1) * 100; out.oi0Src = src; }
       }
       let ago = null;
       for(const x of s){ if(x.ts <= cur.ts - DAY) ago = x; else break; }
@@ -5902,7 +5972,7 @@ const IGN = (()=>{
     }
     return out;
   }
-  return {WIN, TFMS, detect, track, median, oiAt};
+  return {WIN, TFMS, detect, track, median, oiAt, preOi};
 })();
 // 점화 표기 공통 — KST 시각 · 부호(− = U+2212) · 달러 축약
 function ignKST(ms){ const d = new Date(ms + 9*3600e3); const p = n=>String(n).padStart(2,'0'); return `${d.getUTCMonth()+1}/${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; }
@@ -7513,7 +7583,7 @@ document.addEventListener('click', e=>{
   e.stopPropagation();
   setIgnPick(!ignPick);
 });
-// 클릭한 봉을 점화로 저장 (src='manual') — 즐찾이 아니면 즐찾에도 추가. oi0는 비동기로 채움(실패 무시)
+// 클릭한 봉을 점화로 저장 (src='manual') — 즐찾이 아니면 즐찾에도 추가. oi0는 비동기로 채움(실패 시 ↻ 때 재시도)
 async function ignSetManual(sym, tf, t, px0){
   const ex = exchange;
   const rec = {t, tf, ex, oi0:null, px0: (px0!=null && isFinite(px0)) ? px0 : null, src:'manual'};
@@ -7522,15 +7592,9 @@ async function ignSetManual(sym, tf, t, px0){
   updateChartFavBtn();
   setIgnPick(false);
   renderChartView();
-  try{
-    const per = FLOW.periodOf(tf), tfMs = FLOW.TFMS[tf];
-    const n = Math.ceil((Date.now() - t)/per.ms) + 3;
-    if(n <= (ex==='binance' ? 500 : 200) && !(ex==='binance' && FLOW.bnDataUsed() >= 900)){
-      const {snaps} = await FLOW.fetchOIRecent(ex, sym, per, n);
-      let v = null; for(const x of snaps) if(x.ts > t - tfMs && x.ts <= t) v = x.oi;
-      if(v!=null && favIgn[sym]===rec){ rec.oi0 = v; saveFavIgn(); }
-    }
-  }catch(e){}
+  // 점화 직전 OI: 그 봉 직전 창만 따로 요청 (예전엔 '최근 n개'를 받아 TF 주기·요청 한도에 걸리면 조용히 null). 실패하면 null 로 두고 ↻ 때 재시도
+  try{ await ignFillOi0(sym, rec, null, null); }catch(e){}
+  if(favIgn[sym]===rec) renderFavs();
 }
 
 let paneModeRestore = null;   // 결과 카드가 하단 패널을 임시로 바꿨을 때 닫으면 되돌릴 값
