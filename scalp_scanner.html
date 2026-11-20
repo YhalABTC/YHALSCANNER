@@ -1776,6 +1776,9 @@ const IGN_DAYS_MAX = 30;   // 점화 시점 범위 상한 (일) — 메모리만
 let ignDir = 'long';   // 🧨 방향 'long' | 'short' | 'both' (메모리만 — TF·범위와 같이 새로고침하면 롱)
 const IGN_DIR_LAB = {long:'롱', short:'숏', both:'롱·숏'};
 let lastIgnInfo = '';
+// 🧨 롱 결과: 2차만 보기 (localStorage 'ign2Only' — 없으면 켬) · 상세 펼침 상태 (세션 동안만)
+let ign2Only = true; try{ ign2Only = (localStorage.getItem('ign2Only') ?? '1') === '1'; }catch(e){}
+const ign2OpenSet = new Set();
 let maniaBack = 50, maniaCnt = 6, maniaLive = 'live', maniaMode = 'now';   // now=지금과매수 / count=과거N회 / both   // 광기: 룩백 구간·과매수 횟수·마지막봉
 const RS_VIEW_BARS = 50;   // 화면에 보이는 봉 수
 const CHART_TZ = 9*3600;   // 차트 표시용 KST 오프셋 (앱 전체 공통)
@@ -3745,10 +3748,13 @@ function render(){
   const hasOidiv = rows.some(r=>r.oidiv && r.oiChg!=null);
   const fundCnt = {all: rows.length, pos: rows.filter(r=>r.funding>0).length, neg: rows.filter(r=>r.funding<0).length};
   if(hasOidiv && oidivFund!=='all') rows = rows.filter(r=> oidivFund==='pos' ? r.funding>0 : r.funding<0);
-  viewSymbols = rows.map(r=>r.symbol);   // 차트 ←/→ 네비게이션용 현재 표시 순서
-  // 정렬 셀렉터 (테이블 헤더 대신)
+  // 🧨 2차만 보기 (롱 새 규칙 결과가 있을 때만) — 1차·숏(▼) 행 숨김. 차트 ‹ › 도 보이는 행만
   const hasIgn = rows.some(r=>r.ign && r.ignT!=null);
   const hasIgn2 = rows.some(r=>r.ign2Tag);
+  const ign2All = rows.length, ign2N2 = rows.filter(r=>r.ign2Tag && r.ign2K>0).length;
+  if(hasIgn2 && ign2Only) rows = rows.filter(r=>r.ign2Tag && r.ign2K>0);
+  viewSymbols = rows.map(r=>r.symbol);   // 차트 ←/→ 네비게이션용 현재 표시 순서
+  // 정렬 셀렉터 (테이블 헤더 대신)
   const sortOpts = [...(hasIgn2 ? [['ign2','2차·현물X·OI/시총']] : []), ...(hasIgn ? [['ignT','최근 점화순'],['ignTold','오래된 점화순'],['ignOi','OI×'],['ignPx','가격%'],['ignVol','거래량×']] : []), ...(hasOidiv ? [['oiChg','OI↑%'],['pxDrop','가격↓%']] : []), ['rsVal','RS'],['maprox','근접'],['vol','거래대금'],['funding','펀비'],['chg1h','1H변동'],['chg4h','4H변동'],['chg1d','1D변동'],['chg1w','1W변동'],['tagScore','신호']];
   let html = `<div class="sortbar">${sortOpts.map(([k,lab])=>`<button class="sortbtn${(sortKey===k||(k==='tagScore'&&sortKey==='retestSum'))?' on':''}" data-sk="${k}">${lab}${(sortKey===k && k!=='ignT' && k!=='ignTold' && k!=='ign2')?(sortDir<0?' ▼':' ▲'):''}</button>`).join('')}</div>`;
   if(lastRsInfo){
@@ -3767,6 +3773,11 @@ function render(){
       + `<button data-of="neg" class="${oidivFund==='neg'?'on':''}" title="펀비 &lt; 0 — 숏이 쌓이는 중">음수만 ${fundCnt.neg}</button>`
       + `</div></div>`;
     if(!rows.length) html += `<div class="favempty">이 펀비 조건에 맞는 종목이 없어요 — '전체'로 바꾸면 다시 보입니다.</div>`;
+  }
+  if(hasIgn2){
+    html += `<div class="ign2onlybar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 6px"><div class="seg sm"><button id="ign2onlybtn" class="${ign2Only?'on':''}" title="[2차-k] 행만 표시 (1차·숏 ▼ 숨김)">2차만 (${ign2N2})</button></div>`
+      + `<span style="color:var(--muted);font-size:11px">전체 ${ign2All}</span></div>`;
+    if(ign2Only && !rows.length) html += `<div class="favempty ign2empty">2차 0종목 · 전체 ${ign2All}종목</div>`;
   }
   if(lastIgnInfo && hasIgn) html += `<div class="oidivinfo igninfo">${lastIgnInfo}</div>`;
   html += `<div class="cardgrid">`;
@@ -3792,24 +3803,32 @@ function render(){
       : '';
     const IGN2_KL = {'4h':'4H', '1d':'1D', sq:'스퀴즈', '1h':'1H'};
     const _tg = (txt, tip, sty)=>`<span class="reftag" style="${sty||'color:var(--text);background:var(--surface-2)'}" title="${tip}">${txt}</span>`;
-    const ignLine = (r.ign && r.ignT!=null && r.ign2Tag)
-      ? _tg(`[${r.ign2Tag}]`, r.ign2K>0 ? `고점1 확정 후 ${IGN2.DEF.secondDays}일 안 ${r.ign2K}번째 4H 기본 점화 · 1차 ${ignKST(r.ign2T1)} KST` : `앞 ${IGN2.DEF.quietDays}일 점화 없음`, r.ign2K>0 ? 'color:#0a0e16;background:#f05a28;font-weight:800' : 'color:#f05a28;background:rgba(240,90,40,.15);font-weight:800')
+    const ign2Open = (r.ign && r.ignT!=null && r.ign2Tag) ? ign2OpenSet.has(r.symbol) : false;
+    const ignFold = (r.ign && r.ignT!=null && r.ign2Tag)
+      ? `<div class="rc-tagline ign2fold" data-ign2fold="${r.symbol}" style="${ign2Open?'':'display:none'}">`
         + _tg(`🧨 ▲ ${ignKST(r.ignT)} ${IGN2_KL[r.ign2Kind]||''}`, `기준 점화 봉 시작 (KST) · ${IGN2_KL[r.ign2Kind]||r.ign2Kind}${r.ign2Kind==='1d'?' (일봉 시작 = 09:00 KST)':''}${r.ignLen>1?` · 덩어리 점화 ${r.ignLen}개 (${(r.ign2Kinds||[]).map(k=>IGN2_KL[k]||k).join('·')})`:''}`, 'color:#f05a28;background:rgba(240,90,40,.15);font-weight:700')
-        + `<span class="reftag ignago" style="color:var(--text);background:var(--surface-2)" title="기준 봉 시작부터 지금까지 · 봉 = ⌊경과 ÷ ${tfLabel(r.ignTf)}⌋">점화 후 ${ignAgo(r).d.toFixed(1)}일 (${ignAgo(r).n}봉)</span>`
         + _tg(`몸통 ${ignSgn(r.ignPx,1,'%')}`, '기준 봉 종가 ÷ 시가 − 1')
         + _tg(`거래량 ×${r.ignVol!=null?r.ignVol.toFixed(1):'—'}`, `기준 봉 거래량 ÷ 직전 20봉 평균 (${tfLabel(r.ignTf)})`)
         + (r.ignOi!=null
             ? _tg(`OI ×${r.ignOi.toFixed(1)}${r.ignOiBaseDays!=null?'*':''}`, `점화 시각이 든 4H 봉부터 6봉 OI 마감 최고 ÷ 직전 7일 OI 중앙값 (표시만)${r.ignOiBaseDays!=null?` · 바이낸스 OI 30일 한도로 직전 ${r.ignOiBaseDays.toFixed(1)}일 기록만 사용`:''}`)
             : _tg(`OI 확인 불가${r.ignOiWhy==='bn30'?' (30일 한도)':''}`, {fetch:'OI 조회 실패', limit:'요청 한도로 OI 미조회', short:'점화 전 OI 기록 부족', bn30:'바이낸스 OI 기록은 최근 30일까지만 — 점화 직전 7일 기준 구간이 그 밖'}[r.ignOiWhy]||'OI 없음', 'color:var(--dim);background:var(--surface-2)'))
-        + (r.ign2SpotX ? _tg('[현물X]', '바이낸스 현물 상장 없음 (1000·1M 접두 포함 확인)', 'color:#f4c84b;background:rgba(244,200,75,.14);font-weight:800') : '')
         + _tg(`OI/시총 ${r.ign2OiMcap!=null ? (r.ign2OiMcap>=10 ? r.ign2OiMcap.toFixed(0) : r.ign2OiMcap.toFixed(1))+'%' : '—'}`, r.ign2OiMcap!=null ? `OI 명목가 ÷ 시총 (CoinGecko 유통량 × 가격 ${ignUsd(r.ign2Mcap)})` : 'CoinGecko 시총 없음·조회 실패 또는 OI 없음', r.ign2OiMcap!=null ? '' : 'color:var(--dim);background:var(--surface-2)')
         + (r.ign2K>0
-            ? _tg(`고점1 대비 2차시 ${ignSgn(r.ign2Pb2,1,'%')} · 현재 ${ignSgn(r.ign2PbNow,1,'%')}`, `2차시 = 2차 기준 봉 시가 ÷ 고점1 − 1 · 현재 = 마지막 4H 종가 ÷ 고점1 − 1 · 고점1 ${r.ign2Peak!=null?(+r.ign2Peak.toPrecision(6)):'—'}`)
+            ? _tg(`고점1 대비 2차시 ${ignSgn(r.ign2Pb2,1,'%')}`, `2차 기준 봉 시가 ÷ 고점1 − 1 · 고점1 ${r.ign2Peak!=null?(+r.ign2Peak.toPrecision(6)):'—'}`)
               + _tg(`1차→2차 ${r.ign2Days12!=null?r.ign2Days12.toFixed(1):'—'}일`, `1차 ${ignKST(r.ign2T1)} → 2차 ${ignKST(r.ign2Te)} KST (정렬 시각 기준)`)
               + _tg(`거래량 2차/1차 ×${r.ign2VolRatio!=null?r.ign2VolRatio.toFixed(2):'—'}`, '2차 기준 4H 봉 거래량 ÷ 1차 시각이 든 4H 봉 거래량')
             : '')
         + `<span class="reftag" style="color:${r.ignCvd==null?'var(--dim)':(r.ignCvd>=0?'#46cd8a':'#e0584f')};background:var(--surface-2)" title="기준 봉~${IGN.WIN[r.ignTf]||6}봉 바이낸스 현물 CVD 변화 (달러)">점화구간 현물CVD ${ignUsd(r.ignCvd)}</span>`
         + (r.ign2Warn ? _tg('⚠', {'1h':'1H 봉 조회 실패 — 1H 보조 없이 판정', fund:'펀딩 기록 일부만 (요청 한도) — 숏스퀴즈 일부 미판정', '1h,fund':'1H 봉 조회 실패 · 펀딩 기록 일부만'}[r.ign2Warn]||r.ign2Warn, 'color:#f4c84b;background:var(--surface-2)') : '')
+        + `</div>`
+      : '';
+    // 🧨 롱(새 규칙) 카드: 기본 한 줄 = 태그 · 점화 후 · (2차) 고점1 대비 현재 · [현물X] · ▾ 상세 — 나머지 수치는 접힘 줄 (종목별 열림 상태는 세션 동안만)
+    const ignLine = (r.ign && r.ignT!=null && r.ign2Tag)
+      ? _tg(`[${r.ign2Tag}]`, r.ign2K>0 ? `고점1 확정 후 ${IGN2.DEF.secondDays}일 안 ${r.ign2K}번째 4H 기본 점화 · 1차 ${ignKST(r.ign2T1)} KST` : `앞 ${IGN2.DEF.quietDays}일 점화 없음`, r.ign2K>0 ? 'color:#0a0e16;background:#f05a28;font-weight:800' : 'color:#f05a28;background:rgba(240,90,40,.15);font-weight:800')
+        + `<span class="reftag ignago" style="color:var(--text);background:var(--surface-2)" title="기준 봉 시작부터 지금까지 · 봉 = ⌊경과 ÷ ${tfLabel(r.ignTf)}⌋">점화 후 ${ignAgo(r).d.toFixed(1)}일 (${ignAgo(r).n}봉)</span>`
+        + (r.ign2K>0 ? _tg(`고점1 대비 현재 ${ignSgn(r.ign2PbNow,1,'%')}`, `마지막 4H 종가 ÷ 고점1 − 1 · 고점1 ${r.ign2Peak!=null?(+r.ign2Peak.toPrecision(6)):'—'}`) : '')
+        + (r.ign2SpotX ? _tg('[현물X]', '바이낸스 현물 상장 없음 (1000·1M 접두 포함 확인)', 'color:#f4c84b;background:rgba(244,200,75,.14);font-weight:800') : '')
+        + `<span class="reftag ign2det" data-ign2det="${r.symbol}" role="button" style="color:var(--muted);background:var(--surface-2);cursor:pointer" title="상세 수치 펼치기/접기">${ign2Open?'▴ 접기':'▾ 상세'}</span>`
       : (r.ign && r.ignT!=null)
       ? `<span class="reftag" style="color:#f05a28;background:rgba(240,90,40,.15);font-weight:700" title="점화 봉 시작 시각 (KST) · ${r.ignDir==='short'?'숏 (음봉)':'롱 (양봉)'} · ${tfLabel(r.ignTf)}${r.ignLen>1?` · 연속 ${r.ignLen}봉 덩어리의 첫 봉`:''}">🧨 ${r.ignDir==='short'?'▼':'▲'} ${ignKST(r.ignT)}</span>`
         + `<span class="reftag ignago" style="color:var(--text);background:var(--surface-2)" title="점화 봉 시작부터 지금까지 · 봉 = ⌊경과 ÷ ${tfLabel(r.ignTf)}⌋ (점화 봉 = 0봉, 지금 진행봉 = N봉)">점화 후 ${ignAgo(r).d.toFixed(1)}일 (${ignAgo(r).n}봉)</span>`
@@ -3851,7 +3870,7 @@ function render(){
             : `<span class="reftag" style="color:var(--muted);background:var(--surface-2)">지금 RSI ${(r.maniaNowRsi||0).toFixed(0)}</span>`)
         + `<span class="reftag" style="color:${os?'#5b9bd5':'#e0584f'};background:var(--surface-2)">${EXT} ${(r.gap||0).toFixed(0)}</span>`;
     })();
-    const tagRows = [tfLine, ignLine, oidivLine, seqLine, maniaLine, rsScanLine, maproxLine, volxLine, pxLine, rsiLine, condLine, favpxLine, favcondLine].filter(x=>x.trim()).map(x=>`<div class="rc-tagline">${x}</div>`).join('');
+    const tagRows = [tfLine, ignLine, oidivLine, seqLine, maniaLine, rsScanLine, maproxLine, volxLine, pxLine, rsiLine, condLine, favpxLine, favcondLine].filter(x=>x.trim()).map(x=>`<div class="rc-tagline">${x}</div>` + (x===ignLine && ignFold ? ignFold : '')).join('');
     html += `<div class="rescard rowclick" data-symbol="${r.symbol}">
       <div class="rc-top">
         <span class="rc-sym"><span class="favstar${isFav(r.symbol)?' on':''}" data-favtoggle="${r.symbol}">★</span>${base}</span>
@@ -3886,6 +3905,17 @@ function render(){
       if(sortKey===key) sortDir*=-1; else { sortKey=key; sortDir=-1; } }
     else { if(sortKey===k) sortDir*=-1; else { sortKey=k; sortDir=-1; } }
     render();
+  });
+  { const b = el.querySelector('#ign2onlybtn');
+    if(b) b.addEventListener('click', e=>{ e.stopPropagation(); ign2Only = !ign2Only; try{ localStorage.setItem('ign2Only', ign2Only ? '1' : '0'); }catch(err){} render(); }); }
+  el.querySelectorAll('.ign2det[data-ign2det]').forEach(t=>{
+    t.addEventListener('click', e=>{
+      e.stopPropagation();   // 카드 클릭(차트 열기) 막음
+      const sym = t.dataset.ign2det, open = !ign2OpenSet.has(sym);
+      if(open) ign2OpenSet.add(sym); else ign2OpenSet.delete(sym);
+      const f = el.querySelector(`.ign2fold[data-ign2fold="${sym}"]`); if(f) f.style.display = open ? '' : 'none';
+      t.textContent = open ? '▴ 접기' : '▾ 상세';
+    });
   });
   el.querySelectorAll('.favstar[data-favtoggle]').forEach(st=>{
     st.addEventListener('click', e=>{
