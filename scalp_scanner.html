@@ -253,6 +253,22 @@
   body.mobile .mxgrid .seg.mxcells button{font-size:11px;color:var(--dim)}
   body.mobile .mxgrid .seg.mxcells button::before{font-size:10px;margin-right:3px}
   body.mobile .mxgrid .seg.mxcells button.on{color:#1a1205}
+  /* MACD 행: 3단 칸 (꺼짐 ○ → 골 → 데). PC = 열 머리가 TF, 칸엔 상태 글자만 · 모바일 = "4H 골" */
+  .mxgrid .seg.mxcells.mxmacd button.gc{background:rgba(70,205,138,.22);border-color:#46cd8a;color:#46cd8a}
+  .mxgrid .seg.mxcells.mxmacd button.dc{background:rgba(224,88,79,.22);border-color:#e0584f;color:#e0584f}
+  .mxgrid .seg.mxcells.mxmacd button.gc::before{content:'\ACE8';opacity:1;font-size:12px;font-weight:800;color:#46cd8a}
+  .mxgrid .seg.mxcells.mxmacd button.dc::before{content:'\B370';opacity:1;font-size:12px;font-weight:800;color:#e0584f}
+  .mxgrid .seg.mxcells.mxmacd button{white-space:nowrap;overflow:hidden}
+  @media(max-width:640px){
+    .mxgrid .seg.mxcells.mxmacd button.gc,.mxgrid .seg.mxcells.mxmacd button.dc{font-weight:800}
+    .mxgrid .seg.mxcells.mxmacd button.gc::before,.mxgrid .seg.mxcells.mxmacd button.dc::before{content:none}
+    .mxgrid .seg.mxcells.mxmacd button.gc::after{content:' \ACE8'}
+    .mxgrid .seg.mxcells.mxmacd button.dc::after{content:' \B370'}
+  }
+  body.mobile .mxgrid .seg.mxcells.mxmacd button.gc,body.mobile .mxgrid .seg.mxcells.mxmacd button.dc{font-weight:800}
+  body.mobile .mxgrid .seg.mxcells.mxmacd button.gc::before,body.mobile .mxgrid .seg.mxcells.mxmacd button.dc::before{content:none}
+  body.mobile .mxgrid .seg.mxcells.mxmacd button.gc::after{content:' \ACE8'}
+  body.mobile .mxgrid .seg.mxcells.mxmacd button.dc::after{content:' \B370'}
   /* 3단 토글(끄기→근처→위만) */
   .seg.tri button::before{content:'\25CB';margin-right:5px;opacity:.45;font-size:11px;vertical-align:1px}
   .seg.tri button.on::before{content:'\25CF';opacity:.9}
@@ -1305,6 +1321,18 @@
           </div>
         </div>
         <div class="mxrow">
+          <div class="mxname"><span class="mxlab">MACD</span>
+          </div>
+          <div class="seg mxcells mxmacd" id="maproxmacdtf" title="MACD(12,26,9) 상태 · 누를 때마다 꺼짐 → 골크(MACD&gt;시그널) → 데크(MACD&lt;시그널) (중복 = AND · 전부 끄면 비활성)">
+            <button data-mmc="15m">15M</button>
+            <button data-mmc="1h">1H</button>
+            <button data-mmc="4h">4H</button>
+            <button data-mmc="1d">1D</button>
+            <button data-mmc="1w">1W</button>
+            <button data-mmc="1M">월봉</button>
+          </div>
+        </div>
+        <div class="mxrow">
           <div class="mxname"><span class="mxlab">RSI SMA9 ≥</span>
           <div class="seg sm" id="maproxs9lv" title="RSI-SMA9 임계값">
             <button data-lv="50" class="on">50</button>
@@ -1740,6 +1768,7 @@ let mcP5='off', mcP10='off', mcP20='off';   // 종가 vs 가격 SMA5 / SMA10 / S
 let mcBBp='off', mcBBr='off';         // 가격 BB / RSI BB — up=상단 밖, dn=하단 밖
 let mcBBsrc='close';                  // 'close'=종가 마감 기준 · 'wick'=고가/저가 터치 기준
 let maproxBull = {'15m':false,'1h':false,'4h':false,'1d':false,'1w':false,'1M':false};   // 현재 RSI 정배 (SMA9 > SMA20)
+let maproxMacd = {'15m':'off','1h':'off','4h':'off','1d':'off','1w':'off','1M':'off'};   // MACD(12,26,9) 상태 off/gc(골크: MACD>시그널)/dc(데크: MACD<시그널)
 // RS 스캔: BTC 1h 구간 지정
 let rsBars = [];            // 기준 코인 봉 (차트용)
 let rsRefSym = 'BTCUSDT';   // RS 스캔 기준 코인 (기본 BTC, 변경 가능)
@@ -1989,6 +2018,9 @@ function updateCondChips(){
     const rOn=Object.keys(maproxRsiTf).filter(t=>maproxRsiTf[t]).map(tfLabel);
     if(pOn.length) el.innerHTML += `<div class="chip"><b style="color:#d77b38">가격 이평 위</b> · ${pOn.join(' <b>AND</b> ')} 종가가 가격 ${PXL[maproxPxOpt]} 위</div>`;
     if(rOn.length) el.innerHTML += `<div class="chip"><b style="color:#5b9bd5">RSI 이평 위</b> · ${rOn.join(' <b>AND</b> ')} RSI 종가가 RSI ${maproxRsiOpt==='r9'?'SMA9':'SMA20'} 위</div>`;
+    const mOn=Object.keys(maproxMacd).filter(t=>maproxMacd[t]==='gc'||maproxMacd[t]==='dc')
+      .map(t=>maproxMacd[t]==='gc' ? `${tfLabel(t)} <span style="color:#46cd8a">골크</span>` : `${tfLabel(t)} <span style="color:#e0584f">데크</span>`);
+    if(mOn.length) el.innerHTML += `<div class="chip" id="mxmacdchip"><b>MACD</b> · ${mOn.join(' <b>AND</b> ')}</div>`;
   }
 }
 document.getElementById('scanmodeseg').addEventListener('click', e=>{
@@ -2274,6 +2306,24 @@ bindSingleSeg('mcbarseg','mcb', v=>{ mcBarN=+v; const i=document.getElementById(
   });
 }
 bindMultiSeg('maproxbulltf', 'mb9', maproxBull);
+// MACD 행: 칸마다 꺼짐 → 골크 → 데크 → 꺼짐
+function maproxMacdSyncUI(){
+  document.querySelectorAll('#maproxmacdtf button').forEach(b=>{
+    const st = maproxMacd[b.dataset.mmc] || 'off';
+    b.classList.toggle('gc', st==='gc'); b.classList.toggle('dc', st==='dc');
+    b.setAttribute('aria-pressed', st==='off' ? 'false' : 'true');
+  });
+}
+{
+  const el = document.getElementById('maproxmacdtf');
+  if(el) el.addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    const k = b.dataset.mmc; if(k === undefined) return;
+    maproxMacd[k] = {off:'gc', gc:'dc', dc:'off'}[maproxMacd[k]||'off'];
+    maproxMacdSyncUI(); updateCondChips();
+  });
+  maproxMacdSyncUI();
+}
 // RS 스캔 — 차트 TF / 구간(봉)
 bindSingleSeg('rstfseg', 'rtf2', v=>{ rsChartTf = v; initRsChart(true); });
 {
@@ -2981,11 +3031,36 @@ async function scanSymbol(s, cfg){
     const pxTfs  = Object.keys(cfg.maproxPxTf||{}).filter(t=>cfg.maproxPxTf[t]);
     const rsiTfs = Object.keys(cfg.maproxRsiTf||{}).filter(t=>cfg.maproxRsiTf[t]);
     const has1w = (pxTfs.length>0 || rsiTfs.length>0);
-    if(!tfs.length && !hasR50 && !hasR9 && !hasRs && !has1w && !hasS9 && !hasS20 && !hasBull) return null;   // 아무 조건도 없으면 제외
+    const macdTfs = Object.keys(cfg.maproxMacd||{}).filter(t=>cfg.maproxMacd[t]==='gc' || cfg.maproxMacd[t]==='dc');
+    if(!tfs.length && !hasR50 && !hasR9 && !hasRs && !has1w && !hasS9 && !hasS20 && !hasBull && !macdTfs.length) return null;   // 아무 조건도 없으면 제외
+    // ── TF별 캔들 공용 캐시: 한 TF는 한 번만 받는다 (요청 봉 수 = 그 TF를 쓰는 행들의 최대치).
+    //    각 행은 원래 받던 봉 수만큼 끝에서 잘라 쓰므로 (최근 n봉 = 거래소가 limit n 으로 주는 것과 같음) 값이 그대로다.
+    const PX_P  = {a5:5, a20:cfg.smaS, a50:50, a200:200}[cfg.maproxPxOpt] || 5;
+    const RSI_P = (cfg.maproxRsiOpt==='r9') ? cfg.smaF : cfg.smaS;
+    const _need = {};     // 가격·RSI 이평 위 행 (두 행이 같은 TF면 원래도 한 번에 받아 공유)
+    const bump = (tf, n)=>{ _need[tf] = Math.max(_need[tf]||0, Math.min(1000, n)); };
+    pxTfs.forEach(tf => bump(tf, PX_P + 30));
+    rsiTfs.forEach(tf => bump(tf, cfg.rsiLen + RSI_P + 40));
+    const MX_SMA_N = 240, MX_RSMA_N = 150, MX_MACD_N = 240;
+    const _lim = {};
+    const want = (tf, n)=>{ _lim[tf] = Math.max(_lim[tf]||0, Math.min(1000, n)); };
+    tfs.forEach(tf => want(tf, MX_SMA_N));
+    Object.keys(_need).forEach(tf => want(tf, _need[tf]));
+    [cfg.maproxS9, cfg.maproxS20, cfg.maproxBull].forEach(m => Object.keys(m||{}).filter(t=>m[t]).forEach(tf => want(tf, MX_RSMA_N)));
+    macdTfs.forEach(tf => want(tf, MX_MACD_N));
+    const _tfBars = {};
+    const tfBars = async (tf, n)=>{
+      if(_tfBars[tf] === undefined){
+        let bb = null;
+        try{ bb = await EX[cfg.exchange].klines(s.symbol, tf, _lim[tf] || n); }catch(e){ bb = null; }
+        _tfBars[tf] = Array.isArray(bb) ? bb : null;
+      }
+      const bb = _tfBars[tf];
+      return bb ? (bb.length > n ? bb.slice(-n) : bb) : null;
+    };
     const allHits = [];
     for(const mtf of tfs){
-      let mb;
-      try{ mb = await EX[cfg.exchange].klines(s.symbol, mtf, 240); }catch(e){ return null; }
+      const mb = await tfBars(mtf, MX_SMA_N);
       if(!mb || mb.length < 30) return null;
       const mc = mb.map(b=>b.c);
       const mi = cfg.includeLive ? mc.length-2 : mc.length-1;
@@ -2999,25 +3074,9 @@ async function scanSymbol(s, cfg){
       allHits.push({tf:mtf, N:200, diff, above: cfg.maproxTfs[mtf]==='above'});
     }
     // ── 가격 이평 위 / RSI 이평 위 — TF별 독립 토글, 켠 TF 전부 만족 (AND) ──
-    const PX_P  = {a5:5, a20:cfg.smaS, a50:50, a200:200}[cfg.maproxPxOpt] || 5;
     const pxHitsTf = [], rsiHitsTf = [];
-    // 두 필터가 같은 TF를 쓰면 캔들을 한 번만 받도록 캐시.
-    // 요구 봉 수가 다를 수 있으니 TF별 최대치를 미리 계산해서 한 번에 받는다.
-    const RSI_P = (cfg.maproxRsiOpt==='r9') ? cfg.smaF : cfg.smaS;
-    const _need = {};
-    const bump = (tf, n)=>{ _need[tf] = Math.max(_need[tf]||0, Math.min(1000, n)); };
-    pxTfs.forEach(tf => bump(tf, PX_P + 30));
-    rsiTfs.forEach(tf => bump(tf, cfg.rsiLen + RSI_P + 40));
-    const _tfBars = {};
-    const tfBars = async (tf)=>{
-      if(_tfBars[tf] !== undefined) return _tfBars[tf];
-      let bb = null;
-      try{ bb = await EX[cfg.exchange].klines(s.symbol, tf, _need[tf] || 250); }catch(e){ bb = null; }
-      _tfBars[tf] = bb;
-      return bb;
-    };
     for(const ptf of pxTfs){
-      const bb = await tfBars(ptf);
+      const bb = await tfBars(ptf, _need[ptf] || 250);
       if(!bb || bb.length < PX_P + 2) return null;      // 봉이 모자라면 판정 불가 → 탈락
       const wc = bb.map(b=>b.c);
       const wi = cfg.includeLive ? wc.length-2 : wc.length-1;
@@ -3028,7 +3087,7 @@ async function scanSymbol(s, cfg){
     }
     for(const rtf of rsiTfs){
       const RP = RSI_P;
-      const bb = await tfBars(rtf);
+      const bb = await tfBars(rtf, _need[rtf] || 250);
       if(!bb || bb.length < cfg.rsiLen + RP + 2) return null;
       const ro=bb.map(b=>b.o), rh=bb.map(b=>b.h), rl=bb.map(b=>b.l), rcl=bb.map(b=>b.c);
       const R = rsiCandles(ro,rh,rl,rcl,cfg.rsiLen);
@@ -3089,7 +3148,7 @@ async function scanSymbol(s, cfg){
     const _rsiSmaCache = {};
     async function rsiSmaAt(sym, tf, period){
       if(!_rsiSmaCache[tf]){
-        let bb; try{ bb = await EX[cfg.exchange].klines(sym, tf, 150); }catch(e){ return null; }
+        const bb = await tfBars(tf, MX_RSMA_N);
         if(!bb || bb.length < cfg.rsiLen + 25) return null;
         const bo=bb.map(b=>b.o), bh=bb.map(b=>b.h), bl=bb.map(b=>b.l), bc=bb.map(b=>b.c);
         const RC = rsiCandles(bo,bh,bl,bc,cfg.rsiLen);
@@ -3118,12 +3177,29 @@ async function scanSymbol(s, cfg){
       bullHitsTf.push({tf:btf, v9, v20, gap:v9-v20});
     }
 
+    // MACD(12,26,9) 상태 — 켠 TF 전부 만족 (AND). 골크 = MACD > 시그널 · 데크 = MACD < 시그널 (같으면 둘 다 아님)
+    // 판정 봉 = 다른 행과 같음 (includeLive → 마지막 완성봉). 봉이 26+9+10 미만이면 판정 불가 → 탈락
+    const macdHits = [];
+    for(const mtf of macdTfs){
+      const bb = await tfBars(mtf, MX_MACD_N);
+      if(!bb || bb.length < 26 + 9 + 10) return null;
+      const mcl = bb.map(b=>b.c);
+      const wi = cfg.includeLive ? mcl.length-2 : mcl.length-1;
+      if(wi < 0) return null;
+      const M = macdCalc(mcl, 12, 26, 9);
+      const mv = M.macd[wi], sv = M.signal[wi], hv = M.hist[wi];
+      if(mv==null || sv==null || !isFinite(mv) || !isFinite(sv)) return null;
+      const st = mv > sv ? 'gc' : (mv < sv ? 'dc' : null);
+      if(!st || st !== cfg.maproxMacd[mtf]) return null;
+      macdHits.push({tf:mtf, state:st, macd:mv, signal:sv, hist:hv});
+    }
+
     return {
       symbol: s.symbol, vol: s.vol, price: closes[i0], volat, pxMini,
       rO: rO[i0]||0, rH: rH[i0]||0, rL: rL[i0]||0, rC: rC[i0]!=null?rC[i0]:0,
       rPrev: [i0-4,i0-3,i0-2,i0-1].filter(x=>x>=0).map(x=>({o:rO[x],h:rH[x],l:rL[x],c:rC[x]})),
       sma9: smaAt(rC,cfg.smaF,i0), sma20: smaAt(rC,cfg.smaS,i0),
-      gap: 0, retestN: 1, maprox: true, maproxHits: allHits, rsi50: rsi50Tfs, rsi9Hits: rsi9Hits, rsHits: rsHits, s9Hits: s9Hits, s20Hits: s20Hits, maproxBullHits: bullHitsTf, maproxPxHits: pxHitsTf, maproxRsiHits: rsiHitsTf, smaInfo
+      gap: 0, retestN: 1, maprox: true, maproxHits: allHits, rsi50: rsi50Tfs, rsi9Hits: rsi9Hits, rsHits: rsHits, s9Hits: s9Hits, s20Hits: s20Hits, maproxBullHits: bullHitsTf, maproxPxHits: pxHitsTf, maproxRsiHits: rsiHitsTf, maproxMacdHits: macdHits, smaInfo
     };
   }
 
@@ -3833,7 +3909,8 @@ function render(){
     // 2) 이평근접 줄 (📏)
     const maproxLine = r.maprox?(r.maproxHits.map(h=>{const up=h.diff>=0;const col=up?'#4fbf8f':'#c77a6a';const bg=up?'rgba(79,191,143,.16)':'rgba(199,122,106,.16)';return `<span class="reftag" style="color:${col};background:${bg}">📏 ${tfLabel(h.tf)} ${up?'+':''}${h.diff.toFixed(1)}%${h.above?' ↑':''}</span>`;}).join('') + (r.rsi50&&r.rsi50.length?r.rsi50.map(tf=>`<span class="reftag" style="color:#6fc3ff;background:rgba(111,195,255,.16)">RSI50↑ ${tf.toUpperCase()}</span>`).join(''):'') + (r.rsi9Hits&&r.rsi9Hits.length?r.rsi9Hits.map(h=>{const up=h.diff>=0;const col=up?'#8fd6ff':'#c9a0e0';const bg=up?'rgba(143,214,255,.14)':'rgba(201,160,224,.14)';return `<span class="reftag" style="color:${col};background:${bg}">RSI≈9 ${tfLabel(h.tf)} ${up?'+':''}${h.diff.toFixed(1)}%${h.above?' ↑':''}</span>`;}).join(''):'') + (r.rsHits&&r.rsHits.length?r.rsHits.map(h=>`<span class="reftag" style="color:${h.rs>=0?'#f0a840':'#c77a6a'};background:rgba(240,168,64,.14)">RS ${tfLabel(h.tf)} ${h.rs>=0?'+':''}${h.rs.toFixed(1)}%p</span>`).join(''):'') + (r.s9Hits&&r.s9Hits.length?r.s9Hits.map(h=>`<span class="reftag" style="color:#7fd6a8;background:rgba(127,214,168,.14)">R9 ${tfLabel(h.tf)} ${h.v.toFixed(0)}</span>`).join(''):'') + (r.s20Hits&&r.s20Hits.length?r.s20Hits.map(h=>`<span class="reftag" style="color:#d0b978;background:rgba(208,185,120,.14)">R20 ${tfLabel(h.tf)} ${h.v.toFixed(0)}</span>`).join(''):'') + (r.maproxPxHits&&r.maproxPxHits.length?r.maproxPxHits.map(h=>`<span class="reftag" style="color:#d77b38;background:rgba(215,123,56,.16);font-weight:700" title="${tfLabel(h.tf)} 종가가 가격 SMA${h.P} 위 (+${h.pct.toFixed(2)}%)">가격 ${tfLabel(h.tf)} ${h.P}선위</span>`).join(''):'')
       + (r.maproxRsiHits&&r.maproxRsiHits.length?r.maproxRsiHits.map(h=>`<span class="reftag" style="color:#5b9bd5;background:rgba(91,155,213,.16);font-weight:700" title="${tfLabel(h.tf)} RSI ${h.v.toFixed(1)} ≥ RSI-SMA${h.P} ${h.line.toFixed(1)}">RSI ${tfLabel(h.tf)} R${h.P}위</span>`).join(''):'')
-      + (r.maproxBullHits&&r.maproxBullHits.length?r.maproxBullHits.map(h=>`<span class="reftag" style="color:#46cd8a;background:rgba(70,205,138,.16);font-weight:700" title="RSI SMA9 ${h.v9.toFixed(1)} > SMA20 ${h.v20.toFixed(1)}">▲정배 ${tfLabel(h.tf)} +${h.gap.toFixed(1)}</span>`).join(''):'')):'';
+      + (r.maproxBullHits&&r.maproxBullHits.length?r.maproxBullHits.map(h=>`<span class="reftag" style="color:#46cd8a;background:rgba(70,205,138,.16);font-weight:700" title="RSI SMA9 ${h.v9.toFixed(1)} > SMA20 ${h.v20.toFixed(1)}">▲정배 ${tfLabel(h.tf)} +${h.gap.toFixed(1)}</span>`).join(''):'')
+      + (r.maproxMacdHits&&r.maproxMacdHits.length?r.maproxMacdHits.map(h=>{const gc=h.state==='gc';return `<span class="reftag mxmacdtag" style="color:${gc?'#46cd8a':'#e0584f'};background:${gc?'rgba(70,205,138,.16)':'rgba(224,88,79,.16)'};font-weight:700" title="${tfLabel(h.tf)} MACD ${fmtMacdRead(h.macd)} · 시그널 ${fmtMacdRead(h.signal)} · 히스토 ${fmtMacdRead(h.hist)}">MACD ${tfLabel(h.tf)} ${gc?'골':'데'}</span>`;}).join(''):'')):'';
     // 3) 변동성 줄 (⚡)
     const _rsHM = ms=>{ if(ms==null) return '?'; const d=new Date(ms); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
     const seqLine = r.seqScan?`<span class="reftag" style="color:#c9a0f0;background:rgba(157,123,216,.18);font-weight:700">${r.seqBars.map(x=>x.bull?'🟢':'🔴').join('')}</span><span class="reftag" style="color:${r.seqHit==='bull3'?'#e0584f':'#46cd8a'};background:var(--surface-2)">${r.seqHit==='bull3'?'상승후 반전음봉':'하락후 반전양봉'}</span>`:'';
@@ -4025,6 +4102,7 @@ function buildScanCfg(){
     maproxS9: {...maproxS9}, maproxS9Lv: maproxS9Lv,
     maproxS20: {...maproxS20}, maproxS20Lv: maproxS20Lv,
     maproxBull: {...maproxBull},
+    maproxMacd: {...maproxMacd},
     mcBarN, mcC9, mcC20, mcL9, mcL9Lv, mcL20, mcL20Lv, mcP5, mcP10, mcP20, mcBBp, mcBBr, mcBBsrc,
     mcSrc, mcRef: (()=>{ const v=((document.getElementById('mcref')||{}).value||'BTC').trim().toUpperCase().replace(/\s+/g,'');
                          return v ? (/USDT$/.test(v)?v:v+'USDT') : 'BTCUSDT'; })(),
@@ -4467,6 +4545,11 @@ document.getElementById('listsavebtn').addEventListener('click', ()=>{
   saveLists(); renderScopeList();
   $('statustxt').innerHTML = `💾 <b>${escH(name)}</b> 리스트 저장 · ${savedLists[name].symbols.length}종목 — 칩을 누르면 다음 스캔을 그 안에서만`;
 });
+// MACD 행 라벨 조각: "4H골·1D데" (꺼져 있거나 키가 없으면 '')
+function maproxMacdLab(cfg){
+  const m = cfg.maproxMacd || {};
+  return Object.keys(m).filter(t=>m[t]==='gc'||m[t]==='dc').map(t=>tfLabel(t)+(m[t]==='gc'?'골':'데')).join('·');
+}
 function scanModeLabel(cfg){
   const M = {bull:'📈정배', pullback:'📉눌림목', support:'RSI50지지', bear:'📉역배', ctlong:'역추세롱', mania:'🔥과매수', oversold:'🧊과매도', macond:'🎚️이평조건', oidiv:'📉가격↓·OI↑', ign:'🧨점화', short:'숏', resist:'저항', volx:'⚡변동성', maprox:'📏이평근접', rsscan:'🔺RS스캔', seq:'🕯️3+1반전'};
   let base = M[cfg.scanMode] || cfg.scanMode;
@@ -4497,6 +4580,7 @@ function scanModeLabel(cfg){
       const rsT=Object.keys(cfg.maproxRsiTf||{}).filter(t=>cfg.maproxRsiTf[t]);
       if(pxT.length) parts.push(`가격${{a5:'5',a20:'20'}[cfg.maproxPxOpt]||'5'}선 ${pxT.map(tfLabel).join('·')}`);
       if(rsT.length) parts.push(`RSI${cfg.maproxRsiOpt==='r9'?'9':'20'}선 ${rsT.map(tfLabel).join('·')}`);
+      const mcT=maproxMacdLab(cfg); if(mcT) parts.push(`MACD ${mcT}`);
       base = '🔎 ' + (parts.join(' + ') || '조건');
       return base;
     }
@@ -4505,6 +4589,7 @@ function scanModeLabel(cfg){
     if(rs.length) base+=` +RS(${rs.map(t=>t.toUpperCase()).join('·')}≥${cfg.maproxRsPct||0})`;
     const s9b=Object.keys(cfg.maproxS9||{}).filter(t=>cfg.maproxS9[t]); if(s9b.length) base+=` +R9≥${cfg.maproxS9Lv}`;
     const s20b=Object.keys(cfg.maproxS20||{}).filter(t=>cfg.maproxS20[t]); if(s20b.length) base+=` +R20≥${cfg.maproxS20Lv}`;
+    const mcb=maproxMacdLab(cfg); if(mcb) base+=` +MACD ${mcb}`;
   }
   else base += ` ${tfLabel(cfg.tf)}`;
   return base;
@@ -4564,6 +4649,8 @@ async function drillScanMain(){
     nr.rsi9Hits = Object.values(r9);
     // RSI50: TF 합집합
     nr.rsi50 = [...new Set([...(pr.rsi50||[]), ...(nr.rsi50||[])])];
+    // MACD 상태: TF 병합 (같은 TF면 이번 단계 값)
+    if(pr.maproxMacdHits || nr.maproxMacdHits){ const mm = {}; [...(pr.maproxMacdHits||[]), ...(nr.maproxMacdHits||[])].forEach(h=>{ mm[h.tf]=h; }); nr.maproxMacdHits = Object.values(mm); }
     nr.maprox = pr.maprox || nr.maprox;
     // 다른 모드 태그(정배/변동성 등)도 이전 값 유지
     ['volxMode','volx','pullback','support','resist','ctlong','ctPx','ctBoth','gainer','tags','pxCount','rsiCount','ref','span','bullHits','maniaOS','maniaWick','pxRetHits','maproxBullHits','maproxPxHits','maproxRsiHits','macond','mcHits','mcBarN','mcSrc','mcRef','oidiv','oidivTf','oidivN','oidivT0','oidivT1','oidivEx','pxFrom','pxTo','pxChg','pxDrop','oiFrom','oiTo','oiChg',
@@ -7602,7 +7689,6 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   });
   // 🧨 저장된 점화 봉 마커 (이 차트 TF에서 점화 시각을 품는 봉)
   const ignMarks = [];
-  let ignFocusIdx = -1;   // 🧨 스캔 행(롱 새 규칙) 기준 봉 — 처음 보이는 구간에 넣음
   { const tfMs = FLOW.TFMS[tf];
     // 이 차트 TF에서 ms 를 품는 봉 [t, t+TF) — 불러온 봉보다 오래됐으면 -1
     const barIdx = ms=>{ if(ms==null || !tfMs) return -1; for(let k=bars.length-1; k>=0; k--){ if(bars[k].t <= ms) return (ms < bars[k].t + tfMs) ? k : -1; } return -1; };
@@ -7612,7 +7698,7 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     if(sr){
       const k = barIdx(sr.ignT);
       if(sr.ign2Tag){
-        if(k >= 0){ ignMarks.push({time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:`🧨 ${sr.ign2Tag}`}); used.add(k); ignFocusIdx = k; }
+        if(k >= 0){ ignMarks.push({time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:`🧨 ${sr.ign2Tag}`}); used.add(k); }
         if(sr.ign2K > 0){
           const k1 = barIdx(sr.ign2T1);
           if(k1 >= 0 && !used.has(k1)){ ignMarks.push({time:t[k1], position:'aboveBar', color:'rgba(240,136,60,.55)', shape:'arrowDown', text:'🧨 1차'}); used.add(k1); }
@@ -7666,8 +7752,7 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   {
     // 자동 갱신(keepView): 사용자가 보던 봉 폭(span)·오른쪽 여백(off)을 그대로 — 봉수 설정으로 되돌리지 않는다
     const kv = options.keepView && options.keepView[tf];
-    let N = kv ? Math.max(2, Math.round(kv.span - 10)) : (visibleBars || (typeof IS_MOBILE!=='undefined' && IS_MOBILE ? 55 : 100));
-    if(!kv && ignFocusIdx >= 0) N = Math.min(t.length, Math.max(N, t.length - ignFocusIdx + 3));   // 🧨 기준 봉이 보이게 (오른쪽 끝 = 최신 봉 그대로)
+    const N = kv ? Math.max(2, Math.round(kv.span - 10)) : (visibleBars || (typeof IS_MOBILE!=='undefined' && IS_MOBILE ? 55 : 100));
     priceEl._chartMeta = {tf, klim, lastT: bars[bars.length-1].t, len: t.length};
     wantRange = setBars(pc, N, t.length, t[t.length-1], t, priceEl);
     setBars(rc, N, t.length, t[t.length-1], t, rsiEl);
