@@ -7602,11 +7602,32 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   });
   // 🧨 저장된 점화 봉 마커 (이 차트 TF에서 점화 시각을 품는 봉)
   const ignMarks = [];
-  { const g = (typeof favIgn!=='undefined') && favIgn[symbol];
-    const tfMs = FLOW.TFMS[tf];
-    if(g && tfMs){ for(let k=bars.length-1; k>=0; k--){ if(bars[k].t <= g.t){ if(g.t < bars[k].t + tfMs) ignMarks.push(g.dir==='short'
+  let ignFocusIdx = -1;   // 🧨 스캔 행(롱 새 규칙) 기준 봉 — 처음 보이는 구간에 넣음
+  { const tfMs = FLOW.TFMS[tf];
+    // 이 차트 TF에서 ms 를 품는 봉 [t, t+TF) — 불러온 봉보다 오래됐으면 -1
+    const barIdx = ms=>{ if(ms==null || !tfMs) return -1; for(let k=bars.length-1; k>=0; k--){ if(bars[k].t <= ms) return (ms < bars[k].t + tfMs) ? k : -1; } return -1; };
+    const used = new Set();
+    // 1) 현재 스캔 결과 행 (같은 종목 · 같은 거래소)
+    const sr = (typeof lastRows!=='undefined' && Array.isArray(lastRows)) ? lastRows.find(r=>r && r.symbol===symbol && r.ign && r.ignT!=null && r.ignEx===exchange) : null;
+    if(sr){
+      const k = barIdx(sr.ignT);
+      if(sr.ign2Tag){
+        if(k >= 0){ ignMarks.push({time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:`🧨 ${sr.ign2Tag}`}); used.add(k); ignFocusIdx = k; }
+        if(sr.ign2K > 0){
+          const k1 = barIdx(sr.ign2T1);
+          if(k1 >= 0 && !used.has(k1)){ ignMarks.push({time:t[k1], position:'aboveBar', color:'rgba(240,136,60,.55)', shape:'arrowDown', text:'🧨 1차'}); used.add(k1); }
+          if(sr.ign2Peak!=null && isFinite(sr.ign2Peak)){ try{ pcs.createPriceLine({price:sr.ign2Peak, color:'rgba(240,136,60,.7)', lineWidth:1, lineStyle:LightweightCharts.LineStyle.Dashed, axisLabelVisible:true, title:'고점1'}); }catch(e){} }
+        }
+      } else if(k >= 0){
+        ignMarks.push({time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text: sr.ignDir==='short' ? '🧨▼ 점화' : '🧨 점화'}); used.add(k);
+      }
+    }
+    // 2) 즐겨찾기에 저장된 점화 — 같은 봉이면 스캔 표시만
+    const g = (typeof favIgn!=='undefined') && favIgn[symbol];
+    if(g){ const k = barIdx(g.t); if(k >= 0 && !used.has(k)) ignMarks.push(g.dir==='short'
           ? {time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:'🧨▼ 점화'}    // 숏: 큰 음봉 위 (하락 시작점)
-          : {time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:'🧨 점화'}); break; } } } }
+          : {time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:'🧨 점화'}); }
+  }
   pcs.setMarkers([...pxScan, ...pxScanRs, ...posMarks, ...ignMarks].sort((a,b)=>a.time-b.time));
   // 📍 매매표시: MACD 칸에도 같은 봉에 글자 없는 마커 (낮은 칸이라 모두 막대 위쪽) — GC/DC 와 합쳐 한 번에
   if(mc && posMarks.length){
@@ -7645,7 +7666,8 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   {
     // 자동 갱신(keepView): 사용자가 보던 봉 폭(span)·오른쪽 여백(off)을 그대로 — 봉수 설정으로 되돌리지 않는다
     const kv = options.keepView && options.keepView[tf];
-    const N = kv ? Math.max(2, Math.round(kv.span - 10)) : (visibleBars || (typeof IS_MOBILE!=='undefined' && IS_MOBILE ? 55 : 100));
+    let N = kv ? Math.max(2, Math.round(kv.span - 10)) : (visibleBars || (typeof IS_MOBILE!=='undefined' && IS_MOBILE ? 55 : 100));
+    if(!kv && ignFocusIdx >= 0) N = Math.min(t.length, Math.max(N, t.length - ignFocusIdx + 3));   // 🧨 기준 봉이 보이게 (오른쪽 끝 = 최신 봉 그대로)
     priceEl._chartMeta = {tf, klim, lastT: bars[bars.length-1].t, len: t.length};
     wantRange = setBars(pc, N, t.length, t[t.length-1], t, priceEl);
     setBars(rc, N, t.length, t[t.length-1], t, rsiEl);
