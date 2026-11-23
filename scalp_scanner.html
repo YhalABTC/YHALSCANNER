@@ -6536,7 +6536,10 @@ const IGN2 = (()=>{
     const from = now - P.rangeDays*DAY;
     let row = null; for(const ev of events) if(ev.te >= from && (!row || ev.te >= row.te)) row = ev;
     // 차트 라벨용: 모든 덩어리 (기준 봉 · 태그 없으면 null) + 고점1 확정 사슬
-    const all = {clusters: clusters.map(c=>({t:c.ref.t, te:c.ref.te, tf:c.ref.tf, kind:c.ref.kind, tag:c.tag, chainId: c.chain ? c.chain.id : null})),
+    //  s0/s1 = 덩어리 구간 [첫 멤버 시작, 마지막 멤버 끝) — 1H [t, t+1h) · 4H·스퀴즈 [t, t+4h) · 1D 는 거래량 최대 4H 봉 [te, te+4h) (차트 마커를 그 안 가장 큰 양봉에)
+    const span = m=>m.kind==='1d' ? [m.te, m.te + H4] : m.kind==='1h' ? [m.t, m.t + H] : [m.t, m.t + H4];
+    const all = {clusters: clusters.map(c=>({t:c.ref.t, te:c.ref.te, tf:c.ref.tf, kind:c.ref.kind, tag:c.tag, chainId: c.chain ? c.chain.id : null,
+        s0: Math.min(...c.members.map(m=>span(m)[0])), s1: Math.max(...c.members.map(m=>span(m)[1]))})),
       chains: chainsAll.filter(ch=>ch.peak > 0).map(ch=>({chainId:ch.id, t0:ch.ref.t, peak:ch.peak, confirmT:ch.tc,
         t9: Math.max(Math.min(ch.tc + winMs, now), ...clusters.filter(c=>c.chain===ch).map(c=>c.lastTe))}))};   // 확정 사슬 = 2차 창 끝(또는 지금)까지
     return {events, row, ignitions: ign, chain: chain ? {phase:chain.phase, peak:chain.peak||null, tc:chain.tc} : null, all};
@@ -6799,7 +6802,7 @@ function ign2FavRec(d, ex, src){
 const IGN2_ALL_MAX = 60;
 function ign2AllPack(all){
   if(!all || !Array.isArray(all.clusters)) return null;
-  const c = all.clusters.slice(-IGN2_ALL_MAX).map(x=>({t:x.t, tf:x.tf, kind:x.kind, tag:x.tag||null, chainId:x.chainId}));
+  const c = all.clusters.slice(-IGN2_ALL_MAX).map(x=>({t:x.t, tf:x.tf, kind:x.kind, tag:x.tag||null, chainId:x.chainId, ...(x.s1 > x.s0 ? {s0:x.s0, s1:x.s1} : {})}));
   const ids = new Set(c.map(x=>x.chainId));
   const ch = (all.chains||[]).filter(x=>ids.has(x.chainId)).map(x=>({chainId:x.chainId, t0:x.t0, t9:x.t9, peak:x.peak, confirmT:x.confirmT}));
   return {clusters: c, chains: ch};
@@ -7762,10 +7765,27 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     // 모든 점화 덩어리 (새 규칙 · all 목록이 있는 스캔 행/기록): 기준 봉마다 하나 · 같은 차트 봉이면 한 마커에 '·' 로 (태그 먼저)
     const KL = {'4h':'4H', '1h':'1H', '1d':'1D', sq:'스퀴즈'};
     const allAt = new Map();   // k → {tags:[], kinds:[]}
-    const addAll = all=>{
+    // 마커 봉 (표시만): 덩어리 구간 [s0, s1) 과 겹치는 이 TF 봉 중 몸통 (종−시)÷시 가 가장 큰 양봉 · 양봉 없음/구간 없음(예전 기록) → 기준 시각 c.t 를 품는 봉
+    const markBar = c=>{
+      if(c.s0!=null && c.s1 > c.s0 && tfMs){
+        let best = -1, bb = 0;
+        for(let k=0; k<bars.length; k++){
+          const b = bars[k]; if(b.t >= c.s1) break; if(b.t + tfMs <= c.s0) continue;
+          const body = b.o > 0 ? (b.c - b.o) / b.o : 0; if(body > bb){ bb = body; best = k; }
+        }
+        if(best >= 0) return best;
+      }
+      return barIdx(c.t);
+    };
+    // 같은 덩어리 중복 방지 (덩어리 단위): 스캔 행 덩어리의 기준 시각·구간 — 즐찾/찾기 기록(구간 없는 예전 기록 포함)의 같은 덩어리는 건너뜀
+    const rowCl = [];
+    const inRow = (t, s0, s1)=>t!=null && rowCl.some(r=>r.t===t || (r.s1 > r.s0 && t >= r.s0 && t < r.s1) || (s1 > s0 && r.t >= s0 && r.t < s1));
+    const addAll = (all, own)=>{
       if(!all || !Array.isArray(all.clusters)) return false;
       for(const c of all.clusters){
-        const k = barIdx(c.t); if(k < 0) continue;
+        if(own) rowCl.push({t:c.t, s0:c.s0, s1:c.s1});
+        else if(inRow(c.t, c.s0, c.s1)) continue;
+        const k = markBar(c); if(k < 0) continue;
         let m = allAt.get(k); if(!m){ m = {tags:[], kinds:[]}; allAt.set(k, m); }
         if(c.tag){ if(!m.tags.includes(c.tag)) m.tags.push(c.tag); }
         else { const l = KL[c.kind] || c.kind; if(!m.kinds.includes(l)) m.kinds.push(l); }
@@ -7793,7 +7813,7 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     const fs = (!g0 && typeof ignFindSess!=='undefined') ? ignFindSess.get(symbol + '|' + exchange) : null;
     const g = g0 || fs;
     const gAll = !!(g && g.tag && g.dir!=='short' && g.all && Array.isArray(g.all.clusters));
-    if(sr && sr.ign2Tag && sr.ign2All){ addAll(sr.ign2All); if(sr.ign2K > 0) peakLine(sr.ign2Peak); }   // 행 자기 사슬 고점1 은 모든 TF
+    if(sr && sr.ign2Tag && sr.ign2All){ addAll(sr.ign2All, true); if(sr.ign2K > 0) peakLine(sr.ign2Peak); }   // 행 자기 사슬 고점1 은 모든 TF
     else if(sr){
       const k = barIdx(sr.ignT);
       if(sr.ign2Tag){
@@ -7811,14 +7831,14 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
     flushAll();
     if(gAll){ addAll(g.all); flushAll(); peakLine(g.peak); }   // 스캔 행이 이미 표시한 봉은 건너뜀
     else if(g && g.tag && g.dir!=='short'){
-      const k = barIdx(g.t);
+      const k = inRow(g.t) ? -1 : barIdx(g.t);
       if(k >= 0 && !used.has(k)){ ignMarks.push({time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:`🧨 ${g.tag}`}); used.add(k); }
       if(g.tag !== '1차' && g.t1 != null){
-        const k1 = barIdx(g.t1);
+        const k1 = inRow(g.t1) ? -1 : barIdx(g.t1);
         if(k1 >= 0 && !used.has(k1)){ ignMarks.push({time:t[k1], position:'aboveBar', color:'rgba(240,136,60,.55)', shape:'arrowDown', text:'🧨 1차'}); used.add(k1); }
       }
       peakLine(g.peak);
-    } else if(g){ const k = barIdx(g.t); if(k >= 0 && !used.has(k)) ignMarks.push(g.dir==='short'
+    } else if(g){ const k = inRow(g.t) ? -1 : barIdx(g.t); if(k >= 0 && !used.has(k)) ignMarks.push(g.dir==='short'
           ? {time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:'🧨▼ 점화'}    // 숏: 큰 음봉 위 (하락 시작점)
           : {time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:'🧨 점화'}); }
   }
