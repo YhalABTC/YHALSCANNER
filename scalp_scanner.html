@@ -85,6 +85,8 @@
   .ignline .ig{white-space:nowrap}
   .ignline .ig + .ig::before{content:'│';color:var(--dim);margin:0 6px}
   .ignline .ig.pend{color:var(--dim)}
+  .ignline .ig.igtag{color:#f0883c;font-weight:700;margin-right:5px}
+  .ignline .ig.igtag + .ig::before{content:none}
   .ignline b{font-weight:700;color:var(--text)}
   .ignline b.up{color:#46cd8a} .ignline b.dn{color:#e0584f}
   .favignbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
@@ -98,7 +100,10 @@
   .ignhint .warn{color:#f4c84b}
   .ignhint button{font-family:var(--mono);font-size:11px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:1px 8px;margin-left:4px;cursor:pointer}
   .ci-ign{font-family:var(--mono);font-size:10.5px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:1px 7px;cursor:pointer}
-  body.mobile #chartIgn{display:none}
+  body.mobile #chartIgn,body.mobile #chartIgnFind{display:none}
+  .ignfindbtn.busy{opacity:.6;cursor:progress}
+  #chartModal .mh-acts #chartIgnFind{padding:0 5px;font-size:11.5px;margin-left:-2px}   /* 좁게: PC 헤더 줄바꿈 없이 (d2fb2d4 와 같은 높이) */
+  .ci-ign.ignfindbtn{margin-top:-2px;margin-bottom:-2px}   /* 정보줄 줄 높이를 키우지 않게 */
   .favempty{color:var(--dim);font-size:12.5px;padding:14px 2px;line-height:1.6}
   .favrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line,#243044);
     border-radius:9px;margin-bottom:7px;cursor:pointer;background:var(--panel2,#141b27);transition:border-color .12s}
@@ -601,7 +606,7 @@
   body.mobile #chartIndToggle{display:none}                 /* 모바일: 이평 토글 숨김 (기존과 동일) */
   body.mobile #chartModal .mh-acts{padding-left:0;border-left:0}
   body.mobile #chartModal .modal-head{flex-wrap:nowrap;gap:8px;padding:10px 14px}   /* 53px = 6d083b6 와 같은 높이 → 차트 칸 높이 배분 동일 */
-  body.mobile #chartModal #chartMark,body.mobile #chartModal #dirseg,body.mobile #chartModal #chartShare,body.mobile #chartModal #chartIgn{display:none}
+  body.mobile #chartModal #chartMark,body.mobile #chartModal #dirseg,body.mobile #chartModal #chartShare,body.mobile #chartModal #chartIgn,body.mobile #chartModal #chartIgnFind{display:none}
   body.mobile .ci-ign{position:relative}   /* 정보줄 높이는 그대로 두고 터치 영역만 위아래로 넓힘 */
   body.mobile .ci-ign::after{content:'';position:absolute;left:-4px;right:-4px;top:-9px;bottom:-9px}
   body.mobile #chartModal .modal-head .seg.sm button{padding:0 8px}
@@ -1645,6 +1650,7 @@
         <button class="modal-share" id="chartFav" title="즐겨찾기 추가/제거">☆ 즐찾</button>
         <button class="modal-share" id="chartMark" title="봉 클릭으로 사후표시 (진입→청산 자동 번갈기)">📍 매매표시</button>
         <button class="modal-share ignpickbtn" id="chartIgn" title="봉을 클릭해 점화 봉으로 지정 (4H·1D 차트) — 즐겨찾기 점화 추적에 사용">🧨 점화 지정</button>
+        <button class="modal-share ignfindbtn" id="chartIgnFind" title="🧨 점화 찾기 — 이 종목만 새 규칙(롱 1차/2차)으로 점화 탐지 — 즐찾이면 점화 기록 덮어씀, 아니면 차트 표시만" aria-label="🧨 점화 찾기">🧨찾기</button>
         <div class="seg sm" id="dirseg" style="display:none"><button data-dir="long" class="on">롱</button><button data-dir="short">숏</button></div>
         <button class="modal-share" id="chartShare" title="차트 이미지로 공유 / 에어드랍">📷 공유</button>
         <button class="modal-nav" id="chartReload" title="최신 데이터로 갱신">↻</button>
@@ -4049,7 +4055,8 @@ function render(){
       const sym = st.dataset.favtoggle, rr = rows.find(x=>x.symbol===sym);
       // 🧨 점화 결과의 ★ = 즐찾 추가 + 점화 정보 저장 (스캔 TF·거래소)
       if(rr && rr.ign && rr.ignT!=null && !favIgn[sym]){
-        setFavIgn(sym, {t: rr.ignT, tf: rr.ignTf, ex: rr.ignEx, oi0: rr.ignOi0, px0: rr.ignPx0, src:'scan', ...(rr.ignDir==='short' ? {dir:'short'} : {})});   // dir 없음 = 롱
+        setFavIgn(sym, {t: rr.ignT, tf: rr.ignTf, ex: rr.ignEx, oi0: rr.ignOi0, px0: rr.ignPx0, src:'scan', ...(rr.ignDir==='short' ? {dir:'short'} : {}),   // dir 없음 = 롱
+          ...(rr.ign2Tag ? {tag: rr.ign2Tag, ...(rr.ign2T1!=null ? {t1: rr.ign2T1, tf1: rr.ign2T1Tf || rr.ignTf} : {}), ...(rr.ign2K > 0 && rr.ign2Peak!=null && isFinite(rr.ign2Peak) ? {peak: rr.ign2Peak} : {}), ...(rr.ign2All ? {all: rr.ign2All} : {})} : {})});
         if(isFav(sym)){ renderFavs(); render(); return; }   // 이미 즐찾(점화 정보 없음) → 해제하지 않고 점화 정보만 붙임
       }
       toggleFav(sym); render();
@@ -4974,8 +4981,9 @@ const FAV_KEY = 'rsiScannerFavs';
 let favs = [];          // 심볼 배열
 // ── 즐겨찾기 점화 추적 — 점화 메타데이터만 저장 (고점·현재값 같은 수치는 저장 안 함, 리프레시 때 계산) ──
 const FAV_IGN_KEY = 'rsiScannerFavIgn';
-const IGN_DEF = {oiMult:1.5, pxPct:30, volMult:5};   // 자동 탐지 = 점화 스캔 기본값
-let favIgn = {};                 // {SYMBOL: {t, tf, ex, oi0, px0, src, dir?}} — dir 'short' 만 저장, 없으면 롱
+let favIgn = {};                 // {SYMBOL: {t, tf, ex, oi0, px0, src, dir?, tag?, t1?, tf1?, peak?}} — dir 'short' 만 저장, 없으면 롱
+                                 //  tag '1차'|'2차-k' · t1/tf1 = 1차 기준 · peak = 고점1 (새 규칙 기록만) · t/tf/px0/oi0 = 가장 최근 태그(2차가 있으면 2차)
+                                 //  src: scan(스캔 행 ★) · auto2(★ 추가 자동 탐지) · find(🧨 점화 찾기) · manual(차트 지정) · auto(예전 자동 탐지)
 let favIgnStat = {};             // {SYMBOL: IGN.track 결과 + fund} — 메모리만
 const favIgnBusy = new Set();    // 자동 탐지 중
 const favIgnMiss = new Set();    // 자동 탐지 실패 (이번 세션)
@@ -4989,27 +4997,21 @@ function loadFavIgn(){
 function saveFavIgn(){ try{ localStorage.setItem(FAV_IGN_KEY, JSON.stringify(favIgn)); }catch(e){} }
 function setFavIgn(sym, rec){ favIgn[sym] = rec; delete favIgnStat[sym]; favIgnMiss.delete(sym); saveFavIgn(); }
 function delFavIgn(sym){ if(favIgn[sym]){ delete favIgn[sym]; saveFavIgn(); } delete favIgnStat[sym]; favIgnMiss.delete(sym); favIgnBusy.delete(sym); }
-// 즐찾 추가 직후 자동 탐지 (현재 거래소 · 4H · 최근 14일). 비동기 · 실패 무시 — 즐찾 추가 자체엔 영향 없음
+// 즐찾 추가 직후 자동 탐지 (현재 거래소 · 새 규칙 롱 1차/2차 · 이력 전체). 비동기 · 실패 무시 — 즐찾 추가 자체엔 영향 없음
 function ignOnFavAdded(sym){
   if(!sym || favIgn[sym] || favIgnBusy.has(sym)) return;
   favIgnBusy.add(sym); favIgnMiss.delete(sym);
   setTimeout(()=>{ ignAutoDetect(sym).catch(()=>{}); }, 0);
 }
 async function ignAutoDetect(sym){
-  const ex = exchange, tf = '4h';
+  const ex = exchange;
   try{
-    const bars = await EX[ex].klines(sym, tf, 200);
-    let snaps = null;
-    try{
-      if(!(ex==='binance' && FLOW.bnDataUsed() >= 900))
-        snaps = (await FLOW.fetchOIRecent(ex, sym, FLOW.periodOf(tf), 14*6 + 42 + 12)).snaps;
-    }catch(e){ snaps = null; }
-    const r = IGN.detect(bars, snaps, {tf, rangeDays:14, ...IGN_DEF, now: Date.now()});
-    if(!isFav(sym) || favIgn[sym]) return;          // 그 사이 삭제됐거나 수동 지정됨
-    if(r) setFavIgn(sym, {t:r.t, tf, ex, oi0:r.oi0, px0:r.px0, src:'auto'});
+    const d = await ign2DetectOne(ex, sym);
+    if(!isFav(sym) || favIgn[sym]) return;          // 그 사이 삭제됐거나 지정됨
+    if(d && !d.none){ const rec = ign2FavRec(d, ex, 'auto2'); setFavIgn(sym, rec); try{ await ignFillOi0(sym, rec, null, null); }catch(e){} }
     else favIgnMiss.add(sym);
   }catch(e){ if(isFav(sym) && !favIgn[sym]) favIgnMiss.add(sym); }
-  finally{ favIgnBusy.delete(sym); renderFavs(); }
+  finally{ favIgnBusy.delete(sym); renderFavs(); try{ if(currentChartSymbol===sym) renderChartView(); }catch(e){} }
 }
 // 경과 기간에 맞는 가장 촘촘한 OI 주기 (요청 1회 한도: 바이낸스 500 · 바이빗 200)
 function ignOiPlan(ex, age){
@@ -5080,14 +5082,15 @@ function favIgnLine(sym){
     if(favIgnMiss.has(sym)) return `<div class="ignline"><span class="ig pend">점화 미지정 · 차트에서 지정</span></div>`;
     return '';
   }
-  const SRC = {auto:'자동 탐지', manual:'차트 지정', scan:'점화 스캔'}[g.src] || g.src;
+  const SRC = {auto:'자동 탐지', auto2:'자동 탐지', find:'점화 찾기', manual:'차트 지정', scan:'점화 스캔'}[g.src] || g.src;
+  const tagChip = g.tag ? `<span class="ig igtag" title="${g.t1!=null ? `1차 ${ignKST(g.t1)} KST` : ''}${g.peak!=null && isFinite(g.peak) ? ` · 고점1 ${+(+g.peak).toPrecision(6)}` : ''}${g.warn==='1h' ? ' · 1H 이력 일부' : ''}">[${escH(g.tag)}]${g.warn==='1h' ? ' ⚠' : ''}</span>` : '';
   const sh = g.dir === 'short';
   const head = `<span class="ig" title="점화 봉 ${ignKST(g.t)} KST · ${sh?'숏 · ':''}${escH(tfLabel(g.tf))} · ${escH((EX[g.ex]||{}).name||g.ex)} · ${escH(SRC)}">🧨 ${sh?'▼ ':''}${ignKST(g.t)} · ${((Date.now()-g.t)/86400e3).toFixed(1)}일</span>`;
   const st = favIgnStat[sym];
-  if(!st) return `<div class="ignline">${head}<span class="ig pend">↻ 새로고침하면 수치 표시</span></div>`;
+  if(!st) return `<div class="ignline">${tagChip}${head}<span class="ig pend">↻ 새로고침하면 수치 표시</span></div>`;
   const v = (x, txt)=> `<b class="${ignCol(x)}">${txt}</b>`;
   const fund = st.fund==null ? '—' : `${st.fund<0?'−':''}${Math.abs(st.fund).toFixed(3)}%`;
-  return `<div class="ignline">${head}`
+  return `<div class="ignline">${tagChip}${head}`
     + (sh ? `<span class="ig pxlow" title="현재가 ÷ 점화 봉부터의 최저 저가 − 1">저점대비 ${v(st.pxFromLow, ignSgn(st.pxFromLow,1,'%'))}</span>`
           : `<span class="ig">고점대비 ${v(st.pxFromHigh, ignSgn(st.pxFromHigh,1,'%'))}</span>`)
     + `<span class="ig">OI 고점대비 ${v(st.oiFromPeak, ignSgn(st.oiFromPeak,1,'%'))} · 24h ${v(st.oi24, ignSgn(st.oi24,1,'%'))}</span>`
@@ -6468,7 +6471,7 @@ const IGN2 = (()=>{
     const ign = ignitions(b4, bars1d, bars1h, fund, P, now);
     const cover4 = b4.length > 20 ? b4[20].t : Infinity;
     const quietMs = P.quietDays*DAY, winMs = P.secondDays*DAY;
-    const clusters = [];
+    const clusters = [], chainsAll = [];
     let chain = null, cur = null, lastTe = -Infinity, bi = 0;
     const done4 = b4.filter(b=>b.t + H4 <= now);
     // 사슬 고점 추적: 끝 시각 ≤ upTo 인 완성 4H 봉까지
@@ -6504,7 +6507,8 @@ const IGN2 = (()=>{
         cur.chain = chain; cur.phase0 = 'confirmed';
         if(e.kind==='4h'){ chain.k++; cur.tag = '2차-' + chain.k; cur.k = chain.k; }
       }else if(quiet){
-        chain = {phase:'p1', start:e.te, startBar: Math.floor(e.te/H4)*H4, high:-Infinity, highT:null, ref:e, tc:null};
+        chain = {phase:'p1', start:e.te, startBar: Math.floor(e.te/H4)*H4, high:-Infinity, highT:null, ref:e, tc:null, id: chainsAll.length};
+        chainsAll.push(chain);
         bi = 0;
         cur.chain = chain; cur.phase0 = 'p1'; cur.tag = '1차';
       }else if(chain){
@@ -6518,7 +6522,7 @@ const IGN2 = (()=>{
     const events = clusters.filter(c=>c.tag).map(c=>{
       const ch = c.chain, r = c.ref;
       const ev = {tag:c.tag, k:c.k, t:r.t, te:r.te, kind:r.kind, tf:r.tf, o:r.o, c:r.c, v:r.v, volMult:r.volMult, body:r.body,
-        kinds:[...new Set(c.members.map(m=>m.kind))], members:c.members.length, chainT: ch ? ch.ref.te : null};
+        kinds:[...new Set(c.members.map(m=>m.kind))], members:c.members.length, chainT: ch ? ch.ref.te : null, chainTf: ch ? ch.ref.tf : null};
       if(c.k > 0 && ch && ch.peak > 0){
         const b1 = bar4Of(ch.ref.te);
         ev.peak = ch.peak; ev.peakT = ch.peakT; ev.tc = ch.tc;
@@ -6531,7 +6535,11 @@ const IGN2 = (()=>{
     });
     const from = now - P.rangeDays*DAY;
     let row = null; for(const ev of events) if(ev.te >= from && (!row || ev.te >= row.te)) row = ev;
-    return {events, row, ignitions: ign, chain: chain ? {phase:chain.phase, peak:chain.peak||null, tc:chain.tc} : null};
+    // 차트 라벨용: 모든 덩어리 (기준 봉 · 태그 없으면 null) + 고점1 확정 사슬
+    const all = {clusters: clusters.map(c=>({t:c.ref.t, te:c.ref.te, tf:c.ref.tf, kind:c.ref.kind, tag:c.tag, chainId: c.chain ? c.chain.id : null})),
+      chains: chainsAll.filter(ch=>ch.peak > 0).map(ch=>({chainId:ch.id, t0:ch.ref.t, peak:ch.peak, confirmT:ch.tc,
+        t9: Math.max(Math.min(ch.tc + winMs, now), ...clusters.filter(c=>c.chain===ch).map(c=>c.lastTe))}))};   // 확정 사슬 = 2차 창 끝(또는 지금)까지
+    return {events, row, ignitions: ign, chain: chain ? {phase:chain.phase, peak:chain.peak||null, tc:chain.tc} : null, all};
   }
   const fullP = p=>{ const P = {...DEF, ...(p||{})}; ['p4','d1','sq','h1'].forEach(k=>{ P[k] = {...DEF[k], ...((p||{})[k]||{})}; }); return P; };
   // 1H 점화 가능 4H 봉 (필요조건): 1H 봉 몸통 ≥ X% 이면 그 봉을 담은 4H 고가÷저가−1 ≥ X%,
@@ -6671,7 +6679,7 @@ async function ignConfirm(rows, cfg, onProgress){
   return {rows: [...by.values()], st};
 }
 // 롱 새 규칙 행 값 — 숏 행·실패 행은 전부 null (재스캔 병합 때 예전 값이 남지 않게)
-const IGN2_KEYS = ['ign2Tag','ign2K','ign2Kind','ign2Kinds','ign2Te','ign2T1','ign2Pb2','ign2PbNow','ign2Peak','ign2Days12','ign2VolRatio','ign2SpotX','ign2OiMcap','ign2Mcap','ign2Warn','ign2New'];
+const IGN2_KEYS = ['ign2Tag','ign2K','ign2Kind','ign2Kinds','ign2Te','ign2T1','ign2T1Tf','ign2Pb2','ign2PbNow','ign2Peak','ign2Days12','ign2VolRatio','ign2SpotX','ign2OiMcap','ign2Mcap','ign2Warn','ign2New','ign2All'];
 const ign2Clear = r=>{ IGN2_KEYS.forEach(k=>{ r[k] = null; }); return r; };
 const IGN2_N4 = 800;          // 4H ≈ 133일: 범위 30 + 2차 창 60 + 14일 + 1차 덩어리·고점 확정 여유
 const BN_KW_BUDGET = 1800;    // 바이낸스 klines 분당 가중치 — 넘으면 쉼 (IP 한도 2400)
@@ -6680,10 +6688,10 @@ async function ign2Klines(ex, sym, tf, endMs, limit){
   if(ex==='binance') await bnKwWait(bnKlineW(limit));
   return endMs==null ? EX[ex].klines(sym, tf, limit) : EX[ex].klinesUntil(sym, tf, endMs, limit);
 }
-// endMs 이전 봉 n개를 뒤에서 앞으로 (바이낸스 499개씩 = 가중치 2 · 바이빗 1000개씩)
-async function ign2Back(ex, sym, tf, endMs, n, cnt){
-  const chunk = ex==='binance' ? 499 : 1000; let out = [], end = endMs;
-  for(let g=0; n > 0 && g < 4; g++){
+// endMs 이전 봉 n개를 뒤에서 앞으로 (바이낸스 499개씩 = 가중치 2 · 바이빗 1000개씩) · 최대 maxChunks 번 (스캔 4 · 단일 종목 탐지는 더 많이)
+async function ign2Back(ex, sym, tf, endMs, n, cnt, maxChunks){
+  const chunk = ex==='binance' ? 499 : 1000; let out = [], end = endMs, G = maxChunks || 4;
+  for(let g=0; n > 0 && g < G; g++){
     const lim = Math.min(chunk, n);
     if(cnt) cnt.n++;
     const b = await ign2Klines(ex, sym, tf, end, lim);
@@ -6727,6 +6735,63 @@ function ign2CoinSyms(sym){
   const m2 = b.match(/^([A-Z0-9]+?)1000+$/); if(m2) c.push(m2[1]);
   c.push(b); return [...new Set(c)];
 }
+// 한 종목: 4H 이력 → (IGN2.needs 가 필요하다고 할 때만) 1H·펀딩 → IGN2.classify. 스캔(ign2Confirm)·단일 탐지(ign2DetectOne) 공용
+//  opt.h1Chunks: 1H 요청 최대 횟수 (기본 4 = 스캔) · opt.h1Check: 받은 1H 가 요청 구간(또는 상장 이후)을 다 덮지 못하면 warn '1h'
+async function ign2ClassifyOne(ex, sym, b4, P, now, st, opt){
+  const nd = IGN2.needs(b4, P, now);
+  let b1 = null, fund = null, warn = null;
+  if(nd.need1h){
+    const n1 = Math.ceil((now - nd.h1From) / 3600e3) + 1;
+    const c = {n:0}; b1 = await ign2Back(ex, sym, '1h', null, n1, c, opt && opt.h1Chunks);
+    if(st){ st.n1h++; st.req1h += c.n; }
+    if(!b1 || !b1.length) warn = '1h';
+    else if(opt && opt.h1Check){
+      // 1H 첫 봉이 요청 시작보다 늦고, 4H 이력은 그보다 앞서 있으면 (= 상장 때문이 아니라 덜 받음) 1H 점화를 놓쳤을 수 있음
+      //  신규 상장: 4H 첫 봉은 4H 경계 · 1H 첫 봉은 상장 시각 (최대 3시간 뒤) → 4H 한 봉만큼 여유
+      const need = Math.max(nd.h1From, b4.length ? b4[0].t : nd.h1From);
+      if(b1[0].t >= need + 4*3600e3) warn = '1h';
+    }
+  }
+  if(nd.needFund){
+    if(st) st.nFund++;
+    const fr = await FLOW.fundingRange(ex, sym, nd.fundFrom, nd.fundTo);
+    fund = (fr && fr.hist) || [];
+    if(fr && fr.rateLimited){ if(st) st.fundCut++; warn = warn ? warn + ',fund' : 'fund'; }
+  }
+  return {res: IGN2.classify(b4, null, b1, fund, P, now), warn};
+}
+// 🧨 한 종목만 새 규칙(롱 1차/2차)으로 탐지 — 4H 최대 IGN2_N4봉 · ⚙ 현재 설정 · 범위 = 불러온 이력 전체 (30일 제한 없음)
+//  반환: 가장 최근 태그 {tag, k, t, tf, te, px0, t1, tf1, peak, warn?} | 태그 없음 null (1H 를 다 못 받았으면 {none:true, warn:'1h'})
+async function ign2DetectOne(ex, sym){
+  const now = Date.now();
+  const b4 = await ign2Back(ex, sym, '4h', null, IGN2_N4);
+  if(!Array.isArray(b4) || b4.length <= 21) return null;
+  const P = {...ign2Inputs(), rangeDays: Math.ceil((now - b4[0].t) / 86400e3) + 1};
+  // 1H 는 4H 이력 전체를 덮도록 요청 (바이낸스 499개씩 · 단일 종목이라 가중치 여유) — 그래도 모자라면 warn '1h' 를 기록에 남김
+  const h1Chunks = Math.min(10, Math.ceil(((now - b4[0].t) / 3600e3 + IGN2.DEF.quietDays*24 + 2) / (ex==='binance' ? 499 : 1000)) + 1);
+  const {res, warn} = await ign2ClassifyOne(ex, sym, b4, P, now, null, {h1Chunks, h1Check: true});
+  const ev = res.row; if(!ev) return warn ? {none: true, warn} : null;
+  return {tag: ev.tag, k: ev.k, t: ev.t, tf: ev.tf, te: ev.te, px0: ev.o, t1: ev.chainT, tf1: ev.chainTf || ev.tf,
+          peak: (ev.k > 0 && ev.peak > 0) ? ev.peak : null, ...(warn ? {warn} : {}), all: ign2AllPack(res.all)};
+}
+// 탐지 결과 → 즐찾 점화 기록 (oi0 는 비워 두고 ↻·ignFillOi0 가 채움)
+function ign2FavRec(d, ex, src){
+  const rec = {t: d.t, tf: d.tf, ex, oi0: null, px0: (d.px0!=null && isFinite(d.px0)) ? d.px0 : null, src, tag: d.tag};
+  if(d.t1!=null){ rec.t1 = d.t1; rec.tf1 = d.tf1 || d.tf; }
+  if(d.peak!=null && isFinite(d.peak)) rec.peak = d.peak;
+  if(d.warn) rec.warn = d.warn;   // '1h' = 1H 이력 일부만 받음 → 1H 점화(특히 1차)를 놓쳤을 수 있음
+  if(d.all) rec.all = d.all;      // 차트 라벨용 모든 덩어리
+  return rec;
+}
+// IGN2.classify().all → 저장용 (최근 덩어리 IGN2_ALL_MAX 개 · 그 덩어리들이 쓰는 고점1 사슬만)
+const IGN2_ALL_MAX = 60;
+function ign2AllPack(all){
+  if(!all || !Array.isArray(all.clusters)) return null;
+  const c = all.clusters.slice(-IGN2_ALL_MAX).map(x=>({t:x.t, tf:x.tf, kind:x.kind, tag:x.tag||null, chainId:x.chainId}));
+  const ids = new Set(c.map(x=>x.chainId));
+  const ch = (all.chains||[]).filter(x=>ids.has(x.chainId)).map(x=>({chainId:x.chainId, t0:x.t0, t9:x.t9, peak:x.peak, confirmT:x.confirmT}));
+  return {clusters: c, chains: ch};
+}
 async function ign2Confirm(rows, cfg, onProgress){
   const st = {mode: 'long', cand: rows.length, match: 0, drop: 0, na: 0, fail: 0, limited: 0, budget: 0, tag1: 0, tag2: 0,
               req4: 0, req1h: 0, n1h: 0, reqFund: 0, nFund: 0, fundCut: 0, reqOi: 0, short4: 0};
@@ -6741,7 +6806,7 @@ async function ign2Confirm(rows, cfg, onProgress){
     r.ignPx = res ? res.body : null; r.ignVol = res ? res.volMult : null; r.ignPx0 = res ? res.o : null; r.ignLen = res ? res.members : null;
     r.ignOi = null; r.ignOi0 = null; r.ignOiWhy = why || 'short'; r.ignOiBaseDays = null; r.ignCvd = null;
     if(res){
-      r.ign2Tag = res.tag; r.ign2K = res.k; r.ign2Kind = res.kind; r.ign2Kinds = res.kinds; r.ign2Te = res.te; r.ign2T1 = res.chainT;
+      r.ign2Tag = res.tag; r.ign2K = res.k; r.ign2Kind = res.kind; r.ign2Kinds = res.kinds; r.ign2Te = res.te; r.ign2T1 = res.chainT; r.ign2T1Tf = res.chainTf;
       if(res.k > 0){ r.ign2Pb2 = res.pb2; r.ign2PbNow = res.pbNow; r.ign2Peak = res.peak; r.ign2Days12 = res.days12; r.ign2VolRatio = res.volRatio; }
     }
     delete r.ignPending; delete r.ignBars; delete r.ignRes; delete r.ign2B4;
@@ -6759,20 +6824,7 @@ async function ign2Confirm(rows, cfg, onProgress){
         st.req4 += c.n; b4 = ign2Merge(older, b4);
       }
       if(b4.length < IGN2_N4) st.short4++;
-      const nd = IGN2.needs(b4, P, now);
-      let b1 = null, fund = null, warn = null;
-      if(nd.need1h){
-        const c = {n:0}; b1 = await ign2Back(ex, r.symbol, '1h', null, Math.ceil((now - nd.h1From) / 3600e3) + 1, c);
-        st.n1h++; st.req1h += c.n;
-        if(!b1 || !b1.length) warn = '1h';
-      }
-      if(nd.needFund){
-        st.nFund++;
-        const fr = await FLOW.fundingRange(ex, r.symbol, nd.fundFrom, nd.fundTo);
-        fund = (fr && fr.hist) || [];
-        if(fr && fr.rateLimited){ st.fundCut++; warn = warn ? warn + ',fund' : 'fund'; }
-      }
-      const res = IGN2.classify(b4, null, b1, fund, P, now);
+      const {res, warn} = await ign2ClassifyOne(ex, r.symbol, b4, P, now, st);
       if(!res.row){ st.drop++; return null; }
       const row = res.row;
       if(row.k > 0) st.tag2++; else st.tag1++;
@@ -6780,6 +6832,7 @@ async function ign2Confirm(rows, cfg, onProgress){
       const t4 = Math.floor(row.te / H4) * H4;
       const o = finish(r, row, 'short');
       o.ign2Warn = warn;
+      o.ign2All = ign2AllPack(res.all);
       o._px = b4[b4.length-1].c;
       o.ign2SpotX = spotSet ? !FLOW.spotAlias(r.symbol).some(x=>spotSet.has(x)) : null;
       // OI (표시만): 기준 4H 봉 = 점화 시각이 든 4H 봉 · 창 6봉 · 직전 7일 중앙값
@@ -7692,25 +7745,68 @@ async function buildPair(priceEl, rsiEl, symbol, tf, priceH, rsiH, visibleBars, 
   { const tfMs = FLOW.TFMS[tf];
     // 이 차트 TF에서 ms 를 품는 봉 [t, t+TF) — 불러온 봉보다 오래됐으면 -1
     const barIdx = ms=>{ if(ms==null || !tfMs) return -1; for(let k=bars.length-1; k>=0; k--){ if(bars[k].t <= ms) return (ms < bars[k].t + tfMs) ? k : -1; } return -1; };
-    const used = new Set();
+    const used = new Set(), peaks = new Set();
+    const peakLine = pk=>{ if(pk!=null && isFinite(pk) && !peaks.has(pk)){ try{ pcs.createPriceLine({price:pk, color:'rgba(240,136,60,.7)', lineWidth:1, lineStyle:LightweightCharts.LineStyle.Dashed, axisLabelVisible:true, title:'고점1'}); peaks.add(pk); }catch(e){} } };
+    // 모든 점화 덩어리 (새 규칙 · all 목록이 있는 스캔 행/기록): 기준 봉마다 하나 · 같은 차트 봉이면 한 마커에 '·' 로 (태그 먼저)
+    const KL = {'4h':'4H', '1h':'1H', '1d':'1D', sq:'스퀴즈'};
+    const allAt = new Map();   // k → {tags:[], kinds:[]}
+    const addAll = all=>{
+      if(!all || !Array.isArray(all.clusters)) return false;
+      for(const c of all.clusters){
+        const k = barIdx(c.t); if(k < 0) continue;
+        let m = allAt.get(k); if(!m){ m = {tags:[], kinds:[]}; allAt.set(k, m); }
+        if(c.tag){ if(!m.tags.includes(c.tag)) m.tags.push(c.tag); }
+        else { const l = KL[c.kind] || c.kind; if(!m.kinds.includes(l)) m.kinds.push(l); }
+      }
+      const t0 = bars.length ? bars[0].t : Infinity, t9 = bars.length ? bars[bars.length-1].t + tfMs : -Infinity;
+      for(const ch of all.chains||[]) if(ch.t0 <= t9 && ch.t9 >= t0) peakLine(ch.peak);   // 불러온 봉과 겹치는 사슬만
+      return true;
+    };
+    const flushAll = ()=>{
+      for(const [k, m] of allAt){
+        if(used.has(k)) continue;
+        const kOf = x=>x==='1차' ? Infinity : (parseInt(x.split('-')[1], 10) || 0);
+        const tg = m.tags.slice().sort((x,y)=>kOf(x)-kOf(y));   // 2차-1, 2차-2, … 2차-10 · 1차 마지막
+        const two = tg.some(x=>x!=='1차'), one = tg.includes('1차');
+        const mk = {time:t[k], position:'aboveBar', shape:'arrowDown', text:'🧨 ' + tg.concat(m.kinds).join('·'),
+          color: two ? '#f0883c' : one ? 'rgba(240,136,60,.55)' : '#8b949e'};
+        if(!tg.length) mk.size = 0.6;
+        ignMarks.push(mk); used.add(k);
+      }
+      allAt.clear();
+    };
     // 1) 현재 스캔 결과 행 (같은 종목 · 같은 거래소)
     const sr = (typeof lastRows!=='undefined' && Array.isArray(lastRows)) ? lastRows.find(r=>r && r.symbol===symbol && r.ign && r.ignT!=null && r.ignEx===exchange) : null;
-    if(sr){
+    const g0 = (typeof favIgn!=='undefined') && favIgn[symbol];
+    const fs = (!g0 && typeof ignFindSess!=='undefined') ? ignFindSess.get(symbol + '|' + exchange) : null;
+    const g = g0 || fs;
+    const gAll = !!(g && g.tag && g.dir!=='short' && g.all && Array.isArray(g.all.clusters));
+    if(sr && sr.ign2Tag && sr.ign2All){ addAll(sr.ign2All); if(sr.ign2K > 0) peakLine(sr.ign2Peak); }   // 행 자기 사슬 고점1 은 모든 TF
+    else if(sr){
       const k = barIdx(sr.ignT);
       if(sr.ign2Tag){
         if(k >= 0){ ignMarks.push({time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:`🧨 ${sr.ign2Tag}`}); used.add(k); }
         if(sr.ign2K > 0){
           const k1 = barIdx(sr.ign2T1);
           if(k1 >= 0 && !used.has(k1)){ ignMarks.push({time:t[k1], position:'aboveBar', color:'rgba(240,136,60,.55)', shape:'arrowDown', text:'🧨 1차'}); used.add(k1); }
-          if(sr.ign2Peak!=null && isFinite(sr.ign2Peak)){ try{ pcs.createPriceLine({price:sr.ign2Peak, color:'rgba(240,136,60,.7)', lineWidth:1, lineStyle:LightweightCharts.LineStyle.Dashed, axisLabelVisible:true, title:'고점1'}); }catch(e){} }
+          peakLine(sr.ign2Peak);
         }
       } else if(k >= 0){
         ignMarks.push({time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text: sr.ignDir==='short' ? '🧨▼ 점화' : '🧨 점화'}); used.add(k);
       }
     }
-    // 2) 즐겨찾기에 저장된 점화 — 같은 봉이면 스캔 표시만
-    const g = (typeof favIgn!=='undefined') && favIgn[symbol];
-    if(g){ const k = barIdx(g.t); if(k >= 0 && !used.has(k)) ignMarks.push(g.dir==='short'
+    // 2) 즐겨찾기에 저장된 점화 (새 규칙 태그 기록이면 스캔 행과 같은 표시) / 즐찾이 아닌 종목은 이번 세션 🧨 점화 찾기 결과 — 같은 봉이면 스캔 표시만
+    flushAll();
+    if(gAll){ addAll(g.all); flushAll(); peakLine(g.peak); }   // 스캔 행이 이미 표시한 봉은 건너뜀
+    else if(g && g.tag && g.dir!=='short'){
+      const k = barIdx(g.t);
+      if(k >= 0 && !used.has(k)){ ignMarks.push({time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:`🧨 ${g.tag}`}); used.add(k); }
+      if(g.tag !== '1차' && g.t1 != null){
+        const k1 = barIdx(g.t1);
+        if(k1 >= 0 && !used.has(k1)){ ignMarks.push({time:t[k1], position:'aboveBar', color:'rgba(240,136,60,.55)', shape:'arrowDown', text:'🧨 1차'}); used.add(k1); }
+      }
+      peakLine(g.peak);
+    } else if(g){ const k = barIdx(g.t); if(k >= 0 && !used.has(k)) ignMarks.push(g.dir==='short'
           ? {time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:'🧨▼ 점화'}    // 숏: 큰 음봉 위 (하락 시작점)
           : {time:t[k], position:'aboveBar', color:'#f0883c', shape:'arrowDown', text:'🧨 점화'}); }
   }
@@ -8348,7 +8444,9 @@ function renderChartInfo(){
       caseHtml = `<span class="ci-fund" style="color:#f0883c">🚀TOP5 #${gi.rank} +${gi.chg.toFixed(1)}% · ${tstr}</span>`;
     }
   }catch(e){}
-  const ignBtn = `<button class="ci-ign ignpickbtn${ignPick?' on':''}" title="봉을 탭해 점화 봉으로 지정 (4H·1D)">🧨 점화 지정</button>`;
+  const fBusy = ignFindBusy.has(sym + '|' + exchange);
+  const ignBtn = `<button class="ci-ign ignpickbtn${ignPick?' on':''}" title="봉을 탭해 점화 봉으로 지정 (4H·1D)">🧨 점화 지정</button>`
+    + `<button class="ci-ign ignfindbtn${fBusy?' busy':''}"${fBusy?' disabled':''} title="🧨 점화 찾기 — 이 종목만 새 규칙(롱 1차/2차)으로 점화 탐지" aria-label="🧨 점화 찾기">${fBusy?'🧨…':'🧨찾기'}</button>`;
   const html = `<span class="ci-sym">${base}</span><span class="ci-mtf" id="ciMtf"></span>${ignBtn}${caseHtml}${fundHtml}${tagHtml}`;
   if(barEl) barEl.innerHTML = html;
   if(headEl) headEl.innerHTML = '';   // 헤더는 제목만 (높이 안정) — 태그/펀비는 정보바에
@@ -8416,6 +8514,48 @@ document.addEventListener('click', e=>{
   e.stopPropagation();
   setIgnPick(!ignPick);
 });
+// ── 🧨 점화 찾기: 지금 차트 종목·거래소만 ign2DetectOne ──
+//  즐찾이면 결과를 src 'find' 로 저장 (기존 기록 덮어씀 — 직접 누른 것) · 즐찾 아니면 즐찾에 넣지 않고 이번 세션 차트 표시만
+const ignFindSess = new Map();   // 'SYM|ex' → 기록 (즐찾 아닌 종목)
+const ignFindBusy = new Set();   // 'SYM|ex'
+function syncIgnFindBtns(){
+  const busy = !!currentChartSymbol && ignFindBusy.has(currentChartSymbol + '|' + exchange);
+  document.querySelectorAll('.ignfindbtn').forEach(b=>{ b.classList.toggle('busy', busy); b.disabled = busy; b.textContent = busy ? '🧨…' : '🧨찾기'; });
+}
+function showIgnFindHint(msg){
+  if(ignPick){ renderIgnHint(msg); return; }
+  const el = $('ignHint'); if(!el) return;
+  el.style.display = 'block';
+  el.innerHTML = `🧨 <span class="warn">${msg}</span><button data-ign="cancel">닫기</button>`;
+}
+async function ignFind(sym, ex){
+  const key = sym + '|' + ex; if(!sym || ignFindBusy.has(key)) return;
+  ignFindBusy.add(key); syncIgnFindBtns();
+  let d = null, err = false;
+  try{ d = await ign2DetectOne(ex, sym); }catch(e){ err = true; }
+  ignFindBusy.delete(key);
+  let rec = null;
+  const found = d && !d.none;
+  if(found){
+    rec = ign2FavRec(d, ex, 'find');
+    if(isFav(sym)){ setFavIgn(sym, rec); ignFindSess.delete(key); renderFavs(); }
+    else ignFindSess.set(key, rec);
+  }
+  const here = currentChartSymbol === sym && exchange === ex;
+  syncIgnFindBtns();
+  if(here){
+    const w1h = d && d.warn === '1h' ? ' · 1H 이력 일부' : '';
+    if(!found) showIgnFindHint((err ? '조회 실패' : '점화 없음') + w1h);
+    else { if(w1h) showIgnFindHint(`[${d.tag}]${w1h}`); else if(!ignPick) renderIgnHint(); renderChartView(); }
+  }
+  if(rec && favIgn[sym] === rec){ try{ await ignFillOi0(sym, rec, null, null); }catch(e){} if(favIgn[sym] === rec) renderFavs(); }
+}
+document.addEventListener('click', e=>{
+  const b = e.target.closest('.ignfindbtn'); if(!b) return;
+  e.stopPropagation();
+  if(b.disabled || !currentChartSymbol) return;
+  ignFind(currentChartSymbol, exchange);
+});
 // 클릭한 봉을 점화로 저장 (src='manual') — 즐찾이 아니면 즐찾에도 추가. oi0는 비동기로 채움(실패 시 ↻ 때 재시도)
 async function ignSetManual(sym, tf, t, px0){
   const ex = exchange;
@@ -8470,7 +8610,7 @@ function navChart(dir){
   navIdx = i;
   currentChartSymbol = navList[i];
   updateChartFavBtn();   // ‹ › 로 종목이 바뀌면 즐찾 상태도 그 종목 기준으로
-  if(ignPick) renderIgnHint();
+  renderIgnHint();   // 지정 중이면 안내 갱신 · 아니면 (점화 찾기 안내 포함) 닫음
   const body = $('chartBody'); if(body) body.scrollTop = 0;   // 스크롤 맨 위로 (헤더 잘림 방지)
   updateChartTitle();
   updateNavUI();
@@ -8581,6 +8721,7 @@ $('viewseg').addEventListener('click', e=>{
 
 $('chartClose').addEventListener('click', closeChart);
 function updateChartFavBtn(){
+  try{ syncIgnFindBtns(); }catch(e){}
   const b = $('chartFav'); if(!b || !currentChartSymbol) return;
   const on = isFav(currentChartSymbol);
   b.textContent = on ? '★ 즐찾' : '☆ 즐찾';
