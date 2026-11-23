@@ -6688,10 +6688,10 @@ async function ign2Klines(ex, sym, tf, endMs, limit){
   if(ex==='binance') await bnKwWait(bnKlineW(limit));
   return endMs==null ? EX[ex].klines(sym, tf, limit) : EX[ex].klinesUntil(sym, tf, endMs, limit);
 }
-// endMs 이전 봉 n개를 뒤에서 앞으로 (바이낸스 499개씩 = 가중치 2 · 바이빗 1000개씩) · 최대 maxChunks 번 (스캔 4 · 단일 종목 탐지는 더 많이)
-async function ign2Back(ex, sym, tf, endMs, n, cnt, maxChunks){
-  const chunk = ex==='binance' ? 499 : 1000; let out = [], end = endMs, G = maxChunks || 4;
-  for(let g=0; n > 0 && g < G; g++){
+// endMs 이전 봉 n개를 뒤에서 앞으로 (바이낸스 499개씩 = 가중치 2 · 바이빗 1000개씩) · 최대 4번
+async function ign2Back(ex, sym, tf, endMs, n, cnt){
+  const chunk = ex==='binance' ? 499 : 1000; let out = [], end = endMs;
+  for(let g=0; n > 0 && g < 4; g++){
     const lim = Math.min(chunk, n);
     if(cnt) cnt.n++;
     const b = await ign2Klines(ex, sym, tf, end, lim);
@@ -6735,20 +6735,25 @@ function ign2CoinSyms(sym){
   const m2 = b.match(/^([A-Z0-9]+?)1000+$/); if(m2) c.push(m2[1]);
   c.push(b); return [...new Set(c)];
 }
-// 한 종목: 4H 이력 → (IGN2.needs 가 필요하다고 할 때만) 1H·펀딩 → IGN2.classify. 스캔(ign2Confirm)·단일 탐지(ign2DetectOne) 공용
-//  opt.h1Chunks: 1H 요청 최대 횟수 (기본 4 = 스캔) · opt.h1Check: 받은 1H 가 요청 구간(또는 상장 이후)을 다 덮지 못하면 warn '1h'
+// 1H 창: 스캔·🧨찾기·★ 자동 탐지 공통 — 지금부터 (범위 + 조용한 기간) 일 + 1H 이평 20봉 여유 21시간 (1H 규칙이 켜져 있으면 항상)
+//  (예전: 스캔은 IGN2.needs 가 1H 가능 봉을 찾았을 때만 그 봉부터 · 단일 탐지는 4H 이력 전체 → 같은 종목도 1H 점화·사슬이 달라졌음)
+function ign2H1From(P, now){ return now - ((P.rangeDays || IGN2.DEF.rangeDays) + IGN2.DEF.quietDays) * 86400e3 - 21 * 3600e3; }
+// 한 종목: 4H 이력 → 1H (공통 창) · 펀딩 (IGN2.needs 가 필요하다고 할 때만) → IGN2.classify. 스캔(ign2Confirm)·단일 탐지(ign2DetectOne) 공용
+//  opt.h1Check: 받은 1H 가 창(또는 상장 이후)을 다 덮지 못하면 warn '1h'
 async function ign2ClassifyOne(ex, sym, b4, P, now, st, opt){
   const nd = IGN2.needs(b4, P, now);
   let b1 = null, fund = null, warn = null;
-  if(nd.need1h){
-    const n1 = Math.ceil((now - nd.h1From) / 3600e3) + 1;
-    const c = {n:0}; b1 = await ign2Back(ex, sym, '1h', null, n1, c, opt && opt.h1Chunks);
+  const h1On = !(P.h1 && P.h1.on === false);
+  if(h1On){
+    const h1From = ign2H1From(P, now);
+    const n1 = Math.ceil((now - h1From) / 3600e3) + 1;
+    const c = {n:0}; b1 = await ign2Back(ex, sym, '1h', null, n1, c);
     if(st){ st.n1h++; st.req1h += c.n; }
     if(!b1 || !b1.length) warn = '1h';
     else if(opt && opt.h1Check){
-      // 1H 첫 봉이 요청 시작보다 늦고, 4H 이력은 그보다 앞서 있으면 (= 상장 때문이 아니라 덜 받음) 1H 점화를 놓쳤을 수 있음
+      // 1H 첫 봉이 창 시작보다 늦고, 4H 이력은 그보다 앞서 있으면 (= 상장 때문이 아니라 덜 받음) 1H 점화를 놓쳤을 수 있음
       //  신규 상장: 4H 첫 봉은 4H 경계 · 1H 첫 봉은 상장 시각 (최대 3시간 뒤) → 4H 한 봉만큼 여유
-      const need = Math.max(nd.h1From, b4.length ? b4[0].t : nd.h1From);
+      const need = Math.max(h1From, b4.length ? b4[0].t : h1From);
       if(b1[0].t >= need + 4*3600e3) warn = '1h';
     }
   }
@@ -6760,17 +6765,24 @@ async function ign2ClassifyOne(ex, sym, b4, P, now, st, opt){
   }
   return {res: IGN2.classify(b4, null, b1, fund, P, now), warn};
 }
-// 🧨 한 종목만 새 규칙(롱 1차/2차)으로 탐지 — 4H 최대 IGN2_N4봉 · ⚙ 현재 설정 · 범위 = 불러온 이력 전체 (30일 제한 없음)
-//  반환: 가장 최근 태그 {tag, k, t, tf, te, px0, t1, tf1, peak, warn?} | 태그 없음 null (1H 를 다 못 받았으면 {none:true, warn:'1h'})
+// 스캔이 2단계에서 쓰는 4H 봉 수 (1단계 봉이 IGN2_N4 이상이면 그대로, 아니면 IGN2_N4 까지 이전 구간을 더 받음)
+function ign2ScanN4(days){
+  const lim1 = (days + 22) * 6, rsiLen = Math.max(2, +(($('rsilen')||{}).value) || 14);
+  const L1 = (currentTF === '4h') ? Math.min(1000, Math.max(300, rsiLen + 60, lim1)) : Math.min(1000, lim1);
+  return Math.max(L1, IGN2_N4);
+}
+// 🧨 한 종목만 새 규칙(롱 1차/2차)으로 탐지 — 스캔과 같은 입력 (4H 봉 수 · 1H 창 · 펀딩 창 · ⚙ 현재 설정 · 범위 = 현재 범위 일수)으로
+//  IGN2.classify 를 한 번 → 덩어리·태그·고점1 은 스캔 행과 같음. 가장 최근 태그만 범위 밖까지 봄 (같은 계산의 events 에서 — 30일보다 오래된 1차 등)
+//  반환: {tag, k, t, tf, te, px0, t1, tf1, peak, warn?, all} | 태그 없음 null (1H 를 다 못 받았으면 {none:true, warn:'1h'})
 async function ign2DetectOne(ex, sym){
   const now = Date.now();
-  const b4 = await ign2Back(ex, sym, '4h', null, IGN2_N4);
+  const days = (ignDir === 'short' && !ignDaysTouched) ? 30 : ignDays;   // 숏 기본값(7일)이 롱 탐지에 섞이지 않게
+  const b4 = await ign2Back(ex, sym, '4h', null, ign2ScanN4(days));
   if(!Array.isArray(b4) || b4.length <= 21) return null;
-  const P = {...ign2Inputs(), rangeDays: Math.ceil((now - b4[0].t) / 86400e3) + 1};
-  // 1H 는 4H 이력 전체를 덮도록 요청 (바이낸스 499개씩 · 단일 종목이라 가중치 여유) — 그래도 모자라면 warn '1h' 를 기록에 남김
-  const h1Chunks = Math.min(10, Math.ceil(((now - b4[0].t) / 3600e3 + IGN2.DEF.quietDays*24 + 2) / (ex==='binance' ? 499 : 1000)) + 1);
-  const {res, warn} = await ign2ClassifyOne(ex, sym, b4, P, now, null, {h1Chunks, h1Check: true});
-  const ev = res.row; if(!ev) return warn ? {none: true, warn} : null;
+  const P = {...ign2Inputs(), rangeDays: days};
+  const {res, warn} = await ign2ClassifyOne(ex, sym, b4, P, now, null, {h1Check: true});
+  let ev = res.row; for(const e of res.events) if(!ev || e.te >= ev.te) ev = e;   // 범위 안이면 res.row 와 같음
+  if(!ev) return warn ? {none: true, warn} : null;
   return {tag: ev.tag, k: ev.k, t: ev.t, tf: ev.tf, te: ev.te, px0: ev.o, t1: ev.chainT, tf1: ev.chainTf || ev.tf,
           peak: (ev.k > 0 && ev.peak > 0) ? ev.peak : null, ...(warn ? {warn} : {}), all: ign2AllPack(res.all)};
 }
